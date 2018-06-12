@@ -13,7 +13,6 @@
 !images/*
 
 output
-data/coco
 __pycache__
 checkpoints
 
