@@ -1,4 +1,5 @@
 import argparse
+import time
 
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -60,8 +61,9 @@ optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0,
 
 for epoch in range(opt.epochs):
     for batch_i, (_, imgs, targets) in enumerate(dataloader):
-        imgs = Variable(imgs.type(Tensor))
-        targets = Variable(targets.type(Tensor), requires_grad=False)
+        t0 = time.time()
+        imgs = imgs.type(Tensor)
+        targets = targets.type(Tensor)
         # import matplotlib.pyplot as plt
         # plt.imshow(imgs[0,0])
 
@@ -72,16 +74,16 @@ for epoch in range(opt.epochs):
         loss.backward()
         optimizer.step()
 
-        print('[Epoch %d/%d, Batch %d/%d] [Losses: x %f, y %f, w %f, h %f, conf %f, cls %f, total %f, AP: %.5f]' %
+        print('[Epoch %d/%d, Batch %d/%d] [Losses: x %f, y %f, w %f, h %f, conf %f, cls %f, total %f, AP: %.5f] %.3fs' %
               (epoch, opt.epochs, batch_i, len(dataloader),
                model.losses['x'], model.losses['y'], model.losses['w'],
                model.losses['h'], model.losses['conf'], model.losses['cls'],
-               loss.item(), model.losses['AP']))
+               loss.item(), model.losses['AP'], time.time() - t0))
 
         model.seen += imgs.size(0)
-        break
+        # break
 
     if epoch % opt.checkpoint_interval == 0:
         model.save_weights('%s/%d.weights' % (opt.checkpoint_dir, epoch))
 
-    break
+    # break

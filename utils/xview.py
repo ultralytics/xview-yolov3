@@ -28,7 +28,8 @@ def get_labels(fname):
     return coords, chips, classes
 
 
-path = '/Users/glennjocher/Downloads/DATA/xview/'
+#path = '/Users/glennjocher/Downloads/DATA/xview/'
+path = ''
 fname = path + 'xView_train.geojson'
 coords, chips, classes = get_labels(fname)
 
