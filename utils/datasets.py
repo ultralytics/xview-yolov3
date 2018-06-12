@@ -7,11 +7,11 @@ import torch
 from skimage.transform import resize
 from torch.utils.data import Dataset
 
-
 class ImageFolder(Dataset):  # for eval-only
     def __init__(self, folder_path, img_size=416):
         self.files = sorted(glob.glob('%s/*.*' % folder_path))
         self.img_shape = (img_size, img_size)
+
 
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
@@ -108,6 +108,7 @@ class ListDataset(Dataset):  # for training
 
 
 class ListDataset_xview(Dataset):  # for training
+    #@profile
     def __init__(self, folder_path, img_size=416):
         self.img_files = sorted(glob.glob('%s/*.*' % (folder_path + 'train_images')))
         self.img_shape = (img_size, img_size)
@@ -116,6 +117,7 @@ class ListDataset_xview(Dataset):  # for training
         self.img_shape = (img_size, img_size)
         self.max_objects = 5000
 
+    #@profile
     def __getitem__(self, index):
 
         # ---------
@@ -132,10 +134,11 @@ class ListDataset_xview(Dataset):  # for training
         # Determine padding
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
         # Add padding
-        input_img = np.pad(img, pad, 'constant', constant_values=128) / 255.
-        padded_h, padded_w, _ = input_img.shape
-        # Resize and normalize
-        input_img = resize(input_img, (*self.img_shape, 3), mode='reflect', anti_aliasing=True)
+
+        input_img = resize_square(img, height=self.img_shape[0]) / 255.0  # MUCH faster
+        padded_h = max(h,w)
+        padded_w = padded_h
+
         # Channels-first
         input_img = np.transpose(input_img, (2, 0, 1))
         # As pytorch tensor
@@ -193,3 +196,14 @@ def remap_classes(classes):  # remap xview classes 11-94 to 0-61
          -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, 50, 51, 52, -1,
          53, -1, -1, 54, 55, 56, -1, 57, -1, -1, 58, -1, 59, -1, 60, 61]
     return [c[int(x)] for x in classes]
+
+def resize_square(im, height=416, pad_color=(128, 128, 128)):  # resizes a rectangular image to a padded square
+    shape = im.shape[:2]  # shape = [height, width]
+    ratio = float(height) / max(shape)
+    new_shape = [int(shape[0] * ratio), int(shape[1] * ratio)]
+    dw = height - new_shape[1]  # width padding
+    dh = height - new_shape[0]  # height padding
+    top, bottom = dh // 2, dh - (dh // 2)
+    left, right = dw // 2, dw - (dw // 2)
+    im = cv2.resize(im, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+    return cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=pad_color)

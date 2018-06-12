@@ -91,6 +91,7 @@ class YOLOLayer(nn.Module):
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
 
+    #@profile
     def forward(self, x, targets=None):
         bs = x.size(0)
         g_dim = x.size(2)
@@ -107,7 +108,7 @@ class YOLOLayer(nn.Module):
         w = prediction[..., 2]  # Width
         h = prediction[..., 3]  # Height
         conf = torch.sigmoid(prediction[..., 4])  # Conf
-        pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
+        pred_cls = prediction[..., 5:]  # Class
 
         # Calculate offsets for each grid
         grid_x = torch.linspace(0, g_dim - 1, g_dim).repeat(g_dim, 1).repeat(bs * self.num_anchors, 1, 1).view(
@@ -134,7 +135,7 @@ class YOLOLayer(nn.Module):
                 self.mse_loss = self.mse_loss.cuda()
                 self.bce_loss = self.bce_loss.cuda()
 
-            nGT, nCorrect, mask, tx, ty, tw, th, tconf, tcls = build_targets(pred_boxes.cpu().data,
+            nGT, nCorrect, tx, ty, tw, th, tconf, tcls = build_targets(pred_boxes.cpu().data,
                                                                              targets.cpu().data,
                                                                              scaled_anchors,
                                                                              self.num_anchors,
@@ -144,15 +145,13 @@ class YOLOLayer(nn.Module):
                                                                              self.img_dim)
 
             nProposals = int((conf > 0.25).sum().item())
-
-            mask = Variable(mask.type(FloatTensor))
-
-            tx = Variable(tx.type(FloatTensor), requires_grad=False)
-            ty = Variable(ty.type(FloatTensor), requires_grad=False)
-            tw = Variable(tw.type(FloatTensor), requires_grad=False)
-            th = Variable(th.type(FloatTensor), requires_grad=False)
-            tconf = Variable(tconf.type(FloatTensor), requires_grad=False)
-            tcls = Variable(tcls.type(FloatTensor), requires_grad=False)
+            tx = tx.type(FloatTensor)
+            ty = ty.type(FloatTensor)
+            tw = tw.type(FloatTensor)
+            th = th.type(FloatTensor)
+            tconf = tconf.type(FloatTensor)
+            tcls = tcls.type(FloatTensor)
+            mask = tconf
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             loss_x = self.lambda_coord * self.bce_loss(x * mask, tx * mask) / 2
@@ -161,7 +160,7 @@ class YOLOLayer(nn.Module):
             loss_h = self.lambda_coord * self.mse_loss(h * mask, th * mask) / 2
             loss_conf = self.bce_loss(conf * mask, mask) + \
                         self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
-            loss_cls = self.bce_loss(pred_cls[mask == 1], tcls[mask == 1])
+            loss_cls = self.bce_loss(torch.sigmoid(pred_cls[mask == 1]), tcls[mask == 1])
             loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
 
             return loss, loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), float(
@@ -169,6 +168,7 @@ class YOLOLayer(nn.Module):
 
         else:
             # If not in training phase return predictions
+            pred_cls = torch.sigmoid(pred_cls)
             output = torch.cat(
                 (pred_boxes.view(bs, -1, 4) * stride, conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.num_classes)),
                 -1)

@@ -24,7 +24,7 @@ def weights_init_normal(m):
         torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
         torch.nn.init.constant_(m.bias.data, 0.0)
 
-
+#@profile
 def bbox_iou(box1, box2, x1y1x2y2=True):
     """
     Returns the IoU of two bounding boxes
@@ -56,7 +56,6 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
 
     return iou
 
-#@profile
 def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
     """
     Removes detections with lower object confidence score than 'conf_thres' and performs
@@ -82,7 +81,7 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
         if not image_pred.size(0):
             continue
         # Get score and class with highest confidence
-        class_conf, class_pred = torch.max(image_pred[:, 5:5 + num_classes], 1, keepdim=True)
+        class_conf, class_pred = torch.max(image_pred[:, 5:], 1, keepdim=True)
         # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
         detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
         # Iterate through all predicted classes
@@ -120,8 +119,6 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
     nB = target.size(0)
     nA = num_anchors
     nC = num_classes
-    dim = dim
-    mask = torch.zeros(nB, nA, dim, dim)
     tx = torch.zeros(nB, nA, dim, dim)
     ty = torch.zeros(nB, nA, dim, dim)
     tw = torch.zeros(nB, nA, dim, dim)
@@ -137,18 +134,11 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
                 break
             nGT = nGT + 1
             # Convert to position relative to box
-            gx = target[b, t, 1] * dim
-            gy = target[b, t, 2] * dim
-            gw = target[b, t, 3] * dim
-            gh = target[b, t, 4] * dim
+            gx, gy, gw, gh = target[b, t, 1:5] * dim
 
-            # Get grid box indices
-            gi = int(gx)
-            gj = int(gy)
-
-            # prevent overflows i.e. 13.01 on 13 anchors (jocher edit)
-            gi = min(gi, dim-1)
-            gj = min(gj, dim-1)
+            # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
+            gi = min(int(gx), dim-1)
+            gj = min(int(gy), dim-1)
 
             # Get shape of gt box
             gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
@@ -164,8 +154,6 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
             pred_box = pred_boxes[b, best_n, gj, gi].unsqueeze(0)
 
 
-            # Masks
-            mask[b, best_n, gj, gi] = 1
             # Coordinates
             tx[b, best_n, gj, gi] = gx - gi
             ty[b, best_n, gj, gi] = gy - gj
@@ -182,7 +170,7 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
             if iou > 0.5:
                 nCorrect = nCorrect + 1
 
-    return nGT, nCorrect, mask, tx, ty, tw, th, tconf, tcls
+    return nGT, nCorrect, tx, ty, tw, th, tconf, tcls
 
 
 def to_categorical(y, num_classes):

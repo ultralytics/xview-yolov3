@@ -1,0 +1,6 @@
+# classes= 62
+# train=data/coco/trainvalno5k.txt
+# valid=data/coco/5k.txt
+names=data/xview.names
+backup=backup/
+eval=xview
