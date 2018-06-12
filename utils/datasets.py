@@ -4,14 +4,13 @@ import os
 import cv2
 import numpy as np
 import torch
-from skimage.transform import resize
 from torch.utils.data import Dataset
+
 
 class ImageFolder(Dataset):  # for eval-only
     def __init__(self, folder_path, img_size=416):
         self.files = sorted(glob.glob('%s/*.*' % folder_path))
         self.img_shape = (img_size, img_size)
-
 
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
@@ -54,7 +53,7 @@ class ListDataset(Dataset):  # for training
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
         # Add padding
         input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
-        padded_h = max(h,w)
+        padded_h = max(h, w)
         padded_w = padded_h
 
         # As pytorch tensor
@@ -96,7 +95,7 @@ class ListDataset(Dataset):  # for training
 
 
 class ListDataset_xview(Dataset):  # for training
-    #@profile
+    # @profile
     def __init__(self, folder_path, img_size=416):
         self.img_files = sorted(glob.glob('%s/*.*' % (folder_path + 'train_images')))
         self.img_shape = (img_size, img_size)
@@ -105,7 +104,7 @@ class ListDataset_xview(Dataset):  # for training
         self.img_shape = (img_size, img_size)
         self.max_objects = 5000
 
-    #@profile
+    # @profile
     def __getitem__(self, index):
 
         # ---------
@@ -123,7 +122,7 @@ class ListDataset_xview(Dataset):  # for training
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
         # Add padding
         input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
-        padded_h = max(h,w)
+        padded_h = max(h, w)
         padded_w = padded_h
 
         # As pytorch tensor
@@ -181,6 +180,7 @@ def remap_classes(classes):  # remap xview classes 11-94 to 0-61
          -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, 50, 51, 52, -1,
          53, -1, -1, 54, 55, 56, -1, 57, -1, -1, 58, -1, 59, -1, 60, 61]
     return [c[int(x)] for x in classes]
+
 
 def resize_square(im, height=416, pad_color=(128, 128, 128)):  # resizes a rectangular image to a padded square
     shape = im.shape[:2]  # shape = [height, width]

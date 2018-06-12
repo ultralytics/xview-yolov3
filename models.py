@@ -3,7 +3,6 @@ from collections import defaultdict
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 
 from utils.parse_config import *
 from utils.utils import build_targets
@@ -91,7 +90,7 @@ class YOLOLayer(nn.Module):
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None):
         bs = x.size(0)
         g_dim = x.size(2)
@@ -136,13 +135,13 @@ class YOLOLayer(nn.Module):
                 self.bce_loss = self.bce_loss.cuda()
 
             nGT, nCorrect, tx, ty, tw, th, tconf, tcls = build_targets(pred_boxes.cpu().data,
-                                                                             targets.cpu().data,
-                                                                             scaled_anchors,
-                                                                             self.num_anchors,
-                                                                             self.num_classes,
-                                                                             g_dim,
-                                                                             self.ignore_thres,
-                                                                             self.img_dim)
+                                                                       targets.cpu().data,
+                                                                       scaled_anchors,
+                                                                       self.num_anchors,
+                                                                       self.num_classes,
+                                                                       g_dim,
+                                                                       self.ignore_thres,
+                                                                       self.img_dim)
 
             nProposals = int((conf > 0.25).sum().item())
             tx = tx.type(FloatTensor)
