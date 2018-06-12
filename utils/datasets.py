@@ -17,18 +17,8 @@ class ImageFolder(Dataset):  # for eval-only
         img_path = self.files[index % len(self.files)]
         # Extract image
         img = cv2.imread(img_path)
-        h, w, _ = img.shape
-        dim_diff = np.abs(h - w)
-        # Upper (left) and lower (right) padding
-        pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
-        # Determine padding
-        pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
-        # Add padding
-        input_img = np.pad(img, pad, 'constant', constant_values=127.5) / 255.
-        # Resize and normalize
-        input_img = resize(input_img, (*self.img_shape, 3), mode='reflect', anti_aliasing=True)
-        # Channels-first
-        input_img = np.transpose(input_img, (2, 0, 1))
+        input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
+
         # As pytorch tensor
         input_img = torch.from_numpy(input_img).float()
         return img_path, input_img
@@ -63,12 +53,10 @@ class ListDataset(Dataset):  # for training
         # Determine padding
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
         # Add padding
-        input_img = np.pad(img, pad, 'constant', constant_values=128) / 255.
-        padded_h, padded_w, _ = input_img.shape
-        # Resize and normalize
-        input_img = resize(input_img, (*self.img_shape, 3), mode='reflect', anti_aliasing=True)
-        # Channels-first
-        input_img = np.transpose(input_img, (2, 0, 1))
+        input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
+        padded_h = max(h,w)
+        padded_w = padded_h
+
         # As pytorch tensor
         input_img = torch.from_numpy(input_img).float()
 
@@ -134,13 +122,10 @@ class ListDataset_xview(Dataset):  # for training
         # Determine padding
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
         # Add padding
-
-        input_img = resize_square(img, height=self.img_shape[0]) / 255.0  # MUCH faster
+        input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
         padded_h = max(h,w)
         padded_w = padded_h
 
-        # Channels-first
-        input_img = np.transpose(input_img, (2, 0, 1))
         # As pytorch tensor
         input_img = torch.from_numpy(input_img).float()
 
