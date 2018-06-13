@@ -100,4 +100,4 @@ def main(opt):
 
 if __name__ == '__main__':
     main(opt)
-    #os.system('sudo shutdown')
+    os.system('sudo shutdown')
