@@ -28,8 +28,8 @@ def get_labels(fname):
     return coords, chips, classes
 
 
-path = '/Users/glennjocher/Downloads/DATA/xview/'
-#path = ''
+#path = '/Users/glennjocher/Downloads/DATA/xview/'
+path = ''
 fname = path + 'xView_train.geojson'
 coords, chips, classes = get_labels(fname)
 
@@ -39,8 +39,8 @@ os.makedirs(path + 'train_labels/', exist_ok=True)
 for name in tqdm(np.unique(chips)):
     rows = [i for i, x in enumerate(chips) if x == name]
     nF.append(len(rows))
-    #if any(rows):
-    #    with open(path + 'train_labels/' + name.replace('.tif', '.txt'), 'a') as file:
-    #        for i in rows:
-    #            file.write('%g %g %g %g %g\n' % (classes[i], *coords[i]))
+    if any(rows):
+        with open(path + 'train_labels/' + name.replace('.tif', '.txt'), 'a') as file:
+            for i in rows:
+                file.write('%g %g %g %g %g\n' % (classes[i], *coords[i]))
 

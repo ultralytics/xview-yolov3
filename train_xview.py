@@ -1,5 +1,6 @@
 import argparse
 import time
+import os
 
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -13,7 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=30, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/samples', help='path to dataset')
 parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
-parser.add_argument('-model_config_path', type=str, default='config/yolov3.cfg', help='path to model config file')
+parser.add_argument('-model_config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
 parser.add_argument('-data_config_path', type=str, default='config/xview.data', help='path to data config file')
 parser.add_argument('-weights_path', type=str, default='weights/yolov3.weights', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
@@ -26,7 +27,8 @@ parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='di
 opt = parser.parse_args()
 print(opt)
 
-#@profile
+
+# @profile
 def main(opt):
     os.makedirs('output', exist_ok=True)
     os.makedirs('checkpoints', exist_ok=True)
@@ -59,7 +61,7 @@ def main(opt):
 
     # Get dataloader
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
-                            batch_size=opt.batch_size, shuffle=False, num_workers=4)
+                            batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
 
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
 
@@ -78,20 +80,20 @@ def main(opt):
             loss.backward()
             optimizer.step()
 
-            print('[Epoch %d/%d, Batch %d/%d] [Losses: x %f, y %f, w %f, h %f, conf %f, cls %f, total %f, AP: %.5f] %.3fs' %
-                  (epoch, opt.epochs, batch_i, len(dataloader),
-                   model.losses['x'], model.losses['y'], model.losses['w'],
-                   model.losses['h'], model.losses['conf'], model.losses['cls'],
-                   loss.item(), model.losses['AP'], time.time() - t0))
+            s = '[Epoch %d/%d, Batch %d/%d] [x %f, y %f, w %f, h %f, conf %f, cls %f, total %f, AP: %.5f] %.3fs' % (
+                epoch, opt.epochs, batch_i, len(dataloader),
+                model.losses['x'], model.losses['y'], model.losses['w'],
+                model.losses['h'], model.losses['conf'], model.losses['cls'],
+                loss.item(), model.losses['AP'], time.time() - t0)
+            print(s)
+            with open('printedResults.txt', 'a') as file:
+                file.write(s + '\n')
 
             model.seen += imgs.size(0)
-            if batch_i==1:
-                break
 
         if epoch % opt.checkpoint_interval == 0:
             model.save_weights('%s/%d.weights' % (opt.checkpoint_dir, epoch))
-        if epoch==0:
-            break
 
 if __name__ == '__main__':
     main(opt)
+    os.system('sudo shutdown')
