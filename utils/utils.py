@@ -7,7 +7,7 @@ import torch
 
 # set printoptions
 torch.set_printoptions(linewidth=320, precision=5)
-np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
+np.set_printoptions(linewidth=320, formatter={'float_kind': '{11.5g}'.format})  # format short g, %precision=5
 
 
 def load_classes(path):
@@ -80,7 +80,8 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     return iou
 
 
-def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
+#@profile
+def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     """
     Removes detections with lower object confidence score than 'conf_thres' and performs
     Non-Maximum Suppression to further filter detections.
@@ -88,22 +89,23 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
         (x1, y1, x2, y2, object_conf, class_score, class_pred)
     """
 
-    # From (center x, center y, width, height) to (x1, y1, x2, y2)
-    box_corner = prediction.new(prediction.shape)
-    box_corner[:, :, 0] = prediction[:, :, 0] - prediction[:, :, 2] / 2
-    box_corner[:, :, 1] = prediction[:, :, 1] - prediction[:, :, 3] / 2
-    box_corner[:, :, 2] = prediction[:, :, 0] + prediction[:, :, 2] / 2
-    box_corner[:, :, 3] = prediction[:, :, 1] + prediction[:, :, 3] / 2
-    prediction[:, :, :4] = box_corner[:, :, :4]
-
     output = [None for _ in range(len(prediction))]
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
-        conf_mask = (image_pred[:, 4] >= conf_thres).squeeze()
-        image_pred = image_pred[conf_mask]
+        image_pred = image_pred[image_pred[:, 4] > conf_thres]
         # If none are remaining => process next image
-        if not image_pred.size(0):
+        nP = image_pred.shape[0]
+        if not nP:
             continue
+
+        # From (center x, center y, width, height) to (x1, y1, x2, y2)
+        box_corner = image_pred.new(nP, 4)
+        xy = image_pred[:, 0:2]
+        wh = image_pred[:, 2:4] / 2
+        box_corner[:, 0:2] = xy - wh
+        box_corner[:, 2:4] = xy + wh
+        image_pred[:, :4] = box_corner
+
         # Get score and class with highest confidence
         class_conf, class_pred = torch.max(image_pred[:, 5:], 1, keepdim=True)
         # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
@@ -120,7 +122,7 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
             detections_class = detections_class[conf_sort_index]
             # Perform non-maximum suppression
             max_detections = []
-            while detections_class.size(0):
+            while detections_class.shape[0]:
                 # Get detection with highest confidence and save as max detection
                 max_detections.append(detections_class[0].unsqueeze(0))
                 # Stop if we're at the last detection
@@ -139,11 +141,14 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
     return output
 
 
-# @profile
+#@profile
 def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ignore_thres, img_dim):
-    nB = target.size(0)
+    """
+    returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
+    """
+
+    nB = target.shape[0]
     nA = num_anchors
-    nC = num_classes
     tx = torch.zeros(nB, nA, dim, dim)
     ty = torch.zeros(nB, nA, dim, dim)
     tw = torch.zeros(nB, nA, dim, dim)
@@ -151,48 +156,79 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
     tconf = torch.zeros(nB, nA, dim, dim)
     tcls = torch.zeros(nB, nA, dim, dim, num_classes)
 
+
+    anchors = torch.Tensor(anchors)
+
     nGT = 0
     nCorrect = 0
     for b in range(nB):
-        for t in range(target.shape[1]):
-            if target[b, t].sum() == 0:
-                break
-            nGT = nGT + 1
-            # Convert to position relative to box
-            gx, gy, gw, gh = target[b, t, 1:5] * dim
+        nT = torch.argmin(target[b, :, 4])  # number of targets (measures index of first zero-height target box)
+        nGT += nT.item()
 
-            # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
-            gi = min(int(gx), dim - 1)
-            gj = min(int(gy), dim - 1)
+        # Convert to position relative to box
+        gx, gy, gw, gh = target[b, :nT, 1] * dim, target[b, :nT, 2] * dim, target[b, :nT, 3] * dim, target[b, :nT, 4] * dim
+        # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
+        gi = torch.clamp(gx.long(), max=dim - 1)
+        gj = torch.clamp(gy.long(), max=dim - 1)
+        # Calculate ious between ground truth and each of the 3 anchors
+        iou = []
+        for i in range(nA):
+            iou.append(bbox_iou(target[b, :nT, 1:] * dim, pred_boxes[b, i, gj, gi], x1y1x2y2=False))
+        iou = torch.cat(iou).view(nA,-1)
+        # Select best iou and anchor
+        iou, best_a = torch.max(iou,0)
 
-            # Get shape of gt box
-            gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
-            # Get shape of anchor box
-            anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((len(anchors), 2)), np.array(anchors)), 1))
-            # Calculate iou between gt and anchor shape
-            anch_ious = bbox_iou(gt_box, anchor_shapes)
-            # Find the best matching anchor box
-            best_n = np.argmax(anch_ious)
-            best_iou = anch_ious[best_n]
-            # Get the ground truth box and corresponding best prediction
-            gt_box = torch.FloatTensor(np.array([gx, gy, gw, gh])).unsqueeze(0)
-            pred_box = pred_boxes[b, best_n, gj, gi].unsqueeze(0)
+        # Coordinates
+        tx[b, best_a, gj, gi] = gx - gi.float()
+        ty[b, best_a, gj, gi] = gy - gj.float()
+        # Width and height
+        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a,0] + 1e-16)
+        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a,1] + 1e-16)
+        # One-hot encoding of label
+        tcls[b, best_a, gj, gi, target[b, :nT, 0].long()] = 1
+        tconf[b, best_a, gj, gi] = 1
 
-            # Coordinates
-            tx[b, best_n, gj, gi] = gx - gi
-            ty[b, best_n, gj, gi] = gy - gj
-            # Width and height
-            tw[b, best_n, gj, gi] = math.log(gw / anchors[best_n][0] + 1e-16)
-            th[b, best_n, gj, gi] = math.log(gh / anchors[best_n][1] + 1e-16)
-            # One-hot encoding of label
+        nCorrect += (iou > 0.5).sum().item()
 
-            tcls[b, best_n, gj, gi, int(target[b, t, 0])] = 1
-            # Calculate iou between ground truth and best matching prediction
-            iou = bbox_iou(gt_box, pred_box, x1y1x2y2=False)
-            tconf[b, best_n, gj, gi] = 1
 
-            if iou > 0.5:
-                nCorrect = nCorrect + 1
+        # for t in range(nT):
+        #     nGT += 1
+        #     # Convert to position relative to box
+        #     gx, gy, gw, gh = target[b, t, 1:] * dim
+        #
+        #     # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
+        #     gi = min(int(gx), dim - 1)
+        #     gj = min(int(gy), dim - 1)
+        #
+        #     # # Get shape of gt box
+        #     # gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0)
+        #     # Get shape of anchor box
+        #     # anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((len(anchors), 2)), np.array(anchors)), 1))
+        #     # # Calculate iou between gt and anchor shape
+        #     # anch_ious = bbox_iou(gt_box, anchor_shapes)
+        #     # # Find the best matching anchor box
+        #     # best_a = np.argmax(anch_ious)
+        #     # # Get the ground truth box and corresponding best prediction
+        #     # gt_box = torch.FloatTensor([gx, gy, gw, gh]).unsqueeze(0)
+        #     # pred_box = pred_boxes[b, best_a, gj, gi].unsqueeze(0)
+        #     # # Calculate iou between ground truth and best matching prediction
+        #     # iou = bbox_iou(gt_box, pred_box, x1y1x2y2=False)
+        #
+        #     best_a = best_anchors[t]
+        #
+        #     # Coordinates
+        #     tx[b, best_a, gj, gi] = gx - gi
+        #     ty[b, best_a, gj, gi] = gy - gj
+        #     # Width and height
+        #     tw[b, best_a, gj, gi] = math.log(gw / anchors[best_a][0] + 1e-16)
+        #     th[b, best_a, gj, gi] = math.log(gh / anchors[best_a][1] + 1e-16)
+        #     # One-hot encoding of label
+        #     tcls[b, best_a, gj, gi, int(target[b, t, 0])] = 1
+        #     tconf[b, best_a, gj, gi] = 1
+        #
+        #     #if iou > 0.5:
+        #     #    nCorrect += 1
+
 
     return nGT, nCorrect, tx, ty, tw, th, tconf, tcls
 

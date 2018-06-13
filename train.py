@@ -76,7 +76,7 @@ for epoch in range(opt.epochs):
                model.losses['h'], model.losses['conf'], model.losses['cls'],
                loss.item(), model.losses['AP']))
 
-        model.seen += imgs.size(0)
+        model.seen += imgs.shape[0]
 
     if epoch % opt.checkpoint_interval == 0:
         model.save_weights('%s/%d.weights' % (opt.checkpoint_dir, epoch))

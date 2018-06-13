@@ -23,7 +23,7 @@ parser.add_argument('-conf_thres', type=float, default=0.8, help='object confide
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=416, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32*13, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
 
@@ -59,7 +59,7 @@ def main(opt):
         # Get detections
         with torch.no_grad():
             detections = model(im)
-            detections = non_max_suppression(detections, 80, opt.conf_thres, opt.nms_thres)
+            detections = non_max_suppression(detections, opt.conf_thres, opt.nms_thres)
 
         # Log progress
         current_time = time.time()

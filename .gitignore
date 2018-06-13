@@ -15,6 +15,7 @@
 output
 __pycache__
 checkpoints
+*esults.txt
 
 
 # GitHub Python GitIgnore ----------------------------------------------------------------------------------------------
