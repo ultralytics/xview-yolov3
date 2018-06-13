@@ -13,8 +13,6 @@ import torch
 from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.ticker import NullLocator
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-image_folder', type=str, default='data/samples', help='path to dataset')
@@ -54,13 +52,13 @@ def main(opt):
 
     print('\nPerforming object detection:')
     prev_time = time.time()
-    for batch_i, (img_paths, input_imgs) in enumerate(dataloader):
+    for batch_i, (img_paths, im) in enumerate(dataloader):
         # Configure input
-        input_imgs = input_imgs.type(Tensor)
+        im = im.type(Tensor)
 
         # Get detections
         with torch.no_grad():
-            detections = model(input_imgs)
+            detections = model(im)
             detections = non_max_suppression(detections, 80, opt.conf_thres, opt.nms_thres)
 
         # Log progress
@@ -69,9 +67,9 @@ def main(opt):
         prev_time = current_time
         print('\t+ Batch %d, Inference Time: %s' % (batch_i, inference_time))
 
-        # Save image and detections
         imgs.extend(img_paths)
         img_detections.extend(detections)
+
 
     # Bounding-box colors
     cmap = plt.get_cmap('tab20b')
@@ -82,11 +80,8 @@ def main(opt):
     for img_i, (path, detections) in enumerate(zip(imgs, img_detections)):
         print("(%d) Image: '%s'" % (img_i, path))
 
-        # Create plot
+        # read image
         img = cv2.imread(path)
-        plt.figure()
-        fig, ax = plt.subplots(1)
-        ax.imshow(img)
 
         # The amount of padding that was added
         pad_x = max(img.shape[0] - img.shape[1], 0) * (opt.img_size / max(img.shape))
@@ -111,21 +106,14 @@ def main(opt):
 
                 color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0])]
                 # Create a Rectangle patch
-                bbox = patches.Rectangle((x1, y1), box_w, box_h, linewidth=2,
-                                         edgecolor=color,
-                                         facecolor='none')
-                # Add the bbox to the plot
-                ax.add_patch(bbox)
-                # Add label
-                plt.text(x1, y1, s=classes[int(cls_pred)], color='white', verticalalignment='top',
-                         bbox={'color': color, 'pad': 0})
+                x1y1x2y2 = torch.Tensor([x1, y1, x1 + box_w, y1 + box_h])
 
-        # Save generated image with detections
-        plt.axis('off')
-        plt.gca().xaxis.set_major_locator(NullLocator())
-        plt.gca().yaxis.set_major_locator(NullLocator())
-        plt.savefig('output/%d.png' % img_i, bbox_inches='tight', pad_inches=0.0)
-        plt.close()
+                # Add the bbox to the plot
+                plot_one_box(x1y1x2y2, img, label=classes[int(cls_pred)])
+
+            # Save generated image with detections
+            cv2.imwrite('output/' + path.split('/')[-1], img)
+
 
 if __name__ == '__main__':
     main(opt)

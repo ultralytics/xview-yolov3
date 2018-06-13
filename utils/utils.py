@@ -1,11 +1,14 @@
 import math
+import random
 
+import cv2
 import numpy as np
 import torch
 
 # set printoptions
 torch.set_printoptions(linewidth=320, precision=5)
 np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
+
 
 def load_classes(path):
     """
@@ -16,6 +19,25 @@ def load_classes(path):
     return names
 
 
+def plot_one_box(x, im, color=None, label=None):
+    tl = round(0.003 * max(im.shape[0:2]))  # line thickness
+    tf = max(tl - 1, 2)  # font thickness
+
+    c1 = (int(x[0]), int(x[1]))
+    c2 = (int(x[2]), int(x[3]))
+    cls = int(x[-1])
+    if label is None:
+        classes = load_classes('data/coco.names')
+        label = '{0}'.format(classes[cls])
+    color = color or [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
+    cv2.rectangle(im, c1, c2, color, thickness=tl)
+    t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
+    c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+    cv2.rectangle(im, c1, c2, color, -1)  # filled
+    cv2.putText(im, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+    return im
+
+
 def weights_init_normal(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
@@ -24,7 +46,8 @@ def weights_init_normal(m):
         torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
         torch.nn.init.constant_(m.bias.data, 0.0)
 
-#@profile
+
+# @profile
 def bbox_iou(box1, box2, x1y1x2y2=True):
     """
     Returns the IoU of two bounding boxes
@@ -55,6 +78,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     iou = inter_area / (b1_area + b2_area - inter_area + 1e-16)
 
     return iou
+
 
 def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
     """
@@ -114,7 +138,8 @@ def non_max_suppression(prediction, num_classes, conf_thres=0.5, nms_thres=0.4):
 
     return output
 
-#@profile
+
+# @profile
 def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ignore_thres, img_dim):
     nB = target.size(0)
     nA = num_anchors
@@ -137,8 +162,8 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
             gx, gy, gw, gh = target[b, t, 1:5] * dim
 
             # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
-            gi = min(int(gx), dim-1)
-            gj = min(int(gy), dim-1)
+            gi = min(int(gx), dim - 1)
+            gj = min(int(gy), dim - 1)
 
             # Get shape of gt box
             gt_box = torch.FloatTensor(np.array([0, 0, gw, gh])).unsqueeze(0)
@@ -152,7 +177,6 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
             # Get the ground truth box and corresponding best prediction
             gt_box = torch.FloatTensor(np.array([gx, gy, gw, gh])).unsqueeze(0)
             pred_box = pred_boxes[b, best_n, gj, gi].unsqueeze(0)
-
 
             # Coordinates
             tx[b, best_n, gj, gi] = gx - gi
