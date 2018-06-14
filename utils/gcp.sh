@@ -11,7 +11,7 @@ git clone https://github.com/ultralytics/yolov3
 
 # do training
 cd yolov3
-python3  train.py -img_size 864 -batch_size 4 -epochs 10
+python3  train.py -img_size 416 -batch_size 4 -epochs 10
 
 # move training data out
 #sudo mv train_images ..

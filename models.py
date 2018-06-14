@@ -103,11 +103,11 @@ class YOLOLayer(nn.Module):
         prediction = x.view(bs, self.num_anchors, self.bbox_attrs, g_dim, g_dim).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = prediction[..., 0]  # Center x
-        y = prediction[..., 1]  # Center y
+        x = torch.sigmoid(prediction[..., 0])  # Center x
+        y = torch.sigmoid(prediction[..., 1])  # Center y
         w = prediction[..., 2]  # Width
         h = prediction[..., 3]  # Height
-        conf = torch.sigmoid(prediction[..., 4])       # Conf
+        conf = torch.sigmoid(prediction[..., 4])  # Conf
         pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
         # Calculate offsets for each grid
@@ -123,8 +123,8 @@ class YOLOLayer(nn.Module):
 
         # Add offset and scale with anchors
         pred_boxes = FloatTensor(prediction[..., :4].shape)
-        pred_boxes[..., 0] = torch.sigmoid(x).data + grid_x
-        pred_boxes[..., 1] = torch.sigmoid(y).data + grid_y
+        pred_boxes[..., 0] = x.data + grid_x
+        pred_boxes[..., 1] = y.data + grid_y
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
@@ -152,17 +152,25 @@ class YOLOLayer(nn.Module):
             th = th.type(FloatTensor)
             mask = mask.type(FloatTensor)
             tcls = tcls.type(FloatTensor)
+            b = mask == 1
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            loss_x = self.lambda_coord * self.mse_loss(x * mask, tx * mask) / 2
-            loss_y = self.lambda_coord * self.mse_loss(y * mask, ty * mask) / 2
-            loss_w = self.lambda_coord * self.mse_loss(w * mask, tw * mask) / 2
-            loss_h = self.lambda_coord * self.mse_loss(h * mask, th * mask) / 2
-            loss_conf = self.bce_loss(conf * mask, mask) + \
-                        self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
-            loss_cls = self.bce_loss(pred_cls[mask == 1], tcls[mask == 1])
-            loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
+            if b.sum() > 0:
+                loss_x = self.lambda_coord * self.bce_loss(x[b], tx[b])
+                loss_y = self.lambda_coord * self.bce_loss(y[b], ty[b])
+                loss_w = self.lambda_coord * self.mse_loss(w[b], tw[b])
+                loss_h = self.lambda_coord * self.mse_loss(h[b], th[b])
+                loss_cls = self.bce_loss(pred_cls[b], tcls[b])
+            else:
+                loss_x, loss_y, loss_w, loss_h, loss_cls = 0, 0, 0, 0, 0
 
+            # loss_conf = self.bce_loss(conf * mask, mask) + \
+            #            self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
+
+            loss_conf = self.bce_loss(conf[b], mask[b]) + \
+                        self.lambda_noobj * self.bce_loss(conf[mask == 0], mask[mask == 0])
+
+            loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
             return loss, loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
                    nGT, ap
 
