@@ -182,9 +182,9 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
     # nCorrect = 0
     precision, recall = [], []
     for b in range(nB):
-        nT = torch.argmin(target[b, :, 4])  # number of targets (measures index of first zero-height target box)
+        nT = torch.argmin(target[b, :, 4]).item()  # number of targets (measures index of first zero-height target box)
         t = target[b, :nT]
-        nGT += nT.item()
+        nGT += nT
 
         # Convert to position relative to box
         gx, gy, gw, gh = t[:, 1] * dim, t[:, 2] * dim, t[:, 3] * dim, t[:, 4] * dim
@@ -192,28 +192,35 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         gi = torch.clamp(gx.long(), max=dim - 1)
         gj = torch.clamp(gy.long(), max=dim - 1)
         # Calculate ious between ground truth and each of the 3 anchors
-        iou = []
+        iou = torch.zeros(nT, nA)
         for i in range(nA):
-            iou.append(bbox_iou(t[:, 1:] * dim * 32, pred_boxes[b, i, gj, gi] * 32, x1y1x2y2=False))
-        iou = torch.cat(iou).view(nA, -1)
+            iou[:, i] = bbox_iou(t[:, 1:] * dim * 32, pred_boxes[b, i, gj, gi] * 32, x1y1x2y2=False)
+
         # Select best iou and anchor
-        iou, best_a = torch.max(iou, 0)
+        iou, best_a = torch.max(iou, 1)
+
+        # Eliminate non-unique anchor-target relationships. Pick best iou if multiple matches found
+        u = np.concatenate((gi.numpy(), gj.numpy(), best_a.numpy()), 0).reshape(3, -1)
+        iou_order = np.argsort(-iou)  # best to worst
+        _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
+        i = iou_order[first_unique]
+        iou, best_a, gj, gi, gx, gy, gw, gh = iou[i], best_a[i], gj[i], gi[i], gx[i], gy[i], gw[i], gh[i]
 
         # Coordinates
         tx[b, best_a, gj, gi] = gx - gi.float()
         ty[b, best_a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0])
-        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1])
+        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0] + 1e-16)
+        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1] + 1e-16)
         # One-hot encoding of label
-        tcls[b, best_a, gj, gi, t[:, 0].long()] = 1
+        tcls[b, best_a, gj, gi, t[i, 0].long()] = 1
         tconf[b, best_a, gj, gi] = 1
         # predicted classes and confidence
         pcls = torch.argmax(pred_cls[b, best_a, gj, gi], 1)
         pconf = pred_conf[b, best_a, gj, gi]
 
-        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() == t[:, 0])).float()
-        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() != t[:, 0])).float()
+        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() == t[i, 0])).float()
+        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() != t[i, 0])).float()
         FN = ((iou < 0.5) | (pconf < 0.5)).float()
 
         precision.extend((TP / (TP + FP + 1e-16)).tolist())
@@ -221,7 +228,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         # nCorrect += TP.sum().item()
 
         nTP += TP.sum().item()
-        #print(TP.sum(), FP.sum(), FN.sum())
+        # print(TP.sum(), FP.sum(), FN.sum())
 
         # # testing code
         # im = current_img_path[b].permute(1, 2, 0).contiguous().numpy()

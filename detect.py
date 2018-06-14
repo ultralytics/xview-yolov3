@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser()
 parser.add_argument('-image_folder', type=str, default='data/xview_samples1', help='path to dataset')
 parser.add_argument('-config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/epoch159_coordtimesmasks.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/epoch159.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.5, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
