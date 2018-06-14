@@ -83,7 +83,7 @@ class YOLOLayer(nn.Module):
         self.num_anchors = len(anchors)
         self.num_classes = num_classes
         self.bbox_attrs = 5 + num_classes
-        self.img_dim = img_dim
+        self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
         self.ignore_thres = 0.5
         self.lambda_coord = 5
         self.lambda_noobj = 0.5

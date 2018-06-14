@@ -17,13 +17,13 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser()
 parser.add_argument('-image_folder', type=str, default='data/xview_samples', help='path to dataset')
 parser.add_argument('-config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/torchsave0.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/epoch20_SGD_default_864.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.5, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32*13, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32*27, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
 
@@ -38,7 +38,7 @@ def main(opt):
     # Set up model
     model = Darknet(opt.config_path, img_size=opt.img_size)
     #model.load_weights(opt.weights_path)
-    model.load_state_dict(torch.load(opt.weights_path))
+    model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
     model.to(device)
     model.eval()
 
@@ -56,8 +56,8 @@ def main(opt):
     for batch_i, (img_paths, im) in enumerate(dataloader):
         # Configure input
         im = im.type(Tensor)
-        import matplotlib.pyplot as plt
-        plt.imshow(im[0,0])
+        #import matplotlib.pyplot as plt
+        #plt.imshow(im[0,0])
 
         # Get detections
         with torch.no_grad():
@@ -112,7 +112,8 @@ def main(opt):
                 x1y1x2y2 = torch.Tensor([x1, y1, x1 + box_w, y1 + box_h])
 
                 # Add the bbox to the plot
-                plot_one_box(x1y1x2y2, img, label=classes[int(cls_pred)])
+                label = classes[int(cls_pred)]
+                plot_one_box(x1y1x2y2, img, label=None, line_thickness=2)
 
             # Save generated image with detections
             cv2.imwrite('data/xview_predictions/' + path.split('/')[-1], img)

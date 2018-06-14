@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 # set printoptions
-torch.set_printoptions(linewidth=320, precision=5)
+torch.set_printoptions(linewidth=320, precision=5, profile = 'short')
 np.set_printoptions(linewidth=320, formatter={'float_kind': '{11.5g}'.format})  # format short g, %precision=5
 
 
@@ -18,23 +18,18 @@ def load_classes(path):
     return names
 
 
-def plot_one_box(x, im, color=None, label=None):
-    tl = round(0.003 * max(im.shape[0:2]))  # line thickness
-    tf = max(tl - 1, 2)  # font thickness
-
-    c1 = (int(x[0]), int(x[1]))
-    c2 = (int(x[2]), int(x[3]))
-    cls = int(x[-1])
-    if label is None:
-        classes = load_classes('data/coco.names')
-        label = '{0}'.format(classes[cls])
-    color = color or [random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)]
+def plot_one_box(x, im, color=None, label=None, line_thickness=None):
+    tl = line_thickness or round(0.003 * max(im.shape[0:2]))  # line thickness
+    color = color or [random.randint(0, 255) for _ in range(3)]
+    c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
     cv2.rectangle(im, c1, c2, color, thickness=tl)
-    t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
-    c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
-    cv2.rectangle(im, c1, c2, color, -1)  # filled
-    cv2.putText(im, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
-    return im
+    if label:
+        tf = max(tl - 1, 2)  # font thickness
+        t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
+        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+        cv2.rectangle(im, c1, c2, color, -1)  # filled
+        cv2.putText(im, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
+
 
 
 def weights_init_normal(m):
