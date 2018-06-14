@@ -187,7 +187,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         nGT += nT
 
         # Convert to position relative to box
-        gx, gy, gw, gh = t[:, 1] * dim, t[:, 2] * dim, t[:, 3] * dim, t[:, 4] * dim
+        tc, gx, gy, gw, gh = t[:,0], t[:, 1] * dim, t[:, 2] * dim, t[:, 3] * dim, t[:, 4] * dim
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
         gi = torch.clamp(gx.long(), max=dim - 1)
         gj = torch.clamp(gy.long(), max=dim - 1)
@@ -205,7 +205,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
             iou_order = np.argsort(-iou)  # best to worst
             _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
             i = iou_order[first_unique]
-            iou, best_a, gj, gi, gx, gy, gw, gh = iou[i], best_a[i], gj[i], gi[i], gx[i], gy[i], gw[i], gh[i]
+            iou, best_a, gj, gi, tc, gx, gy, gw, gh = iou[i], best_a[i], gj[i], gi[i], tc[i], gx[i], gy[i], gw[i], gh[i]
 
         # Coordinates
         tx[b, best_a, gj, gi] = gx - gi.float()
@@ -214,14 +214,14 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0] + 1e-16)
         th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1] + 1e-16)
         # One-hot encoding of label
-        tcls[b, best_a, gj, gi, t[i, 0].long()] = 1
+        tcls[b, best_a, gj, gi, tc.long()] = 1
         tconf[b, best_a, gj, gi] = 1
         # predicted classes and confidence
         pcls = torch.argmax(pred_cls[b, best_a, gj, gi], 1)
         pconf = pred_conf[b, best_a, gj, gi]
 
-        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() == t[i, 0])).float()
-        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() != t[i, 0])).float()
+        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() == tc)).float()
+        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() != tc)).float()
         FN = ((iou < 0.5) | (pconf < 0.5)).float()
 
         precision.extend((TP / (TP + FP + 1e-16)).tolist())
