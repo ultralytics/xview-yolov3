@@ -13,7 +13,7 @@ git clone https://github.com/ultralytics/yolov3
 
 # do training
 cd yolov3
-python3  train.py -img_size 416 -batch_size 4 -epochs 30
+python3  train.py -img_size 416 -batch_size 4 -epochs 160
 
 # move checkpoint to fuse drive
 mv yolov3/checkpoints/epoch0.pt drive

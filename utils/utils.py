@@ -199,12 +199,13 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         # Select best iou and anchor
         iou, best_a = torch.max(iou, 1)
 
-        # Eliminate non-unique anchor-target relationships. Pick best iou if multiple matches found
-        u = np.concatenate((gi.numpy(), gj.numpy(), best_a.numpy()), 0).reshape(3, -1)
-        iou_order = np.argsort(-iou)  # best to worst
-        _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
-        i = iou_order[first_unique]
-        iou, best_a, gj, gi, gx, gy, gw, gh = iou[i], best_a[i], gj[i], gi[i], gx[i], gy[i], gw[i], gh[i]
+        # Enforce unique anchor-target joinings. Pick best-iou target if multiple targets match to one anchor
+        if nT > 1:
+            u = np.concatenate((gi.numpy(), gj.numpy(), best_a.numpy()), 0).reshape(3, -1)
+            iou_order = np.argsort(-iou)  # best to worst
+            _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
+            i = iou_order[first_unique]
+            iou, best_a, gj, gi, gx, gy, gw, gh = iou[i], best_a[i], gj[i], gi[i], gx[i], gy[i], gw[i], gh[i]
 
         # Coordinates
         tx[b, best_a, gj, gi] = gx - gi.float()
