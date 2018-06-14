@@ -100,14 +100,8 @@ def main(opt):
             model.seen += imgs.shape[0]
             t0 = time.time()
 
-            #if batch_i == 10:
-            #    #model.save_weights('%s/epoch%d_batch%d_final.weights' % (opt.checkpoint_dir, epoch, batch_i))
-            #    torch.save(model.state_dict(), 'checkpoints/torchsave0.pt')
-            #    return
-
         if epoch % opt.checkpoint_interval == 0:
-            model.save_weights('%s/epoch%d.weights' % (opt.checkpoint_dir, epoch))
-    model.save_weights('%s/epoch%d_batch%d_final.weights' % (opt.checkpoint_dir, epoch, batch_i))
+            torch.save(model.state_dict(), '%s/epoch%d.pt' % (opt.checkpoint_dir, epoch))
 
 
 if __name__ == '__main__':
