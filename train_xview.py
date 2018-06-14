@@ -64,7 +64,7 @@ def main(opt):
                             batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
 
     #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, amsgrad=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0002, amsgrad=False)
 
     for epoch in range(opt.epochs):
         t0 = time.time()
