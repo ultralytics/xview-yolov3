@@ -136,15 +136,15 @@ class YOLOLayer(nn.Module):
                 self.bce_loss = self.bce_loss.cuda()
 
             nGT, ap, tx, ty, tw, th, mask, tcls = build_targets(pred_boxes.cpu().data,
-                                                                      conf.cpu().data,
-                                                                      pred_cls.cpu().data,
-                                                                      targets.cpu().data,
-                                                                      scaled_anchors,
-                                                                      self.num_anchors,
-                                                                      self.num_classes,
-                                                                      g_dim,
-                                                                      self.ignore_thres,
-                                                                      self.img_dim)
+                                                                conf.cpu().data,
+                                                                pred_cls.cpu().data,
+                                                                targets.cpu().data,
+                                                                scaled_anchors,
+                                                                self.num_anchors,
+                                                                self.num_classes,
+                                                                g_dim,
+                                                                self.ignore_thres,
+                                                                self.img_dim)
 
             tx = tx.type(FloatTensor)
             ty = ty.type(FloatTensor)
@@ -159,10 +159,16 @@ class YOLOLayer(nn.Module):
             loss_w = self.mse_loss(w * mask, tw * mask)
             loss_h = self.mse_loss(h * mask, th * mask)
 
-            loss_conf = self.bce_loss(conf * mask, mask) + \
-                        self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
+            # loss_conf = self.bce_loss(conf * mask, mask) + \
+            #            self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
+
+            n_1 = (mask == 1).sum()
+            n_0 = (mask == 0).sum()
+            loss_conf = self.bce_loss(conf[mask == 1], torch.ones(int(n_1))) + \
+                        self.lambda_noobj * self.bce_loss(conf[mask == 0], torch.ones(int(n_0)))
 
             loss_cls = self.bce_loss(torch.sigmoid(pred_cls[mask == 1]), tcls[mask == 1])
+
             loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
 
             return loss, loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \

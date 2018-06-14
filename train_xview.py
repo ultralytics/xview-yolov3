@@ -63,7 +63,8 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
 
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
+    #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, amsgrad=True)
 
     for epoch in range(opt.epochs):
         t0 = time.time()
