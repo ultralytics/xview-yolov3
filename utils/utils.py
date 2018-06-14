@@ -223,8 +223,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         # nCorrect += TP.sum().item()
 
         nTP += TP.sum().item()
-        print(TP.sum().item(), FP.sum().item(), FN.sum().item())
-        nTP
+        #print(TP.sum(), FP.sum(), FN.sum())
 
         # # testing code
         # im = current_img_path[b].permute(1, 2, 0).contiguous().numpy()
