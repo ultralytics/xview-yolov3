@@ -103,8 +103,8 @@ class YOLOLayer(nn.Module):
         prediction = x.view(bs, self.num_anchors, self.bbox_attrs, g_dim, g_dim).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = torch.sigmoid(prediction[..., 0])  # Center x
-        y = torch.sigmoid(prediction[..., 1])  # Center y
+        x = prediction[..., 0]  # Center x
+        y = prediction[..., 1]  # Center y
         w = prediction[..., 2]  # Width
         h = prediction[..., 3]  # Height
         conf = torch.sigmoid(prediction[..., 4])       # Conf
@@ -123,8 +123,8 @@ class YOLOLayer(nn.Module):
 
         # Add offset and scale with anchors
         pred_boxes = FloatTensor(prediction[..., :4].shape)
-        pred_boxes[..., 0] = x.data + grid_x
-        pred_boxes[..., 1] = y.data + grid_y
+        pred_boxes[..., 0] = torch.sigmoid(x).data + grid_x
+        pred_boxes[..., 1] = torch.sigmoid(y).data + grid_y
         pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
         pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
@@ -154,8 +154,8 @@ class YOLOLayer(nn.Module):
             tcls = tcls.type(FloatTensor)
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            loss_x = self.lambda_coord * self.bce_loss(x * mask, tx * mask) / 2
-            loss_y = self.lambda_coord * self.bce_loss(y * mask, ty * mask) / 2
+            loss_x = self.lambda_coord * self.mse_loss(x * mask, tx * mask) / 2
+            loss_y = self.lambda_coord * self.mse_loss(y * mask, ty * mask) / 2
             loss_w = self.lambda_coord * self.mse_loss(w * mask, tw * mask) / 2
             loss_h = self.lambda_coord * self.mse_loss(h * mask, th * mask) / 2
             loss_conf = self.bce_loss(conf * mask, mask) + \
