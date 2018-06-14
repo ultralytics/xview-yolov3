@@ -1,4 +1,3 @@
-import math
 import random
 
 import cv2
@@ -47,7 +46,33 @@ def weights_init_normal(m):
         torch.nn.init.constant_(m.bias.data, 0.0)
 
 
-# @profile
+def compute_ap(recall, precision):
+    """ Compute the average precision, given the recall and precision curves.
+    Code originally from https://github.com/rbgirshick/py-faster-rcnn.
+    # Arguments
+        recall:    The recall curve (list).
+        precision: The precision curve (list).
+    # Returns
+        The average precision as computed in py-faster-rcnn.
+    """
+    # correct AP calculation
+    # first append sentinel values at the end
+    mrec = np.concatenate(([0.], recall, [1.]))
+    mpre = np.concatenate(([0.], precision, [0.]))
+
+    # compute the precision envelope
+    for i in range(mpre.size - 1, 0, -1):
+        mpre[i - 1] = np.maximum(mpre[i - 1], mpre[i])
+
+    # to calculate area under PR curve, look for points
+    # where X axis (recall) changes value
+    i = np.where(mrec[1:] != mrec[:-1])[0]
+
+    # and sum (\Delta recall) * prec
+    ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
+    return ap
+
+
 def bbox_iou(box1, box2, x1y1x2y2=True):
     """
     Returns the IoU of two bounding boxes
@@ -80,7 +105,6 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     return iou
 
 
-#@profile
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     """
     Removes detections with lower object confidence score than 'conf_thres' and performs
@@ -141,8 +165,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     return output
 
 
-#@profile
-def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ignore_thres, img_dim):
+# @profile
+def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors, num_classes, dim, ignore_thres,
+                  img_dim):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
@@ -156,17 +181,19 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
     tconf = torch.zeros(nB, nA, dim, dim)
     tcls = torch.zeros(nB, nA, dim, dim, num_classes)
 
+    anchors = torch.FloatTensor(anchors)
 
-    anchors = torch.Tensor(anchors)
-
+    nTP = 0
     nGT = 0
-    nCorrect = 0
+    #nCorrect = 0
+    precision, recall = [], []
     for b in range(nB):
         nT = torch.argmin(target[b, :, 4])  # number of targets (measures index of first zero-height target box)
         nGT += nT.item()
 
         # Convert to position relative to box
-        gx, gy, gw, gh = target[b, :nT, 1] * dim, target[b, :nT, 2] * dim, target[b, :nT, 3] * dim, target[b, :nT, 4] * dim
+        gx, gy, gw, gh = target[b, :nT, 1] * dim, target[b, :nT, 2] * dim, target[b, :nT, 3] * dim, target[b, :nT,
+                                                                                                    4] * dim
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
         gi = torch.clamp(gx.long(), max=dim - 1)
         gj = torch.clamp(gy.long(), max=dim - 1)
@@ -174,63 +201,35 @@ def build_targets(pred_boxes, target, anchors, num_anchors, num_classes, dim, ig
         iou = []
         for i in range(nA):
             iou.append(bbox_iou(target[b, :nT, 1:] * dim, pred_boxes[b, i, gj, gi], x1y1x2y2=False))
-        iou = torch.cat(iou).view(nA,-1)
+        iou = torch.cat(iou).view(nA, -1)
         # Select best iou and anchor
-        iou, best_a = torch.max(iou,0)
+        iou, best_a = torch.max(iou, 0)
 
         # Coordinates
         tx[b, best_a, gj, gi] = gx - gi.float()
         ty[b, best_a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a,0] + 1e-16)
-        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a,1] + 1e-16)
+        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0] + 1e-16)
+        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1] + 1e-16)
         # One-hot encoding of label
         tcls[b, best_a, gj, gi, target[b, :nT, 0].long()] = 1
         tconf[b, best_a, gj, gi] = 1
+        # predicted classes and confidence
+        pcls = torch.argmax(pred_cls[b, best_a, gj, gi], 1)
+        pconf = pred_conf[b, best_a, gj, gi]
 
-        nCorrect += (iou > 0.5).sum().item()
+        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() == target[b, :nT, 0])).float()
+        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() != target[b, :nT, 0])).float()
+        FN = ((iou < 0.5) | (pconf < 0.5)).float()
 
+        precision.extend((TP / (TP + FP + 1e-16)).tolist())
+        recall.extend((TP / (TP + FN + 1e-16)).tolist())
+        #nCorrect += TP.sum().item()
 
-        # for t in range(nT):
-        #     nGT += 1
-        #     # Convert to position relative to box
-        #     gx, gy, gw, gh = target[b, t, 1:] * dim
-        #
-        #     # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
-        #     gi = min(int(gx), dim - 1)
-        #     gj = min(int(gy), dim - 1)
-        #
-        #     # # Get shape of gt box
-        #     # gt_box = torch.FloatTensor([0, 0, gw, gh]).unsqueeze(0)
-        #     # Get shape of anchor box
-        #     # anchor_shapes = torch.FloatTensor(np.concatenate((np.zeros((len(anchors), 2)), np.array(anchors)), 1))
-        #     # # Calculate iou between gt and anchor shape
-        #     # anch_ious = bbox_iou(gt_box, anchor_shapes)
-        #     # # Find the best matching anchor box
-        #     # best_a = np.argmax(anch_ious)
-        #     # # Get the ground truth box and corresponding best prediction
-        #     # gt_box = torch.FloatTensor([gx, gy, gw, gh]).unsqueeze(0)
-        #     # pred_box = pred_boxes[b, best_a, gj, gi].unsqueeze(0)
-        #     # # Calculate iou between ground truth and best matching prediction
-        #     # iou = bbox_iou(gt_box, pred_box, x1y1x2y2=False)
-        #
-        #     best_a = best_anchors[t]
-        #
-        #     # Coordinates
-        #     tx[b, best_a, gj, gi] = gx - gi
-        #     ty[b, best_a, gj, gi] = gy - gj
-        #     # Width and height
-        #     tw[b, best_a, gj, gi] = math.log(gw / anchors[best_a][0] + 1e-16)
-        #     th[b, best_a, gj, gi] = math.log(gh / anchors[best_a][1] + 1e-16)
-        #     # One-hot encoding of label
-        #     tcls[b, best_a, gj, gi, int(target[b, t, 0])] = 1
-        #     tconf[b, best_a, gj, gi] = 1
-        #
-        #     #if iou > 0.5:
-        #     #    nCorrect += 1
+        nTP += TP.sum().item()
 
-
-    return nGT, nCorrect, tx, ty, tw, th, tconf, tcls
+    ap = nTP/nGT #compute_ap(recall, precision)
+    return nGT, ap, tx, ty, tw, th, tconf, tcls
 
 
 def to_categorical(y, num_classes):

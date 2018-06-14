@@ -15,8 +15,7 @@ class ImageFolder(Dataset):  # for eval-only
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
         # Extract image
-        img = cv2.imread(img_path)
-        input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
+        input_img = resize_square(cv2.imread(img_path), height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
 
         # As pytorch tensor
         input_img = torch.from_numpy(input_img).float()
@@ -132,7 +131,7 @@ class ListDataset_xview(Dataset):  # for training
         #  Label
         # ---------
 
-        label_path = self.label_files[index % len(self.img_files)].rstrip()
+        label_path = self.label_files[index % len(self.img_files)]
 
         labels = None
         if os.path.exists(label_path):
@@ -162,19 +161,20 @@ class ListDataset_xview(Dataset):  # for training
             labels[:, 3] *= w / padded_w
             labels[:, 4] *= h / padded_h
             # remap xview classes 11-94 to 0-61
-            labels[:, 0] = remap_classes(labels[:, 0])
+            labels[:, 0] = remap_xview_classes(labels[:, 0])
         # Fill matrix
         filled_labels = np.zeros((self.max_objects, 5))
         if labels is not None:
-            filled_labels[range(len(labels))[:self.max_objects]] = labels[:self.max_objects]
+            nT = len(labels)  # number of targets
+            filled_labels[range(nT)[:self.max_objects]] = labels[:self.max_objects]
         filled_labels = torch.from_numpy(filled_labels)
-        return img_path, input_img, filled_labels
+        return img_path, input_img, filled_labels, nT
 
     def __len__(self):
         return len(self.img_files)
 
 
-def remap_classes(classes):  # remap xview classes 11-94 to 0-61
+def remap_xview_classes(classes):  # remap xview classes 11-94 to 0-61
     c = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14, 15,
          -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34, 35, 36, 37,
          -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, 50, 51, 52, -1,

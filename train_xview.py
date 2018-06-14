@@ -1,6 +1,5 @@
 import argparse
 import time
-import os
 
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -28,7 +27,7 @@ opt = parser.parse_args()
 print(opt)
 
 
-#@profile
+# @profile
 def main(opt):
     os.makedirs('output', exist_ok=True)
     os.makedirs('checkpoints', exist_ok=True)
@@ -67,36 +66,49 @@ def main(opt):
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
 
     for epoch in range(opt.epochs):
-        for batch_i, (_, imgs, targets) in enumerate(dataloader):
-            t0 = time.time()
+        t0 = time.time()
+        epochAP, nGT = 0, 0
+        print('\n' + '%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
+        for batch_i, (_, imgs, targets, nT) in enumerate(dataloader):
             imgs = imgs.type(Tensor)
             targets = targets.type(Tensor)
 
-            # import matplotlib.pyplot as plt
-            # plt.imshow(imgs[0,0])
-
             loss = model(imgs, targets)
+            #detections = non_max_suppression(model(imgs[3].unsqueeze(0)), opt.conf_thres, opt.nms_thres)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            s = '[Epoch %d/%d, Batch %d/%d] [x %f, y %f, w %f, h %f, conf %f, cls %f, total %f, AP: %.5f] %.3fs' % (
-                epoch, opt.epochs, batch_i, len(dataloader),
+            # s = '[Epoch %d/%d, Batch %d/%d] [x %f, y %f, w %f, h %f, conf %f, cls %f, total %f, AP: %.5f] %.3fs' % (
+            #     epoch, opt.epochs, batch_i, len(dataloader),
+            #     model.losses['x'], model.losses['y'], model.losses['w'],
+            #     model.losses['h'], model.losses['conf'], model.losses['cls'],
+            #     loss.item(), model.losses['AP'], time.time() - t0)
+
+            epochAP = (epochAP*batch_i + model.losses['AP'])/(batch_i + 1)
+            nGT += model.losses['nGT']
+            s = ('%10s%10s' + '%10.3g' * 10) % (
+                '%g/%g' % (epoch, opt.epochs), '%g/%g' % (batch_i, len(dataloader)),
                 model.losses['x'], model.losses['y'], model.losses['w'],
                 model.losses['h'], model.losses['conf'], model.losses['cls'],
-                loss.item(), model.losses['AP'], time.time() - t0)
+                loss.item(), model.losses['AP'], epochAP, time.time() - t0)
             print(s)
             with open('printedResults.txt', 'a') as file:
                 file.write(s + '\n')
 
             model.seen += imgs.shape[0]
+            t0 = time.time()
 
-            #if batch_i == 0:
-            #   return
+            #if batch_i == 10:
+            #    #model.save_weights('%s/epoch%d_batch%d_final.weights' % (opt.checkpoint_dir, epoch, batch_i))
+            #    torch.save(model.state_dict(), 'checkpoints/torchsave0.pt')
+            #    return
 
         if epoch % opt.checkpoint_interval == 0:
-            model.save_weights('%s/%d.weights' % (opt.checkpoint_dir, epoch))
+            model.save_weights('%s/epoch%d.weights' % (opt.checkpoint_dir, epoch))
+    model.save_weights('%s/epoch%d_batch%d_final.weights' % (opt.checkpoint_dir, epoch, batch_i))
+
 
 if __name__ == '__main__':
     main(opt)

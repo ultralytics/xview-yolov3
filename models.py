@@ -8,6 +8,7 @@ from utils.parse_config import *
 from utils.utils import build_targets
 
 
+# @profile
 def create_modules(module_defs):
     """
     Constructs module list of layer blocks from module configuration in module_defs
@@ -90,7 +91,7 @@ class YOLOLayer(nn.Module):
         self.mse_loss = nn.MSELoss()
         self.bce_loss = nn.BCELoss()
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None):
         bs = x.shape[0]
         g_dim = x.shape[2]
@@ -134,14 +135,16 @@ class YOLOLayer(nn.Module):
                 self.mse_loss = self.mse_loss.cuda()
                 self.bce_loss = self.bce_loss.cuda()
 
-            nGT, nCorrect, tx, ty, tw, th, mask, tcls = build_targets(pred_boxes.cpu().data,
-                                                                       targets.cpu().data,
-                                                                       scaled_anchors,
-                                                                       self.num_anchors,
-                                                                       self.num_classes,
-                                                                       g_dim,
-                                                                       self.ignore_thres,
-                                                                       self.img_dim)
+            nGT, ap, tx, ty, tw, th, mask, tcls = build_targets(pred_boxes.cpu().data,
+                                                                      conf.cpu().data,
+                                                                      pred_cls.cpu().data,
+                                                                      targets.cpu().data,
+                                                                      scaled_anchors,
+                                                                      self.num_anchors,
+                                                                      self.num_classes,
+                                                                      g_dim,
+                                                                      self.ignore_thres,
+                                                                      self.img_dim)
 
             tx = tx.type(FloatTensor)
             ty = ty.type(FloatTensor)
@@ -149,20 +152,21 @@ class YOLOLayer(nn.Module):
             th = th.type(FloatTensor)
             mask = mask.type(FloatTensor)
             tcls = tcls.type(FloatTensor)
-            bool_mask = mask == 1
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            loss_x = self.lambda_coord * self.bce_loss(x * mask, tx * mask) / 2
-            loss_y = self.lambda_coord * self.bce_loss(y * mask, ty * mask) / 2
-            loss_w = self.lambda_coord * self.mse_loss(w * mask, tw * mask) / 2
-            loss_h = self.lambda_coord * self.mse_loss(h * mask, th * mask) / 2
+            loss_x = self.lambda_coord * self.mse_loss(x * mask, tx * mask)
+            loss_y = self.lambda_coord * self.mse_loss(y * mask, ty * mask)
+            loss_w = self.mse_loss(w * mask, tw * mask)
+            loss_h = self.mse_loss(h * mask, th * mask)
+
             loss_conf = self.bce_loss(conf * mask, mask) + \
                         self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
-            loss_cls = self.bce_loss(torch.sigmoid(pred_cls[bool_mask]), tcls[bool_mask])
+
+            loss_cls = self.bce_loss(torch.sigmoid(pred_cls[mask == 1]), tcls[mask == 1])
             loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
 
-            return loss, loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), float(
-                nCorrect / nGT)
+            return loss, loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
+                   nGT, ap
 
         else:
             # If not in training phase return predictions
@@ -183,7 +187,7 @@ class Darknet(nn.Module):
         self.img_size = img_size
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen, 0])
-        self.loss_names = ['x', 'y', 'w', 'h', 'conf', 'cls', 'AP']
+        self.loss_names = ['x', 'y', 'w', 'h', 'conf', 'cls', 'nGT', 'AP']
 
     def forward(self, x, targets=None):
         is_training = targets is not None
@@ -211,7 +215,10 @@ class Darknet(nn.Module):
                 output.append(x)
             layer_outputs.append(x)
 
-        self.losses['AP'] /= 3
+        if is_training:
+            self.losses['nGT'] /= 3
+            self.losses['AP'] /= 3
+
         return sum(output) if is_training else torch.cat(output, 1)
 
     def load_weights(self, weights_path):
