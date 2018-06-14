@@ -15,15 +15,15 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/xview_samples', help='path to dataset')
+parser.add_argument('-image_folder', type=str, default='data/xview_samples1', help='path to dataset')
 parser.add_argument('-config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/epoch20_SGD_default_864.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/epoch0_adam_lossfixes_416.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.5, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32*27, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32*13, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
 
@@ -92,6 +92,20 @@ def main(opt):
         # Image height and width after padding is removed
         unpad_h = opt.img_size - pad_y
         unpad_w = opt.img_size - pad_x
+
+        # write results to .txt file
+        #path_predictions: a folder path of prediction files.
+        #  Prediction files should have filename format 'XYZ.tif.txt',
+        #  where 'XYZ.tif' is the xView TIFF file being predicted on.
+        #  Prediction files should be in space-delimited csv format, with each
+        #  line like (xmin ymin xmax ymax class_prediction score_prediction)
+
+        fname = 'data/xview_predictions/' + path.split('/')[-1] + '.txt'
+        if os._exists(fname):
+            os.remove(fname)
+        with open(fname, 'a') as file:
+           for  x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, cls_pred, conf) )
 
         # Draw bounding boxes and labels of detections
         if detections is not None:

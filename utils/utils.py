@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 # set printoptions
-torch.set_printoptions(linewidth=320, precision=5, profile = 'short')
+torch.set_printoptions(linewidth=320, precision=5, profile='short')
 np.set_printoptions(linewidth=320, formatter={'float_kind': '{11.5g}'.format})  # format short g, %precision=5
 
 
@@ -29,7 +29,6 @@ def plot_one_box(x, im, color=None, label=None, line_thickness=None):
         c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
         cv2.rectangle(im, c1, c2, color, -1)  # filled
         cv2.putText(im, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
-
 
 
 def weights_init_normal(m):
@@ -89,11 +88,11 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     inter_rect_x2 = torch.min(b1_x2, b2_x2)
     inter_rect_y2 = torch.min(b1_y2, b2_y2)
     # Intersection area
-    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1 + 1, 0) * \
-                 torch.clamp(inter_rect_y2 - inter_rect_y1 + 1, 0)
+    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1, 0) * \
+                 torch.clamp(inter_rect_y2 - inter_rect_y1, 0)
     # Union Area
-    b1_area = (b1_x2 - b1_x1 + 1) * (b1_y2 - b1_y1 + 1)
-    b2_area = (b2_x2 - b2_x1 + 1) * (b2_y2 - b2_y1 + 1)
+    b1_area = (b1_x2 - b1_x1) * (b1_y2 - b1_y1)
+    b2_area = (b2_x2 - b2_x1) * (b2_y2 - b2_y1)
 
     iou = inter_area / (b1_area + b2_area - inter_area + 1e-16)
 
@@ -162,7 +161,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
 
 # @profile
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors, num_classes, dim, ignore_thres,
-                  img_dim):
+                  img_dim, current_img_path):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
@@ -180,22 +179,22 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
 
     nTP = 0
     nGT = 0
-    #nCorrect = 0
+    # nCorrect = 0
     precision, recall = [], []
     for b in range(nB):
         nT = torch.argmin(target[b, :, 4])  # number of targets (measures index of first zero-height target box)
+        t = target[b, :nT]
         nGT += nT.item()
 
         # Convert to position relative to box
-        gx, gy, gw, gh = target[b, :nT, 1] * dim, target[b, :nT, 2] * dim, target[b, :nT, 3] * dim, target[b, :nT,
-                                                                                                    4] * dim
+        gx, gy, gw, gh = t[:, 1] * dim, t[:, 2] * dim, t[:, 3] * dim, t[:, 4] * dim
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
         gi = torch.clamp(gx.long(), max=dim - 1)
         gj = torch.clamp(gy.long(), max=dim - 1)
         # Calculate ious between ground truth and each of the 3 anchors
         iou = []
         for i in range(nA):
-            iou.append(bbox_iou(target[b, :nT, 1:] * dim, pred_boxes[b, i, gj, gi], x1y1x2y2=False))
+            iou.append(bbox_iou(t[:, 1:] * dim * 32, pred_boxes[b, i, gj, gi] * 32, x1y1x2y2=False))
         iou = torch.cat(iou).view(nA, -1)
         # Select best iou and anchor
         iou, best_a = torch.max(iou, 0)
@@ -204,26 +203,50 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         tx[b, best_a, gj, gi] = gx - gi.float()
         ty[b, best_a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0] + 1e-16)
-        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1] + 1e-16)
+        tw[b, best_a, gj, gi] = gw / anchors[best_a, 0]
+        th[b, best_a, gj, gi] = gh / anchors[best_a, 1]
+        #tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0])
+        #th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1])
         # One-hot encoding of label
-        tcls[b, best_a, gj, gi, target[b, :nT, 0].long()] = 1
+        tcls[b, best_a, gj, gi, t[:, 0].long()] = 1
         tconf[b, best_a, gj, gi] = 1
         # predicted classes and confidence
         pcls = torch.argmax(pred_cls[b, best_a, gj, gi], 1)
         pconf = pred_conf[b, best_a, gj, gi]
 
-        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() == target[b, :nT, 0])).float()
-        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() != target[b, :nT, 0])).float()
+        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() == t[:, 0])).float()
+        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls.float() != t[:, 0])).float()
         FN = ((iou < 0.5) | (pconf < 0.5)).float()
 
         precision.extend((TP / (TP + FP + 1e-16)).tolist())
         recall.extend((TP / (TP + FN + 1e-16)).tolist())
-        #nCorrect += TP.sum().item()
+        # nCorrect += TP.sum().item()
 
         nTP += TP.sum().item()
+        print(TP.sum().item(), FP.sum().item(), FN.sum().item())
+        nTP
 
-    ap = nTP/nGT #compute_ap(recall, precision)
+        # # testing code
+        # im = current_img_path[b].permute(1, 2, 0).contiguous().numpy()
+        # #for a in t:
+        # a = t[1]
+        # txy1xy2 = torch.Tensor([a[1] - a[3] / 2, a[2] - a[4] / 2, a[1] + a[3] / 2, a[2] + a[4] / 2]) * dim * 32
+        # plot_one_box(txy1xy2, im, label=None, line_thickness=1, color=[0, 0, 1])
+        # #for i in range(nT):
+        # i = 1
+        # j = 2 #best_a[i]
+        # x = pred_boxes[b, j, gj[i], gi[i]][0]
+        # y = pred_boxes[b, j, gj[i], gi[i]][1]
+        # w = pred_boxes[b, j, gj[i], gi[i]][2]
+        # h = pred_boxes[b, j, gj[i], gi[i]][3]
+        # pxy1xy2 = torch.Tensor([x - w / 2, y - h / 2, x + w / 2, y + h / 2]) * 32
+        # plot_one_box(pxy1xy2, im, label=None, line_thickness=1, color=[0, 1, 0])
+        #
+        # print(bbox_iou(txy1xy2.unsqueeze(0), pxy1xy2.unsqueeze(0), x1y1x2y2=True))
+        # import matplotlib.pyplot as plt
+        # plt.imshow(im)
+
+    ap = nTP / nGT  # compute_ap(recall, precision)
     return nGT, ap, tx, ty, tw, th, tconf, tcls
 
 

@@ -12,7 +12,7 @@ from utils.utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=30, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/samples', help='path to dataset')
-parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=1, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
 parser.add_argument('-data_config_path', type=str, default='config/xview.data', help='path to data config file')
 parser.add_argument('-weights_path', type=str, default='weights/yolov3.weights', help='path to weights file')
@@ -20,7 +20,7 @@ parser.add_argument('-class_path', type=str, default='data/xview.names', help='p
 parser.add_argument('-conf_thres', type=float, default=0.8, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=2, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 13, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 27, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -64,16 +64,17 @@ def main(opt):
                             batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
 
     #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0002)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(opt.epochs):
         t0 = time.time()
         epochAP, nGT = 0, 0
         print('\n' + '%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
-        for batch_i, (_, imgs, targets, nT) in enumerate(dataloader):
+        for batch_i, (impath, imgs, targets, nT) in enumerate(dataloader):
             imgs = imgs.type(Tensor)
             targets = targets.type(Tensor)
 
+            model.current_img_path = imgs
             loss = model(imgs, targets)
             #detections = non_max_suppression(model(imgs[3].unsqueeze(0)), opt.conf_thres, opt.nms_thres)
 

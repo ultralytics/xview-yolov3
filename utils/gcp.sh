@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
-## move training data out
-#sudo mv yolov3/train_images ..
-#sudo mv yolov3/train_labels ..
-#
-##clone repo
+# reattach screen
+# screen -r
+
+# detach from screen
+# ctrl + a + d
+
+# clone repo
 cd ..
 sudo rm -rf yolov3
 git clone https://github.com/ultralytics/yolov3
@@ -13,8 +15,8 @@ git clone https://github.com/ultralytics/yolov3
 cd yolov3
 python3  train.py -img_size 416 -batch_size 4 -epochs 10
 
-# move training data out
-#sudo mv train_images ..
-#sudo mv train_labels ..
+# move checkpoint to fuse drive
+mv yolov3/checkpoints/epoch0.pt drive
+
 
 #sudo shutdown
