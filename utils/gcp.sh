@@ -13,7 +13,7 @@
 #sudo mv train_labels yolov3
 
 # do training
-python3  train_xview.py -img_size 416 -batch_size 4 -epochs 30
+python3  train_xview.py -img_size 864 -batch_size 4 -epochs 30
 
 # move training data out
 #sudo mv train_images ..

@@ -107,8 +107,8 @@ class YOLOLayer(nn.Module):
         y = torch.sigmoid(prediction[..., 1])  # Center y
         w = prediction[..., 2]  # Width
         h = prediction[..., 3]  # Height
-        conf = torch.sigmoid(prediction[..., 4])  # Conf
-        pred_cls = prediction[..., 5:]  # Class
+        conf = torch.sigmoid(prediction[..., 4])       # Conf
+        pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
         # Calculate offsets for each grid
         grid_x = torch.linspace(0, g_dim - 1, g_dim).repeat(g_dim, 1).repeat(bs * self.num_anchors, 1, 1).view(
@@ -154,21 +154,13 @@ class YOLOLayer(nn.Module):
             tcls = tcls.type(FloatTensor)
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            loss_x = self.lambda_coord * self.mse_loss(x * mask, tx * mask)
-            loss_y = self.lambda_coord * self.mse_loss(y * mask, ty * mask)
-            loss_w = self.mse_loss(w * mask, tw * mask)
-            loss_h = self.mse_loss(h * mask, th * mask)
-
-            # loss_conf = self.bce_loss(conf * mask, mask) + \
-            #            self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
-
-            n_1 = (mask == 1).sum()
-            n_0 = (mask == 0).sum()
-            loss_conf = self.bce_loss(conf[mask == 1], torch.ones(int(n_1))) + \
-                        self.lambda_noobj * self.bce_loss(conf[mask == 0], torch.ones(int(n_0)))
-
-            loss_cls = self.bce_loss(torch.sigmoid(pred_cls[mask == 1]), tcls[mask == 1])
-
+            loss_x = self.lambda_coord * self.bce_loss(x * mask, tx * mask) / 2
+            loss_y = self.lambda_coord * self.bce_loss(y * mask, ty * mask) / 2
+            loss_w = self.lambda_coord * self.mse_loss(w * mask, tw * mask) / 2
+            loss_h = self.lambda_coord * self.mse_loss(h * mask, th * mask) / 2
+            loss_conf = self.bce_loss(conf * mask, mask) + \
+                        self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
+            loss_cls = self.bce_loss(pred_cls[mask == 1], tcls[mask == 1])
             loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
 
             return loss, loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
@@ -176,7 +168,6 @@ class YOLOLayer(nn.Module):
 
         else:
             # If not in training phase return predictions
-            pred_cls = torch.sigmoid(pred_cls)
             output = torch.cat(
                 (pred_boxes.view(bs, -1, 4) * stride, conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.num_classes)),
                 -1)
