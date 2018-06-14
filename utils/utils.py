@@ -203,10 +203,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         tx[b, best_a, gj, gi] = gx - gi.float()
         ty[b, best_a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, best_a, gj, gi] = gw / anchors[best_a, 0]
-        th[b, best_a, gj, gi] = gh / anchors[best_a, 1]
-        #tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0])
-        #th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1])
+        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0])
+        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1])
         # One-hot encoding of label
         tcls[b, best_a, gj, gi, t[:, 0].long()] = 1
         tconf[b, best_a, gj, gi] = 1

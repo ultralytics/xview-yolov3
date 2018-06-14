@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser()
 parser.add_argument('-image_folder', type=str, default='data/xview_samples1', help='path to dataset')
 parser.add_argument('-config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/epoch0_adam_lossfixes_416.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/epoch159_coordtimesmasks.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.5, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
@@ -76,7 +76,7 @@ def main(opt):
 
     # Bounding-box colors
     cmap = plt.get_cmap('tab20b')
-    colors = [cmap(i) for i in np.linspace(0, 1, 20)]
+    colors = [cmap(i)[0:3] for i in np.linspace(0, 1, 20)]
 
     print('\nSaving images:')
     # Iterate through images and save plot of detections
@@ -101,7 +101,7 @@ def main(opt):
         #  line like (xmin ymin xmax ymax class_prediction score_prediction)
 
         fname = 'data/xview_predictions/' + path.split('/')[-1] + '.txt'
-        if os._exists(fname):
+        if os.path.isfile(fname):
             os.remove(fname)
         with open(fname, 'a') as file:
            for  x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
@@ -112,8 +112,13 @@ def main(opt):
             unique_labels = detections[:, -1].cpu().unique()
             n_cls_preds = len(unique_labels)
             bbox_colors = random.sample(colors, n_cls_preds)
+
+            for i in unique_labels:
+                n = sum(detections[:,-1]==i)
+                print('%g %ss' % (n, classes[int(i)]))
+
             for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                print('\t+ Label: %s, Conf: %.5f' % (classes[int(cls_pred)], cls_conf.item()))
+                #print('\t%s, %.2f' % (classes[int(cls_pred)], cls_conf.item()))
 
                 # Rescale coordinates to original dimensions
                 box_h = ((y2 - y1) / unpad_h) * img.shape[0]
@@ -121,16 +126,18 @@ def main(opt):
                 y1 = ((y1 - pad_y // 2) / unpad_h) * img.shape[0]
                 x1 = ((x1 - pad_x // 2) / unpad_w) * img.shape[1]
 
+                # color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0])]
                 color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0])]
                 # Create a Rectangle patch
                 x1y1x2y2 = torch.Tensor([x1, y1, x1 + box_w, y1 + box_h])
 
                 # Add the bbox to the plot
-                label = classes[int(cls_pred)]
-                plot_one_box(x1y1x2y2, img, label=None, line_thickness=2)
+                # label = classes[int(cls_pred)]
+                plot_one_box(x1y1x2y2, img, color=[c * 255 for c in color], label=None, line_thickness=2)
 
             # Save generated image with detections
             cv2.imwrite('data/xview_predictions/' + path.split('/')[-1], img)
+            print('\n')
 
 
 if __name__ == '__main__':

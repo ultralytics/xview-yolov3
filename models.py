@@ -123,10 +123,8 @@ class YOLOLayer(nn.Module):
         pred_boxes = FloatTensor(prediction[..., :4].shape)
         pred_boxes[..., 0] = x.data + grid_x
         pred_boxes[..., 1] = y.data + grid_y
-        pred_boxes[..., 2] = w.data * anchor_w
-        pred_boxes[..., 3] = h.data * anchor_h
-        #pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
-        #pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
+        pred_boxes[..., 2] = torch.exp(w.data) * anchor_w
+        pred_boxes[..., 3] = torch.exp(h.data) * anchor_h
 
         # Training
         if targets is not None:
@@ -156,14 +154,14 @@ class YOLOLayer(nn.Module):
             b = (mask == 1).float()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            loss_x = self.lambda_coord * self.bce_loss(x * b, tx * b)
-            loss_y = self.lambda_coord * self.bce_loss(y * b, ty * b)
-            loss_w = self.lambda_coord * self.mse_loss(w * b, tw * b)
-            loss_h = self.lambda_coord * self.mse_loss(h * b, th * b)
+            loss_x = self.lambda_coord * self.mse_loss(x * b, tx * b) * 8
+            loss_y = self.lambda_coord * self.mse_loss(y * b, ty * b) * 8
+            loss_w = self.lambda_coord * self.mse_loss(w * b, tw * b) / 4
+            loss_h = self.lambda_coord * self.mse_loss(h * b, th * b) / 4
             loss_cls = self.bce_loss(pred_cls[mask==1], tcls[mask==1])
 
             #loss_conf = self.bce_loss(conf * mask, mask) + \
-              #         self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
+             #          self.lambda_noobj * self.bce_loss(conf * (1 - mask), mask * (1 - mask))
 
             loss_conf = self.bce_loss(conf[mask==1], mask[mask==1]) + \
                         self.lambda_noobj * self.bce_loss(conf[mask == 0], mask[mask == 0])
