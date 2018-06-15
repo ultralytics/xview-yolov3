@@ -96,8 +96,8 @@ def main(opt):
             t0 = time.time()
 
         if cuda and (epoch % opt.checkpoint_interval == 0):
-            torch.save(model.state_dict(), '%s/epoch%d_adam_864.pt' % (opt.checkpoint_dir, epoch))
-    torch.save(model.state_dict(), '%s/epoch%d_adam_864%d.pt' % (opt.checkpoint_dir, epoch))
+            torch.save(model.state_dict(), '%s/epoch%d_adam_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
+        torch.save(model.state_dict(), '%s/epoch%d_adam_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
 
 
 if __name__ == '__main__':
