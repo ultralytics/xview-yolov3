@@ -12,7 +12,7 @@ from utils.utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=360, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='train_images', help='path to dataset')
-parser.add_argument('-batch_size', type=int, default=2, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
 parser.add_argument('-data_config_path', type=str, default='config/xview.data', help='path to data config file')
 parser.add_argument('-weights_path', type=str, default='checkpoints/epoch29.pt', help='path to weights file')
@@ -41,10 +41,10 @@ def main(opt):
 
     # Get data configuration
     # data_config = parse_data_config(opt.data_config_path)
-    train_path = '/Users/glennjocher/Downloads/DATA/xview/'  # data_config['train']
+    #train_path = '/Users/glennjocher/Downloads/DATA/xview/'  # data_config['train']
 
     # if cuda:
-    #    train_path = '../'
+    train_path = '../'
 
     # Get hyper parameters
     hyperparams = parse_model_config(opt.model_config_path)[0]
