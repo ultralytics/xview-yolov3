@@ -94,12 +94,12 @@ class ListDataset(Dataset):  # for training
 
 
 class ListDataset_xview(Dataset):  # for training
-    # @profile
     def __init__(self, folder_path, img_size=416):
-        self.img_files = sorted(glob.glob('%s/*.*' % (folder_path + 'train_images')))
+        p = folder_path + 'train_images'
+        self.img_files = sorted(glob.glob('%s/*.*' % p))
+        assert len(self.img_files)>0, 'No images found in path %s' % p
         self.img_shape = (img_size, img_size)
-        self.label_files = [path.replace('train_images', 'train_labels').replace('.tif', '.txt') for
-                            path in self.img_files]
+        self.label_files = [path.replace('_images', '_labels').replace('.tif', '.txt') for path in self.img_files]
         self.img_shape = (img_size, img_size)
         self.max_objects = 5000
 
@@ -111,8 +111,6 @@ class ListDataset_xview(Dataset):  # for training
         # ---------
 
         img_path = self.img_files[index % len(self.img_files)]
-        #if not os.path.isfile(img_path + '.small.tif'):
-
         img = cv2.imread(img_path)
 
         h, w, _ = img.shape
