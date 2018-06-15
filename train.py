@@ -27,7 +27,7 @@ opt = parser.parse_args()
 print(opt)
 
 
-# @profile
+#@profile
 def main(opt):
     os.makedirs('output', exist_ok=True)
     os.makedirs('checkpoints', exist_ok=True)
@@ -53,7 +53,7 @@ def main(opt):
     burn_in = int(hyperparams['burn_in'])
 
     # Initiate model
-    model = Darknet(opt.model_config_path)
+    model = Darknet(opt.model_config_path, opt.img_size)
     # model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
     model.apply(weights_init_normal)  # random weights
     model.to(device).train()
@@ -62,8 +62,8 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, amsgrad=True)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
+    #optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, amsgrad=True)
 
     for epoch in range(opt.epochs):
         print('%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
@@ -96,8 +96,8 @@ def main(opt):
             t0 = time.time()
 
         if cuda and (epoch % opt.checkpoint_interval == 0):
-            torch.save(model.state_dict(), '%s/epoch%d_adam_%g.pt' % (opt.checkpoint_dir, epoch,opt.img_size))
-        torch.save(model.state_dict(), '%s/epoch%d_adam_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
+            torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch,opt.img_size))
+        torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
 
 
 if __name__ == '__main__':

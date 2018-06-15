@@ -20,14 +20,14 @@ parser.add_argument('-class_path', type=str, default='data/xview.names', help='p
 parser.add_argument('-conf_thres', type=float, default=0.8, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=4, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 27, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=4, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
 print(opt)
 
 
-# @profile
+#@profile
 def main(opt):
     os.makedirs('output', exist_ok=True)
     os.makedirs('checkpoints', exist_ok=True)
@@ -62,8 +62,8 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, amsgrad=True)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
+    #optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, amsgrad=True)
 
     for epoch in range(opt.epochs):
         print('%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
@@ -92,12 +92,12 @@ def main(opt):
             with open('printedResults.txt', 'a') as file:
                file.write(s + '\n')
             model.seen += imgs.shape[0]
-            
+
             t0 = time.time()
 
         if cuda and (epoch % opt.checkpoint_interval == 0):
-            torch.save(model.state_dict(), '%s/epoch%d_adam_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
-        torch.save(model.state_dict(), '%s/epoch%d_adam_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
+            torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch,opt.img_size))
+        torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
 
 
 if __name__ == '__main__':

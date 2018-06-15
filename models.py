@@ -185,6 +185,8 @@ class Darknet(nn.Module):
         super(Darknet, self).__init__()
         self.current_img_path = ''
         self.module_defs = parse_model_config(config_path)
+        self.module_defs[0]['height'] = img_size
+
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
         self.seen = 0

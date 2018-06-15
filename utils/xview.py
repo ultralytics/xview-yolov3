@@ -28,13 +28,22 @@ def get_labels(fname):
     return coords, chips, classes
 
 
-#path = '/Users/glennjocher/Downloads/DATA/xview/'
+def plotResults():
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).T
+    x, y, w, h, conf, cls, total, AP, mAP, time = results
+    plt.plot(mAP)
+
+
+# path = '/Users/glennjocher/Downloads/DATA/xview/'
 path = ''
 fname = path + 'xView_train.geojson'
 coords, chips, classes = get_labels(fname)
 
 # create train_labels folder in coco format
-nF = [] # number of features
+nF = []  # number of features
 os.makedirs(path + 'train_labels/', exist_ok=True)
 for name in tqdm(np.unique(chips)):
     rows = [i for i, x in enumerate(chips) if x == name]
@@ -43,4 +52,3 @@ for name in tqdm(np.unique(chips)):
         with open(path + 'train_labels/' + name.replace('.tif', '.txt'), 'a') as file:
             for i in rows:
                 file.write('%g %g %g %g %g\n' % (classes[i], *coords[i]))
-
