@@ -184,17 +184,18 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
     for b in range(nB):
         nT = torch.argmin(target[b, :, 4]).item()  # number of targets (measures index of first zero-height target box)
         t = target[b, :nT]
+        tb = t[:, 1:] * dim
         nGT += nT
 
         # Convert to position relative to box
-        tc, gx, gy, gw, gh = t[:,0], t[:, 1] * dim, t[:, 2] * dim, t[:, 3] * dim, t[:, 4] * dim
+        tc, gx, gy, gw, gh = t[:, 0], tb[:, 0], tb[:, 1], tb[:, 2], tb[:, 3]
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
         gi = torch.clamp(gx.long(), max=dim - 1)
         gj = torch.clamp(gy.long(), max=dim - 1)
         # Calculate ious between ground truth and each of the 3 anchors
         iou = torch.zeros(nT, nA)
         for i in range(nA):
-            iou[:, i] = bbox_iou(t[:, 1:] * dim * 32, pred_boxes[b, i, gj, gi] * 32, x1y1x2y2=False)
+            iou[:, i] = bbox_iou(tb, pred_boxes[b, i, gj, gi], x1y1x2y2=False)
 
         # Select best iou and anchor
         iou, best_a = torch.max(iou, 1)

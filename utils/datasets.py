@@ -103,7 +103,7 @@ class ListDataset_xview(Dataset):  # for training
         self.img_shape = (img_size, img_size)
         self.max_objects = 5000
 
-    # @profile
+    #@profile
     def __getitem__(self, index):
 
         # ---------
@@ -111,6 +111,8 @@ class ListDataset_xview(Dataset):  # for training
         # ---------
 
         img_path = self.img_files[index % len(self.img_files)]
+        #if not os.path.isfile(img_path + '.small.tif'):
+
         img = cv2.imread(img_path)
 
         h, w, _ = img.shape
@@ -135,7 +137,11 @@ class ListDataset_xview(Dataset):  # for training
 
         labels = None
         if os.path.exists(label_path):
-            labels = np.loadtxt(label_path).reshape(-1, 5)
+            # labels0 = np.loadtxt(label_path)  # slower than with open() as file:
+            with open(label_path, 'r') as file:
+                a = file.read().replace('\n', ' ').split()
+            labels = np.array([float(x) for x in a]).reshape(-1, 5)
+
             # convert from x1y1x2y2 to xywh (required to convert xview to coco)
             cx = (labels[:, 1] + labels[:, 3]) / 2
             cy = (labels[:, 2] + labels[:, 4]) / 2
@@ -182,6 +188,7 @@ def remap_xview_classes(classes):  # remap xview classes 11-94 to 0-61
     return [c[int(x)] for x in classes]
 
 
+# @profile
 def resize_square(im, height=416, pad_color=(128, 128, 128)):  # resizes a rectangular image to a padded square
     shape = im.shape[:2]  # shape = [height, width]
     ratio = float(height) / max(shape)

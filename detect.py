@@ -15,9 +15,9 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/xview_samples1', help='path to dataset')
+parser.add_argument('-image_folder', type=str, default='data/xview_samples', help='path to dataset')
 parser.add_argument('-config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/epoch159.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/epoch359.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.5, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
@@ -76,7 +76,7 @@ def main(opt):
 
     # Bounding-box colors
     cmap = plt.get_cmap('tab20b')
-    colors = [cmap(i)[0:3] for i in np.linspace(0, 1, 20)]
+    colors = [cmap(i)[0:3] for i in np.linspace(0, 1, 62)]
 
     print('\nSaving images:')
     # Iterate through images and save plot of detections
@@ -93,28 +93,23 @@ def main(opt):
         unpad_h = opt.img_size - pad_y
         unpad_w = opt.img_size - pad_x
 
-        # write results to .txt file
-        #path_predictions: a folder path of prediction files.
-        #  Prediction files should have filename format 'XYZ.tif.txt',
-        #  where 'XYZ.tif' is the xView TIFF file being predicted on.
-        #  Prediction files should be in space-delimited csv format, with each
-        #  line like (xmin ymin xmax ymax class_prediction score_prediction)
-
-        fname = 'data/xview_predictions/' + path.split('/')[-1] + '.txt'
-        if os.path.isfile(fname):
-            os.remove(fname)
-        with open(fname, 'a') as file:
-           for  x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, cls_pred, conf) )
-
         # Draw bounding boxes and labels of detections
         if detections is not None:
+            # write results to .txt file
+            # Prediction files should be  (xmin ymin xmax ymax class_prediction score_prediction)
+            fname = 'data/xview_predictions/' + path.split('/')[-1] + '.txt'
+            if os.path.isfile(fname):
+                os.remove(fname)
+            with open(fname, 'a') as file:
+                for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                    file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, cls_pred, conf))
+
             unique_labels = detections[:, -1].cpu().unique()
             n_cls_preds = len(unique_labels)
             bbox_colors = random.sample(colors, n_cls_preds)
 
             for i in unique_labels:
-                n = sum(detections[:,-1]==i)
+                n = sum(detections[:,-1].cpu()==i)
                 print('%g %ss' % (n, classes[int(i)]))
 
             for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
