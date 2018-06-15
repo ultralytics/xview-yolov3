@@ -27,7 +27,7 @@ opt = parser.parse_args()
 print(opt)
 
 
-#@profile
+# @profile
 def main(opt):
     os.makedirs('output', exist_ok=True)
     os.makedirs('checkpoints', exist_ok=True)
@@ -63,7 +63,7 @@ def main(opt):
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
-    #optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, amsgrad=True)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=0.0005, amsgrad=True)
 
     for epoch in range(opt.epochs):
         print('%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
@@ -90,13 +90,13 @@ def main(opt):
             print(s)
 
             with open('printedResults.txt', 'a') as file:
-               file.write(s + '\n')
+                file.write(s + '\n')
             model.seen += imgs.shape[0]
 
             t0 = time.time()
 
         if cuda and (epoch % opt.checkpoint_interval == 0):
-            torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch,opt.img_size))
+            torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
         torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
 
 
