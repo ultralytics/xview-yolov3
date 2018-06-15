@@ -33,7 +33,7 @@ def main(opt):
     os.makedirs('checkpoints', exist_ok=True)
 
     cuda = torch.cuda.is_available()
-    device = torch.device('cuda' if cuda else 'cpu')
+    device = torch.device('cuda:0' if cuda else 'cpu')
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
     torch.manual_seed(1)
@@ -54,7 +54,7 @@ def main(opt):
 
     # Initiate model
     model = Darknet(opt.model_config_path, opt.img_size)
-    model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
+    model.load_state_dict(torch.load(opt.weights_path))
     # model.apply(weights_init_normal)  # random weights
     model.to(device).train()
 
