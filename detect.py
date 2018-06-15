@@ -1,87 +1,71 @@
-from models import *
-from utils.utils import *
-from utils.datasets import *
-
-import os
-import time
-import random
-import datetime
 import argparse
-import cv2
+import time
 
-import torch
 from torch.utils.data import DataLoader
 
-import matplotlib.pyplot as plt
+from models import *
+from utils.datasets import *
+from utils.utils import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/xview_samples', help='path to dataset')
-parser.add_argument('-config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/epoch359.pt', help='path to weights file')
-parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.5, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
-parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32*19, help='size of each image dimension')
+parser.add_argument('--image_folder', type=str, default='data/xview_samples/5.tif', help='path to images')
+parser.add_argument('--output_folder', type=str, default='data/xview_predictions/', help='path to outputs')
+parser.add_argument('--config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
+parser.add_argument('--weights_path', type=str, default='checkpoints/epoch19_sgd_608.pt', help='path to weights file')
+parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
+parser.add_argument('--conf_thres', type=float, default=0.99, help='object confidence threshold')
+parser.add_argument('--nms_thres', type=float, default=0.1, help='iou thresshold for non-maximum suppression')
+parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
+parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
+parser.add_argument('--img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('--plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
-#@profile
+
 def main(opt):
     os.makedirs('output', exist_ok=True)
 
-    cuda = torch.cuda.is_available()
+    cuda = False #torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
     # Set up model
     model = Darknet(opt.config_path, img_size=opt.img_size)
-    #model.load_weights(opt.weights_path)
     model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
-    model.to(device)
-    model.eval()
+    model.to(device).eval()
 
+    # Set dataloader
+    classes = load_classes(opt.class_path)  # Extracts class labels from file
     dataloader = DataLoader(ImageFolder(opt.image_folder, img_size=opt.img_size),
                             batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
 
-    classes = load_classes(opt.class_path)  # Extracts class labels from file
-
-
     imgs = []  # Stores image paths
     img_detections = []  # Stores detections for each image index
-
-    print('\nPerforming object detection:')
     prev_time = time.time()
-    for batch_i, (img_paths, im) in enumerate(dataloader):
+    print('\nRunning inference:')
+    for batch_i, (img_paths, img) in enumerate(dataloader):
         # Configure input
-        im = im.type(Tensor)
-        #import matplotlib.pyplot as plt
-        #plt.imshow(im[0,0])
+        img = img.type(Tensor)
 
         # Get detections
         with torch.no_grad():
-            detections = model(im)
-            detections = non_max_suppression(detections, opt.conf_thres, opt.nms_thres)
+            detections = non_max_suppression(model(img), opt.conf_thres, opt.nms_thres)
 
         # Log progress
-        current_time = time.time()
-        inference_time = datetime.timedelta(seconds=current_time - prev_time)
-        prev_time = current_time
-        print('\t+ Batch %d, Inference Time: %s' % (batch_i, inference_time))
+        print('Batch %d... (Done %.3fs)' % (batch_i, time.time() - prev_time))
+        prev_time = time.time()
 
         imgs.extend(img_paths)
         img_detections.extend(detections)
 
 
     # Bounding-box colors
-    cmap = plt.get_cmap('tab20b')
-    colors = [cmap(i)[0:3] for i in np.linspace(0, 1, 62)]
+    color_list = [[random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)] for _ in range(len(classes))]
 
-    print('\nSaving images:')
     # Iterate through images and save plot of detections
     for img_i, (path, detections) in enumerate(zip(imgs, img_detections)):
-        print("(%d) Image: '%s'" % (img_i, path))
+        print("image %g: '%s'" % (img_i, path))
 
         # read image
         img = cv2.imread(path)
@@ -95,44 +79,40 @@ def main(opt):
 
         # Draw bounding boxes and labels of detections
         if detections is not None:
+            unique_classes = detections[:, -1].cpu().unique()
+            bbox_colors = random.sample(color_list, len(unique_classes))
+
             # write results to .txt file
-            # Prediction files should be  (xmin ymin xmax ymax class_prediction score_prediction)
-            fname = 'data/xview_predictions/' + path.split('/')[-1] + '.txt'
-            if os.path.isfile(fname):
-                os.remove(fname)
-            with open(fname, 'a') as file:
+            results_path = os.path.join(opt.output_folder, path.split('/')[-1])
+            if os.path.isfile(results_path + '.txt'):
+                os.remove(results_path + '.txt')
+
+            with open(results_path + '.txt', 'a') as file:
+                for i in unique_classes:
+                    n = (detections[:, -1].cpu() == i).sum()
+                    print('%g %ss' % (n, classes[int(i)]))
+
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
+                    # Rescale coordinates to original dimensions
+                    box_h = ((y2 - y1) / unpad_h) * img.shape[0]
+                    box_w = ((x2 - x1) / unpad_w) * img.shape[1]
+                    y1 = (((y1 - pad_y // 2) / unpad_h) * img.shape[0]).round().item()
+                    x1 = (((x1 - pad_x // 2) / unpad_w) * img.shape[1]).round().item()
+                    x2 = (x1 + box_w).round().item()
+                    y2 = (y1 + box_h).round().item()
+
+                    # write to file
                     file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, cls_pred, conf))
 
-            unique_labels = detections[:, -1].cpu().unique()
-            n_cls_preds = len(unique_labels)
-            bbox_colors = random.sample(colors, n_cls_preds)
+                    if opt.plot_flag:
+                        # Add the bbox to the plot
+                        # label = classes[int(cls_pred)]
+                        color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
+                        plot_one_box([x1, y1, x2, y2], img, color=color, line_thickness=2)
 
-            for i in unique_labels:
-                n = sum(detections[:,-1].cpu()==i)
-                print('%g %ss' % (n, classes[int(i)]))
-
-            for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
-                #print('\t%s, %.2f' % (classes[int(cls_pred)], cls_conf.item()))
-
-                # Rescale coordinates to original dimensions
-                box_h = ((y2 - y1) / unpad_h) * img.shape[0]
-                box_w = ((x2 - x1) / unpad_w) * img.shape[1]
-                y1 = ((y1 - pad_y // 2) / unpad_h) * img.shape[0]
-                x1 = ((x1 - pad_x // 2) / unpad_w) * img.shape[1]
-
-                # color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0])]
-                color = bbox_colors[int(np.where(unique_labels == int(cls_pred))[0])]
-                # Create a Rectangle patch
-                x1y1x2y2 = torch.Tensor([x1, y1, x1 + box_w, y1 + box_h])
-
-                # Add the bbox to the plot
-                # label = classes[int(cls_pred)]
-                plot_one_box(x1y1x2y2, img, color=[c * 255 for c in color], label=None, line_thickness=2)
-
-            # Save generated image with detections
-            cv2.imwrite('data/xview_predictions/' + path.split('/')[-1], img)
-            print('\n')
+            if opt.plot_flag:
+                # Save generated image with detections
+                cv2.imwrite(results_path, img)
 
 
 if __name__ == '__main__':

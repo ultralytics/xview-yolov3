@@ -7,7 +7,7 @@ http://www.ultralytics.com  
 
 # Description
 
-The https://github.com/ultralytics/yolo repo contains You Only Look Once (YOLO) sandbox code. Credit to P.J. Reddie for YOLO (https://pjreddie.com/darknet/yolo/) and to Erik Lindernoren for the pytorch implementation (https://github.com/eriklindernoren/PyTorch-YOLOv3).
+The https://github.com/ultralytics/yolov3 repo contains You Only Look Once (YOLO) sandbox code. Credit to P.J. Reddie for YOLO (https://pjreddie.com/darknet/yolo/) and to Erik Lindernoren for the pytorch implementation (https://github.com/eriklindernoren/PyTorch-YOLOv3).
 
 # Requirements
 
@@ -19,7 +19,7 @@ Python 3.6 or later with the following `pip3 install -U -r requirements.txt` pac
 - `opencv-python`
 
 # Running
-- From python run `yolo.py` to process images in `images/` folder. Results are written to  `results/` folder.
+- From python run `detect.py` to process images in `data/samples/` folder. Results are written to  `output/` folder.
 
 ![Alt](https://github.com/ultralytics/yolo/blob/master/results/zidane.jpg "example")
 

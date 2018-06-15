@@ -8,8 +8,15 @@ from torch.utils.data import Dataset
 
 
 class ImageFolder(Dataset):  # for eval-only
-    def __init__(self, folder_path, img_size=416):
-        self.files = sorted(glob.glob('%s/*.*' % folder_path))
+    def __init__(self, path, img_size=416):
+        try:
+            if os.path.isdir(path):
+                self.files = sorted(glob.glob('%s/*.*' % path))
+            elif os.path.isfile(path):
+                self.files = [path]
+        except:
+            print('Error: no files or folders found in supplied path.')
+
         self.img_shape = (img_size, img_size)
 
     def __getitem__(self, index):
@@ -97,13 +104,13 @@ class ListDataset_xview(Dataset):  # for training
     def __init__(self, folder_path, img_size=416):
         p = folder_path + 'train_images'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
-        assert len(self.img_files)>0, 'No images found in path %s' % p
+        assert len(self.img_files) > 0, 'No images found in path %s' % p
         self.img_shape = (img_size, img_size)
         self.label_files = [path.replace('_images', '_labels').replace('.tif', '.txt') for path in self.img_files]
         self.img_shape = (img_size, img_size)
         self.max_objects = 5000
 
-    #@profile
+    # @profile
     def __getitem__(self, index):
 
         # ---------

@@ -15,12 +15,12 @@ parser.add_argument('-image_folder', type=str, default='train_images', help='pat
 parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='config/yolovx.cfg', help='path to model config file')
 parser.add_argument('-data_config_path', type=str, default='config/xview.data', help='path to data config file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/epoch270.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='../epoch14_sgd_864.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.8, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=4, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 13, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=4, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -54,8 +54,8 @@ def main(opt):
 
     # Initiate model
     model = Darknet(opt.model_config_path, opt.img_size)
-    # model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
-    model.apply(weights_init_normal)  # random weights
+    model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
+    # model.apply(weights_init_normal)  # random weights
     model.to(device).train()
 
     # Get dataloader
@@ -95,9 +95,9 @@ def main(opt):
 
             t0 = time.time()
 
-        if cuda and (epoch % opt.checkpoint_interval == 0):
-            torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
-        torch.save(model.state_dict(), '%s/epoch%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
+        if epoch % opt.checkpoint_interval == 0:
+            torch.save(model.state_dict(), '%s/epoch14_%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
+        torch.save(model.state_dict(), '%s/epoch14_%d_sgd_%g.pt' % (opt.checkpoint_dir, epoch, opt.img_size))
 
 
 if __name__ == '__main__':
