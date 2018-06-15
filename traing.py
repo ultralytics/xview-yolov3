@@ -33,7 +33,7 @@ def main(opt):
     os.makedirs('checkpoints', exist_ok=True)
 
     cuda = torch.cuda.is_available()
-    device = torch.device('cuda:0' if cuda else 'cpu')
+    device = torch.device('cuda' if cuda else 'cpu')
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
     torch.manual_seed(1)
