@@ -64,8 +64,8 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
 
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, dampening=0, weight_decay=decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     print('\n' + '%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
     for epoch in range(opt.epochs):
@@ -104,6 +104,7 @@ def main(opt):
         if cuda and (epoch % opt.checkpoint_interval == 0):
             torch.save(model.state_dict(), '%s/epoch%d.pt' % (opt.checkpoint_dir, epoch))
     torch.save(model.state_dict(), '%s/epoch%d.pt' % (opt.checkpoint_dir, epoch))
+
 
 
 if __name__ == '__main__':
