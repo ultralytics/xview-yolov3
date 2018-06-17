@@ -11,7 +11,7 @@ from utils.utils import *
 
 # from tqdm import tqdm
 
-run_name = 'BCEw'
+run_name = 'SGD'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=3, help='size of each image batch')
@@ -57,8 +57,8 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-    # optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # reload saved optimizer state
     resume_training = False
@@ -86,7 +86,7 @@ def main(opt):
 
             epochAP = (epochAP * batch_i + model.losses['AP']) / (batch_i + 1)
             s = ('%10s%10s' + '%10.3g' * 10) % (
-                '%g/%g' % (j, opt.epochs - 1), '%g/%g' % (batch_i, len(dataloader) - 1), model.losses['x'],
+                '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (batch_i, len(dataloader) - 1), model.losses['x'],
                 model.losses['y'], model.losses['w'], model.losses['h'], model.losses['conf'], model.losses['cls'],
                 model.losses['loss'], model.losses['AP'], epochAP, time.time() - t0)
             print(s)
