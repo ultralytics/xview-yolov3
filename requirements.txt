@@ -1,5 +1,6 @@
+pip3 install -U -r requirements.txt
 numpy
-torch>=0.4.0
-torchvision
+opencv-python
+torch
 matplotlib
 tqdm

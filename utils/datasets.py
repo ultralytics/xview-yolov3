@@ -120,6 +120,8 @@ class ListDataset_xview(Dataset):  # for training
         img_path = self.img_files[index % len(self.img_files)]
         img = cv2.imread(img_path)
 
+        # random_affine(img, points=None, degrees=(-5, 5), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
+
         h, w, _ = img.shape
         dim_diff = np.abs(h - w)
         # Upper (left) and lower (right) padding
@@ -127,12 +129,12 @@ class ListDataset_xview(Dataset):  # for training
         # Determine padding
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
         # Add padding
-        input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
+        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
         padded_h = max(h, w)
         padded_w = padded_h
 
         # As pytorch tensor
-        input_img = torch.from_numpy(input_img).float()
+        input_img = torch.from_numpy(img)
 
         # ---------
         #  Label
@@ -172,9 +174,9 @@ class ListDataset_xview(Dataset):  # for training
             labels[:, 3] *= w / padded_w
             labels[:, 4] *= h / padded_h
             # remap xview classes 11-94 to 0-61
-            labels[:, 0] = remap_xview_classes(labels[:, 0])
+            labels[:, 0] = xview_classes2indices(labels[:, 0])
         # Fill matrix
-        filled_labels = np.zeros((self.max_objects, 5))
+        filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
         if labels is not None:
             nT = len(labels)  # number of targets
             filled_labels[range(nT)[:self.max_objects]] = labels[:self.max_objects]
@@ -185,12 +187,12 @@ class ListDataset_xview(Dataset):  # for training
         return len(self.img_files)
 
 
-def remap_xview_classes(classes):  # remap xview classes 11-94 to 0-61
-    c = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14, 15,
-         -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34, 35, 36, 37,
-         -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, 50, 51, 52, -1,
-         53, -1, -1, 54, 55, 56, -1, 57, -1, -1, 58, -1, 59, -1, 60, 61]
-    return [c[int(x)] for x in classes]
+def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
+    indices = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14,
+               15, -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34,
+               35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, 50, 51, 52, -1, 53, -1,
+               -1, 54, 55, 56, -1, 57, -1, -1, 58, -1, 59, -1, 60, 61]
+    return [indices[int(c)] for c in classes]
 
 
 # @profile
@@ -204,3 +206,32 @@ def resize_square(im, height=416, pad_color=(128, 128, 128)):  # resizes a recta
     left, right = dw // 2, dw - (dw // 2)
     im = cv2.resize(im, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
     return cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=pad_color)
+
+
+def random_affine(img, points=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
+    # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
+    # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
+
+    a = np.random.rand(1) * (degrees[1] - degrees[0]) + degrees[0]
+    cx = img.shape[0] * (1 + np.random.rand(1) * translate[0])
+    cy = img.shape[1] * (1 + np.random.rand(1) * translate[1])
+    s = np.random.rand(1) * (scale[1] - scale[0]) + scale[0]
+
+    M = cv2.getRotationMatrix2D(angle=a, center=(cy, cx), scale=s)
+    imw = cv2.warpAffine(img, M, dsize=(img.shape[1], img.shape[0]))
+
+    # Return warped points as well
+    if points:
+        M3 = np.concatenate((M, np.zeros((1, 3))), axis=0)
+        M3[2, 2] = 1
+        points_warped = 0
+        # x = np.array([[1, .2], [.3, .5], [.7, .8]], dtype=np.float32) * 2000
+        # M3 = M3.astype(np.float32)
+        # points_warped = cv2.perspectiveTransform(np.array([x]), M)
+
+        # import matplotlib.pyplot as plt
+        # plt.imshow(imw)
+        # plt.plot(x[0],x[1])
+        return imw, points_warped
+    else:
+        return imw
