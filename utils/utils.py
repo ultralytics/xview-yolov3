@@ -150,8 +150,8 @@ def bbox_iou_training(box1, b1_area, box2):
     return inter_area / (b1_area + b2_area - inter_area + 1e-16)  # iou
 
 
-# @profile
-def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors, num_classes, dim, tcls_zeros):
+def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchors, num_classes, dim,
+                  tcls_zeros, anchor_xywh):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
@@ -188,46 +188,58 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         tb[:, 1] = gy - gh / 2
         tb[:, 2] = gx + gw / 2
         tb[:, 3] = gy + gh / 2
-        iou = torch.zeros(nT, nA)
-        ta = gw * gh  # target box areas
+
+        tc = torch.zeros(nT, 4)  # target boxes aligned to anchor grid
+        tc[:, 0] = gi.float()
+        tc[:, 1] = gj.float()
+        tc[:, 2] = gi.float() + gw
+        tc[:, 3] = gj.float() + gh
+
+        tb_area = gw * gh  # target box area
+        iou_pred = torch.zeros(nT, nA)  # iou of predicted boxes
+        iou_anch = torch.zeros(nT, nA)  # iou of nearest anchor boxes
 
         if pred_boxes.is_cuda:
+            tc = tc.cuda()
             tb = tb.cuda()
-            ta = ta.cuda()
-            iou = iou.cuda()
+            tb_area = tb_area.cuda()
+            iou_pred = iou_pred.cuda()
+            iou_anch = iou_anch.cuda()
 
         for i in range(nA):
-            iou[:, i] = bbox_iou_training(tb, ta, pred_boxes[b, i, gj, gi])
+            iou_pred[:, i] = bbox_iou_training(tb, tb_area, pred_boxes[b, i, gj, gi])  # iou of targets-predictions
+            iou_anch[:, i] = bbox_iou_training(tc, tb_area, anchor_xywh[0, i, gj, gi])  # iou of targets-anchors
 
-        # Select best iou and anchor
-        iou, best_a = iou.cpu().max(1)
+        # Select best iou_pred and anchor
+        iou_pred, _ = iou_pred.cpu().max(1)
+        iou_anch, a = iou_anch.cpu().max(1)  # best anchor [0-2] for each target
 
-        # Enforce unique anchor-target joinings. Pick best-iou target if multiple targets match to one anchor
+        # Two targets can not claim the same anchor
         if nT > 1:
-            u = np.concatenate((gi.numpy(), gj.numpy(), best_a.numpy()), 0).reshape(3, -1)
-            iou_order = np.argsort(-iou)  # best to worst
-            _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
-            i = iou_order[first_unique]
-            iou, best_a, gj, gi, t = iou[i], best_a[i], gj[i], gi[i], t[i]
+            u = np.concatenate((gi.numpy(), gj.numpy(), a.numpy()), 0).reshape(3, -1)
+            iou_anch_order = np.argsort(-iou_anch)  # best to worst
+            _, first_unique = np.unique(u[:, iou_anch_order], axis=1, return_index=True)  # first unique indices
+            i = iou_anch_order[first_unique]
+            a, gj, gi, t, iou_pred = a[i], gj[i], gi[i], t[i], iou_pred[i]
 
         tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1], t[:, 2], t[:, 3], t[:, 4]
 
         # Coordinates
-        tx[b, best_a, gj, gi] = gx - gi.float()
-        ty[b, best_a, gj, gi] = gy - gj.float()
+        tx[b, a, gj, gi] = gx - gi.float()
+        ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, best_a, gj, gi] = torch.log(gw / anchors[best_a, 0] + 1e-16)
-        th[b, best_a, gj, gi] = torch.log(gh / anchors[best_a, 1] + 1e-16)
+        tw[b, a, gj, gi] = torch.log(gw / anchor_wh[a, 0] + 1e-16)
+        th[b, a, gj, gi] = torch.log(gh / anchor_wh[a, 1] + 1e-16)
         # One-hot encoding of label
-        tcls[b, best_a, gj, gi, tc] = 1
-        tconf[b, best_a, gj, gi] = 1
+        tcls[b, a, gj, gi, tc] = 1
+        tconf[b, a, gj, gi] = 1
         # predicted classes and confidence
-        pcls = torch.argmax(pred_cls[b, best_a, gj, gi], 1)
-        pconf = pred_conf[b, best_a, gj, gi]
+        pcls = torch.argmax(pred_cls[b, a, gj, gi], 1)
+        pconf = pred_conf[b, a, gj, gi]
 
-        TP = ((iou > 0.5) & (pconf > 0.5) & (pcls == tc)).float()
-        FP = ((iou > 0.5) & (pconf > 0.5) & (pcls != tc)).float()
-        FN = ((iou < 0.5) | (pconf < 0.5)).float()
+        TP = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls == tc)).float()
+        FP = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls != tc)).float()
+        FN = ((iou_pred < 0.5) | (pconf < 0.5)).float()
 
         precision.extend((TP / (TP + FP + 1e-16)).tolist())
         recall.extend((TP / (TP + FN + 1e-16)).tolist())
@@ -236,29 +248,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchors, num_anchors,
         nTP += TP.sum().item()
         # print(TP.sum(), FP.sum(), FN.sum())
 
-        # # testing code
-        # im = current_img_path[b].permute(1, 2, 0).contiguous().numpy()
-        # #for a in t:
-        # a = t[1]
-        # txy1xy2 = torch.Tensor([a[1] - a[3] / 2, a[2] - a[4] / 2, a[1] + a[3] / 2, a[2] + a[4] / 2]) * dim * 32
-        # plot_one_box(txy1xy2, im, label=None, line_thickness=1, color=[0, 0, 1])
-        # #for i in range(nT):
-        # i = 1
-        # j = 2 #best_a[i]
-        # x = pred_boxes[b, j, gj[i], gi[i]][0]
-        # y = pred_boxes[b, j, gj[i], gi[i]][1]
-        # w = pred_boxes[b, j, gj[i], gi[i]][2]
-        # h = pred_boxes[b, j, gj[i], gi[i]][3]
-        # pxy1xy2 = torch.Tensor([x - w / 2, y - h / 2, x + w / 2, y + h / 2]) * 32
-        # plot_one_box(pxy1xy2, im, label=None, line_thickness=1, color=[0, 1, 0])
-        #
-        # print(bbox_iou(txy1xy2.unsqueeze(0), pxy1xy2.unsqueeze(0), x1y1x2y2=True))
-        # import matplotlib.pyplot as plt
-        # plt.imshow(im)
-
     ap = nTP / nGT  # compute_ap(recall, precision)
     return nGT, ap, tx, ty, tw, th, tconf == 1, tcls
-
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """

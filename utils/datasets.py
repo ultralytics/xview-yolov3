@@ -21,12 +21,8 @@ class ImageFolder(Dataset):  # for eval-only
 
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
-        # Extract image
         input_img = resize_square(cv2.imread(img_path), height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
-
-        # As pytorch tensor
-        input_img = torch.from_numpy(input_img).float()
-        return img_path, input_img
+        return img_path, torch.from_numpy(input_img).float()
 
     def __len__(self):
         return len(self.files)
@@ -58,12 +54,9 @@ class ListDataset(Dataset):  # for training
         # Determine padding
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
         # Add padding
-        input_img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
+        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
         padded_h = max(h, w)
         padded_w = padded_h
-
-        # As pytorch tensor
-        input_img = torch.from_numpy(input_img).float()
 
         # ---------
         #  Label
@@ -93,8 +86,7 @@ class ListDataset(Dataset):  # for training
         filled_labels = np.zeros((self.max_objects, 5))
         if labels is not None:
             filled_labels[range(len(labels))[:self.max_objects]] = labels[:self.max_objects]
-        filled_labels = torch.from_numpy(filled_labels)
-        return img_path, input_img, filled_labels
+        return img_path, torch.from_numpy(img).float(), torch.from_numpy(filled_labels)
 
     def __len__(self):
         return len(self.img_files)
@@ -102,13 +94,15 @@ class ListDataset(Dataset):  # for training
 
 class ListDataset_xview(Dataset):  # for training
     def __init__(self, folder_path, img_size=416):
-        p = folder_path + 'train_images'
+        p = folder_path + 'train_images3'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         assert len(self.img_files) > 0, 'No images found in path %s' % p
         self.img_shape = (img_size, img_size)
-        self.label_files = [path.replace('_images', '_labels').replace('.tif', '.txt') for path in self.img_files]
+        self.label_files = [path.replace('_images3', '_labels').replace('.tif', '.txt') for path in self.img_files]
         self.img_shape = (img_size, img_size)
         self.max_objects = 5000
+        self.mu = np.array([40.746, 49.697, 60.134])[:, np.newaxis, np.newaxis] / 255.0
+        self.std = np.array([22.046, 24.498, 29.99])[:, np.newaxis, np.newaxis] / 255.0
 
     # @profile
     def __getitem__(self, index):
@@ -132,9 +126,6 @@ class ListDataset_xview(Dataset):  # for training
         img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
         padded_h = max(h, w)
         padded_w = padded_h
-
-        # As pytorch tensor
-        input_img = torch.from_numpy(img)
 
         # ---------
         #  Label
@@ -181,7 +172,7 @@ class ListDataset_xview(Dataset):  # for training
             nT = len(labels)  # number of targets
             filled_labels[range(nT)[:self.max_objects]] = labels[:self.max_objects]
         filled_labels = torch.from_numpy(filled_labels)
-        return img_path, input_img, filled_labels, nT
+        return img_path, torch.from_numpy(img), filled_labels
 
     def __len__(self):
         return len(self.img_files)

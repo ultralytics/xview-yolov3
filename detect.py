@@ -13,12 +13,12 @@ from utils.datasets import *
 from utils.utils import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--image_folder', type=str, default='data/xview_samples1', help='path to images')
+parser.add_argument('--image_folder', type=str, default='data/train_images3', help='path to images')
 parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('--config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
-parser.add_argument('--weights_path', type=str, default='checkpoints/epoch_0_train3only_final_416.pt', help='path to weights file')
+parser.add_argument('--weights_path', type=str, default='checkpoints/BCEw_epoch_0_416.pt', help='path to weights file')
 parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('--conf_thres', type=float, default=0.99, help='object confidence threshold')
+parser.add_argument('--conf_thres', type=float, default=0.95, help='object confidence threshold')
 parser.add_argument('--nms_thres', type=float, default=0.25, help='iou thresshold for non-maximum suppression')
 parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
@@ -29,6 +29,7 @@ print(opt)
 
 
 def main(opt):
+    os.system('rm -rf ' + opt.output_folder)
     os.makedirs(opt.output_folder, exist_ok=True)
 
     cuda = False #torch.cuda.is_available()

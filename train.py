@@ -13,8 +13,8 @@ from utils.utils import *
 
 run_name = 'BCEw'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
-parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
+parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-batch_size', type=int, default=3, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
 parser.add_argument('-weights_path', type=str, default='checkpoints/epoch21_sgd_608.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
@@ -74,25 +74,25 @@ def main(opt):
         t0 = time.time()
         epochAP = 0
 
-        for batch_i, (impath, imgs, targets, nT) in enumerate(dataloader):
+        for batch_i, (impath, imgs, targets) in enumerate(dataloader):
             imgs = imgs.to(device)
             targets = targets.to(device)
 
-            for j in range(4):
+            for j in range(1000):
                 loss = model(imgs, targets)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-            epochAP = (epochAP * batch_i + model.losses['AP']) / (batch_i + 1)
-            s = ('%10s%10s' + '%10.3g' * 10) % (
-                '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (batch_i, len(dataloader) - 1), model.losses['x'],
-                model.losses['y'], model.losses['w'], model.losses['h'], model.losses['conf'], model.losses['cls'],
-                model.losses['loss'], model.losses['AP'], epochAP, time.time() - t0)
-            print(s)
-            # with open('printedResults.txt', 'a') as file:
-            #    file.write(s + '\n')
-            t0 = time.time()
+                epochAP = (epochAP * batch_i + model.losses['AP']) / (batch_i + 1)
+                s = ('%10s%10s' + '%10.3g' * 10) % (
+                    '%g/%g' % (j, opt.epochs - 1), '%g/%g' % (batch_i, len(dataloader) - 1), model.losses['x'],
+                    model.losses['y'], model.losses['w'], model.losses['h'], model.losses['conf'], model.losses['cls'],
+                    model.losses['loss'], model.losses['AP'], epochAP, time.time() - t0)
+                print(s)
+                # with open('printedResults.txt', 'a') as file:
+                #    file.write(s + '\n')
+                t0 = time.time()
 
             model.seen += imgs.shape[0]
 

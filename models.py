@@ -52,7 +52,7 @@ def create_modules(module_defs):
         elif module_def["type"] == "yolo":
             anchor_idxs = [int(x) for x in module_def["mask"].split(",")]
             # Extract anchors
-            anchors = [int(x) for x in module_def["anchors"].split(",")]
+            anchors = [float(x) for x in module_def["anchors"].split(",")]
             anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
             anchors = [anchors[i] for i in anchor_idxs]
             num_classes = int(module_def['classes'])
@@ -82,6 +82,8 @@ class YOLOLayer(nn.Module):
         super(YOLOLayer, self).__init__()
         FloatTensor = torch.FloatTensor
         LongTensor = torch.LongTensor
+
+        anchors = [(a_w * img_dim, a_h * img_dim) for a_w, a_h in anchors]
 
         nA = len(anchors)
         self.anchors = anchors
@@ -117,6 +119,7 @@ class YOLOLayer(nn.Module):
         anchor_h = self.scaled_anchors.index_select(1, LongTensor([1]))
         self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, g_dim * g_dim).view(shape)
         self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, g_dim * g_dim).view(shape)
+        self.anchor_xywh = torch.cat((self.grid_x.unsqueeze(4),self.grid_y.unsqueeze(4),self.anchor_w.unsqueeze(4),self.anchor_h.unsqueeze(4)),4)
 
         # prepopulate target-class zero matrices for speed
         nB = batch_size
@@ -149,8 +152,9 @@ class YOLOLayer(nn.Module):
             self.anchor_h = self.anchor_h.cuda()
             self.mse_loss = self.mse_loss.cuda()
             self.bce_loss = self.bce_loss.cuda()
+            self.anchor_xywh = self.anchor_xywh.cuda()
 
-        # Add offset and scale with anchors
+        # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FloatTensor(prediction[..., :4].shape)
         pred_boxes[..., 0] = x.data + self.grid_x
         pred_boxes[..., 1] = y.data + self.grid_y
@@ -167,7 +171,8 @@ class YOLOLayer(nn.Module):
                                                                 self.num_anchors,
                                                                 self.num_classes,
                                                                 g_dim,
-                                                                self.tcls_zeros)
+                                                                self.tcls_zeros,
+                                                                self.anchor_xywh)
 
             tcls = tcls[mask]
             if x.is_cuda:
@@ -180,12 +185,12 @@ class YOLOLayer(nn.Module):
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             b = mask.float()
-            loss_x = self.lambda_coord * self.mse_loss(x * b, tx * b) * 4
-            loss_y = self.lambda_coord * self.mse_loss(y * b, ty * b) * 4
+            loss_x = self.lambda_coord * self.mse_loss(x * b, tx * b)
+            loss_y = self.lambda_coord * self.mse_loss(y * b, ty * b)
             loss_w = self.lambda_coord * self.mse_loss(w * b, tw * b)
             loss_h = self.lambda_coord * self.mse_loss(h * b, th * b)
 
-            loss_cls = self.bce_loss_cls(pred_cls[mask], tcls) / 4
+            loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
             #BCEWithLogitsLoss
             loss_conf = self.bce_loss(conf[mask], mask[mask].float()) + \
                         self.lambda_noobj * self.bce_loss(conf[~mask], mask[~mask].float())
