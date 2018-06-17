@@ -42,8 +42,7 @@ def main(opt):
         os.system('wget -c https://storage.googleapis.com/ultralytics/xvw1.pt')
         opt.weights_path = 'xvw1.pt'
     model = Darknet(opt.config_path, img_size=opt.img_size)
-    model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
-    model.to(device).eval()
+    model.load_state_dict(torch.load(opt.weights_path, map_location=device.type)).to(device).eval()
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file

@@ -51,8 +51,7 @@ def main(opt):
     burn_in = int(hyperparams['burn_in'])
 
     # Initiate model
-    model = Darknet(opt.model_config_path, opt.img_size, opt.batch_size)
-    model.to(device).train()
+    model = Darknet(opt.model_config_path, opt.img_size, opt.batch_size).to(device).train()
 
     # Get dataloader
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
