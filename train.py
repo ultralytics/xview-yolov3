@@ -58,7 +58,8 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+    #optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # reload saved optimizer state
     resume_training = False
@@ -90,8 +91,8 @@ def main(opt):
                     model.losses['y'], model.losses['w'], model.losses['h'], model.losses['conf'], model.losses['cls'],
                     model.losses['loss'], model.losses['AP'], epochAP, time.time() - t0)
                 print(s)
-                # with open('printedResults.txt', 'a') as file:
-                #    file.write(s + '\n')
+                with open('printedResults.txt', 'a') as file:
+                   file.write(s + '\n')
                 t0 = time.time()
 
             model.seen += imgs.shape[0]

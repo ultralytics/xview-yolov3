@@ -184,16 +184,17 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            b = mask.float()
-            loss_x = self.lambda_coord * self.mse_loss(x * b, tx * b)
-            loss_y = self.lambda_coord * self.mse_loss(y * b, ty * b)
-            loss_w = self.lambda_coord * self.mse_loss(w * b, tw * b)
-            loss_h = self.lambda_coord * self.mse_loss(h * b, th * b)
+            if nGT > 0:
+                loss_x = self.lambda_coord * self.mse_loss(x[mask], tx[mask])
+                loss_y = self.lambda_coord * self.mse_loss(y[mask], ty[mask])
+                loss_w = self.lambda_coord * self.mse_loss(w[mask], tw[mask])
+                loss_h = self.lambda_coord * self.mse_loss(h[mask], th[mask])
+                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls) * 8
+                loss_conf = self.bce_loss(conf[mask], mask[mask].float()) * 8
+            else:
+                loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
 
-            loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
-            #BCEWithLogitsLoss
-            loss_conf = self.bce_loss(conf[mask], mask[mask].float()) + \
-                        self.lambda_noobj * self.bce_loss(conf[~mask], mask[~mask].float())
+            loss_conf += self.lambda_noobj * self.bce_loss(conf[~mask], mask[~mask].float()) * 8
 
             loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
