@@ -14,7 +14,7 @@ from utils.utils import *
 run_name = 'SGD'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
-parser.add_argument('-batch_size', type=int, default=3, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
 parser.add_argument('-weights_path', type=str, default='checkpoints/epoch21_sgd_608.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
