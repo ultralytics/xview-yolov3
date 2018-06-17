@@ -13,7 +13,7 @@ from utils.datasets import *
 from utils.utils import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--image_folder', type=str, default='data/train_images3', help='path to images')
+parser.add_argument('--image_folder', type=str, default='data/train_images', help='path to images')
 parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('--config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
 parser.add_argument('--weights_path', type=str, default='checkpoints/BCEw_epoch_0_416.pt', help='path to weights file')

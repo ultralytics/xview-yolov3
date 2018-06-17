@@ -13,7 +13,7 @@ from utils.utils import *
 
 run_name = 'BCEw'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=3, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
 parser.add_argument('-weights_path', type=str, default='checkpoints/epoch21_sgd_608.pt', help='path to weights file')
@@ -22,7 +22,7 @@ parser.add_argument('-conf_thres', type=float, default=0.8, help='object confide
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=2, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 13, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=90, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=50, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
 print(opt)
@@ -58,7 +58,7 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-    #optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     # reload saved optimizer state
@@ -79,21 +79,21 @@ def main(opt):
             imgs = imgs.to(device)
             targets = targets.to(device)
 
-            for j in range(1000):
+            for j in range(4):
                 loss = model(imgs, targets)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-                epochAP = (epochAP * batch_i + model.losses['AP']) / (batch_i + 1)
-                s = ('%10s%10s' + '%10.3g' * 10) % (
-                    '%g/%g' % (j, opt.epochs - 1), '%g/%g' % (batch_i, len(dataloader) - 1), model.losses['x'],
-                    model.losses['y'], model.losses['w'], model.losses['h'], model.losses['conf'], model.losses['cls'],
-                    model.losses['loss'], model.losses['AP'], epochAP, time.time() - t0)
-                print(s)
-                with open('printedResults.txt', 'a') as file:
-                   file.write(s + '\n')
-                t0 = time.time()
+            epochAP = (epochAP * batch_i + model.losses['AP']) / (batch_i + 1)
+            s = ('%10s%10s' + '%10.3g' * 10) % (
+                '%g/%g' % (j, opt.epochs - 1), '%g/%g' % (batch_i, len(dataloader) - 1), model.losses['x'],
+                model.losses['y'], model.losses['w'], model.losses['h'], model.losses['conf'], model.losses['cls'],
+                model.losses['loss'], model.losses['AP'], epochAP, time.time() - t0)
+            print(s)
+            with open('printedResults.txt', 'a') as file:
+                file.write(s + '\n')
+            t0 = time.time()
 
             model.seen += imgs.shape[0]
 
