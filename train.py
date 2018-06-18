@@ -14,9 +14,9 @@ from utils.utils import *
 run_name = 'Adam'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
-parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/Adam_epoch_0_416.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/BCEw_epoch_180_416.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.8, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
@@ -60,7 +60,7 @@ def main(opt):
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
 
     #optimizer = torch.optim.Adam(model.parameters(), lr=.01)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50], gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
 
     # reload saved optimizer state
     resume_training = False
