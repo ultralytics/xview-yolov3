@@ -84,8 +84,8 @@ class YOLOLayer(nn.Module):
         LongTensor = torch.LongTensor
 
         anchors = [(a_w * img_dim, a_h * img_dim) for a_w, a_h in anchors]
-
         nA = len(anchors)
+
         self.anchors = anchors
         self.num_anchors = nA
         self.num_classes = num_classes
@@ -95,11 +95,11 @@ class YOLOLayer(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-        self.mse_loss = nn.MSELoss()
+        self.mse_loss = nn.MSELoss(size_average=True)
 
         class_weights = 1 / xview_class_weights(torch.arange(num_classes))
-        self.bce_loss_cls = nn.BCELoss(weight=class_weights)
-        self.bce_loss = nn.BCELoss()
+        self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
+        self.bce_loss = nn.BCELoss(size_average=True)
 
         if anchor_idxs[0] == 6:
             stride = 32
@@ -109,33 +109,28 @@ class YOLOLayer(nn.Module):
             stride = 8
 
         # Build anchor grids
-        g_dim = int(self.img_dim / stride)
+        nG = int(self.img_dim / stride)
         nB = 1  # batch_size set to 1
-        shape = [nB, self.num_anchors, g_dim, g_dim]
-        self.grid_x = torch.arange(g_dim).repeat(g_dim, 1).repeat(nB * nA, 1, 1).view(shape).type(FloatTensor)
-        self.grid_y = torch.arange(g_dim).repeat(g_dim, 1).t().repeat(nB * nA, 1, 1).view(shape).type(FloatTensor)
-        self.scaled_anchors = FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in self.anchors])
+        shape = [nB, self.num_anchors, nG, nG]
+        self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
+        self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
+        self.scaled_anchors = FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
         anchor_w = self.scaled_anchors.index_select(1, LongTensor([0]))
         anchor_h = self.scaled_anchors.index_select(1, LongTensor([1]))
-        self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, g_dim * g_dim).view(shape)
-        self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, g_dim * g_dim).view(shape)
+        self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_xywh = torch.cat((self.grid_x.unsqueeze(4), self.grid_y.unsqueeze(4), self.anchor_w.unsqueeze(4),
-                                      self.anchor_h.unsqueeze(4)), 4)
-
-        # prepopulate target-class zero matrices for speed
-        nB = batch_size
-        self.tcls_zeros = torch.zeros(nB, nA, g_dim, g_dim, num_classes).float()  # predefined for 4 batch-size
+                                      self.anchor_h.unsqueeze(4)), 4).squeeze()
 
     # @profile
     def forward(self, x, targets=None, current_img_path=None):
         bs = x.shape[0]
-        g_dim = x.shape[2]
-        stride = self.img_dim / g_dim
+        nG = x.shape[2]
+        stride = self.img_dim / nG
         # Tensors for cuda support
         FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-        LongTensor = torch.cuda.LongTensor if x.is_cuda else torch.LongTensor
 
-        prediction = x.view(bs, self.num_anchors, self.bbox_attrs, g_dim, g_dim).permute(0, 1, 3, 4, 2).contiguous()
+        prediction = x.view(bs, self.num_anchors, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
         x = torch.sigmoid(prediction[..., 0])  # Center x
@@ -170,8 +165,7 @@ class YOLOLayer(nn.Module):
                                                                 self.scaled_anchors,
                                                                 self.num_anchors,
                                                                 self.num_classes,
-                                                                g_dim,
-                                                                self.tcls_zeros,
+                                                                nG,
                                                                 self.anchor_xywh)
 
             tcls = tcls[mask]
@@ -189,8 +183,8 @@ class YOLOLayer(nn.Module):
                 loss_y = self.lambda_coord * self.mse_loss(y[mask], ty[mask])
                 loss_w = self.lambda_coord * self.mse_loss(w[mask], tw[mask])
                 loss_h = self.lambda_coord * self.mse_loss(h[mask], th[mask])
-                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls) / 500
-                loss_conf = self.bce_loss(conf[mask], mask[mask].float()) * 8
+                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
+                loss_conf = self.bce_loss(conf[mask], mask[mask].float())
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
 

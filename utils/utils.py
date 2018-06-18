@@ -149,38 +149,34 @@ def bbox_iou_training(box1, b1_area, box2):
 
     return inter_area / (b1_area + b2_area - inter_area + 1e-16)  # iou
 
-
-def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchors, num_classes, dim,
-                  tcls_zeros, anchor_xywh):
+#@profile
+def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchors, nC, nG, anchor_xywh):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
 
     nB = target.shape[0]
     nA = num_anchors
-    tx = torch.zeros(nB, nA, dim, dim)
-    ty = torch.zeros(nB, nA, dim, dim)
-    tw = torch.zeros(nB, nA, dim, dim)
-    th = torch.zeros(nB, nA, dim, dim)
-    tconf = torch.zeros(nB, nA, dim, dim)
-    if tcls_zeros.shape[0] == nB:
-        tcls = tcls_zeros
-    else:
-        tcls = torch.zeros(nB, nA, dim, dim, num_classes)
+    tx = torch.zeros(nB, nA, nG, nG)  # batch size (4), number of anchors (3), number of grid points (13)
+    ty = torch.zeros(nB, nA, nG, nG)
+    tw = torch.zeros(nB, nA, nG, nG)
+    th = torch.zeros(nB, nA, nG, nG)
+    tconf = torch.zeros(nB, nA, nG, nG)
+    tcls = torch.zeros(nB, nA, nG, nG, nC)  # nC = number of classes
 
     nTP, nGT = 0, 0
     precision, recall = [], []
     for b in range(nB):
         nT = torch.argmin(target[b, :, 4]).item()  # number of targets (measures index of first zero-height target box)
         t = target[b, :nT]
-        t[:, 1:] *= dim
+        t[:, 1:] *= nG
         nGT += nT
 
         # Convert to position relative to box
         gx, gy, gw, gh = t[:, 1], t[:, 2], t[:, 3], t[:, 4]
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
-        gi = torch.clamp(gx.long(), min=0, max=dim - 1)
-        gj = torch.clamp(gy.long(), min=0, max=dim - 1)
+        gi = torch.clamp(gx.long(), min=0, max=nG - 1)
+        gj = torch.clamp(gy.long(), min=0, max=nG - 1)
         # Calculate ious between ground truth and each of the 3 anchors
 
         tb = torch.zeros(nT, 4)  # target boxes
@@ -208,7 +204,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
 
         for i in range(nA):
             iou_pred[:, i] = bbox_iou_training(tb, tb_area, pred_boxes[b, i, gj, gi])  # iou of targets-predictions
-            iou_anch[:, i] = bbox_iou_training(tc, tb_area, anchor_xywh[0, i, gj, gi])  # iou of targets-anchors
+            iou_anch[:, i] = bbox_iou_training(tc, tb_area, anchor_xywh[i, gj, gi])  # iou of targets-anchors
 
         # Select best iou_pred and anchor
         iou_pred, _ = iou_pred.cpu().max(1)

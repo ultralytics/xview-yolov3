@@ -11,12 +11,13 @@ from utils.utils import *
 
 # from tqdm import tqdm
 
-run_name = 'Adam'
+run_name = 'Adam_clsfix'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=25, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/BCEw_epoch_180_416.pt', help='path to weights file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/Adam_clsfix_final_epoch_0_416.pt',
+                    help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.8, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
@@ -28,7 +29,7 @@ opt = parser.parse_args()
 print(opt)
 
 
-#@profile
+# @profile
 def main(opt):
     os.makedirs('output', exist_ok=True)
     os.makedirs('checkpoints', exist_ok=True)
@@ -57,10 +58,9 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
-
-    #optimizer = torch.optim.Adam(model.parameters(), lr=.01)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100], gamma=0.5)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.90, weight_decay=decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.001)
+    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100], gamma=0.5)
 
     # reload saved optimizer state
     resume_training = False
@@ -73,7 +73,7 @@ def main(opt):
 
     print('%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
     for epoch in range(opt.epochs):
-        scheduler.step()
+        # scheduler.step()
         t0 = time.time()
         epochAP = 0
 
@@ -81,11 +81,11 @@ def main(opt):
             imgs = imgs.to(device)
             targets = targets.to(device)
 
-            #for j in range(2):
-            loss = model(imgs, targets)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            for j in range(10):
+                loss = model(imgs, targets)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
             epochAP = (epochAP * batch_i + model.losses['AP']) / (batch_i + 1)
             s = ('%10s%10s' + '%10.3g' * 10) % (
@@ -96,14 +96,13 @@ def main(opt):
             with open('printedResults.txt', 'a') as file:
                 file.write(s + '\n')
             t0 = time.time()
-
             model.seen += imgs.shape[0]
 
         if epoch % opt.checkpoint_interval == 0:
             torch.save(model.state_dict(), '%s/%s_epoch_%d_%g.pt' % (opt.checkpoint_dir, run_name, epoch, opt.img_size))
 
     # save final model
-    torch.save(model.state_dict(), '%s/%s_epoch_%d_%g.pt' % (opt.checkpoint_dir, run_name, epoch, opt.img_size))
+    torch.save(model.state_dict(), '%s/%s_final_epoch_%d_%g.pt' % (opt.checkpoint_dir, run_name, epoch, opt.img_size))
 
 
 if __name__ == '__main__':
