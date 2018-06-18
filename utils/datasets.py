@@ -21,75 +21,18 @@ class ImageFolder(Dataset):  # for eval-only
 
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
-        input_img = resize_square(cv2.imread(img_path), height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
-        return img_path, torch.from_numpy(input_img).float()
+        # Add padding
+        img = cv2.imread(img_path)
+        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+
+        # Normalize
+        r, c = np.nonzero(img.sum(0))
+        img -= img[:, r, c].mean()
+        img /= img[:, r, c].std()
+        return img_path, torch.from_numpy(img)
 
     def __len__(self):
         return len(self.files)
-
-
-class ListDataset(Dataset):  # for training
-    def __init__(self, list_path, img_size=416):
-        with open(list_path, 'r') as file:
-            self.img_files = file.readlines()
-        self.label_files = [
-            path.replace('images', 'labels').replace('.png', '.txt').replace('.jpg', '.txt').replace('.tif', '.txt') for
-            path in self.img_files]
-        self.img_shape = (img_size, img_size)
-        self.max_objects = 50
-
-    def __getitem__(self, index):
-
-        # ---------
-        #  Image
-        # ---------
-
-        img_path = self.img_files[index % len(self.img_files)].rstrip()
-        img = cv2.imread(img_path)
-
-        h, w, _ = img.shape
-        dim_diff = np.abs(h - w)
-        # Upper (left) and lower (right) padding
-        pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
-        # Determine padding
-        pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
-        # Add padding
-        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1) / 255.0
-        padded_h = max(h, w)
-        padded_w = padded_h
-
-        # ---------
-        #  Label
-        # ---------
-
-        label_path = self.label_files[index % len(self.img_files)].rstrip()
-
-        labels = None
-        if os.path.exists(label_path):
-            labels = np.loadtxt(label_path).reshape(-1, 5)
-            # Extract coordinates for unpadded + unscaled image
-            x1 = w * (labels[:, 1] - labels[:, 3] / 2)
-            y1 = h * (labels[:, 2] - labels[:, 4] / 2)
-            x2 = w * (labels[:, 1] + labels[:, 3] / 2)
-            y2 = h * (labels[:, 2] + labels[:, 4] / 2)
-            # Adjust for added padding
-            x1 += pad[1][0]
-            y1 += pad[0][0]
-            x2 += pad[1][0]
-            y2 += pad[0][0]
-            # Calculate ratios from coordinates
-            labels[:, 1] = ((x1 + x2) / 2) / padded_w
-            labels[:, 2] = ((y1 + y2) / 2) / padded_h
-            labels[:, 3] *= w / padded_w
-            labels[:, 4] *= h / padded_h
-        # Fill matrix
-        filled_labels = np.zeros((self.max_objects, 5))
-        if labels is not None:
-            filled_labels[range(len(labels))[:self.max_objects]] = labels[:self.max_objects]
-        return img_path, torch.from_numpy(img).float(), torch.from_numpy(filled_labels)
-
-    def __len__(self):
-        return len(self.img_files)
 
 
 class ListDataset_xview(Dataset):  # for training
@@ -122,10 +65,16 @@ class ListDataset_xview(Dataset):  # for training
         pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
         # Determine padding
         pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
-        # Add padding
-        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
         padded_h = max(h, w)
         padded_w = padded_h
+
+        # Add padding
+        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+
+        # Normalize
+        r, c = np.nonzero(img.sum(0))
+        img -= img[:, r, c].mean()
+        img /= img[:, r, c].std()
 
         # ---------
         #  Label
@@ -171,8 +120,7 @@ class ListDataset_xview(Dataset):  # for training
         if labels is not None:
             nT = len(labels)  # number of targets
             filled_labels[range(nT)[:self.max_objects]] = labels[:self.max_objects]
-        filled_labels = torch.from_numpy(filled_labels)
-        return img_path, torch.from_numpy(img), filled_labels
+        return img_path, torch.from_numpy(img), torch.from_numpy(filled_labels)
 
     def __len__(self):
         return len(self.img_files)
@@ -187,16 +135,16 @@ def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
 
 
 # @profile
-def resize_square(im, height=416, pad_color=(128, 128, 128)):  # resizes a rectangular image to a padded square
-    shape = im.shape[:2]  # shape = [height, width]
+def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular image to a padded square
+    shape = img.shape[:2]  # shape = [height, width]
     ratio = float(height) / max(shape)
     new_shape = [int(shape[0] * ratio), int(shape[1] * ratio)]
     dw = height - new_shape[1]  # width padding
     dh = height - new_shape[0]  # height padding
     top, bottom = dh // 2, dh - (dh // 2)
     left, right = dw // 2, dw - (dw // 2)
-    im = cv2.resize(im, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
-    return cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=pad_color)
+    img = cv2.resize(img, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+    return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
 def random_affine(img, points=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):

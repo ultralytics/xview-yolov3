@@ -13,12 +13,12 @@ from utils.datasets import *
 from utils.utils import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--image_folder', type=str, default='data/train_images', help='path to images')
+parser.add_argument('--image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('--config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
-parser.add_argument('--weights_path', type=str, default='checkpoints/BCEw_epoch_0_416.pt', help='path to weights file')
+parser.add_argument('--weights_path', type=str, default='checkpoints/Adam_epoch_0_416.pt', help='path to weights file')
 parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('--conf_thres', type=float, default=0.95, help='object confidence threshold')
+parser.add_argument('--conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('--nms_thres', type=float, default=0.25, help='iou thresshold for non-maximum suppression')
 parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
@@ -32,7 +32,7 @@ def main(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.makedirs(opt.output_folder, exist_ok=True)
 
-    cuda = False #torch.cuda.is_available()
+    cuda = torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
@@ -41,8 +41,8 @@ def main(opt):
         print('Network weights downloading. Please wait...\n')
         os.system('wget -c https://storage.googleapis.com/ultralytics/xvw1.pt')
         opt.weights_path = 'xvw1.pt'
-    model = Darknet(opt.config_path, img_size=opt.img_size)
-    model.load_state_dict(torch.load(opt.weights_path, map_location=device.type)).to(device).eval()
+    model = Darknet(opt.config_path, img_size=opt.img_size).to(device).eval()
+    model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file

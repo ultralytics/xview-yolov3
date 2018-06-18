@@ -9,11 +9,11 @@
 # clone repo
 #cd ..
 sudo rm -rf yolov3
-git clone https://github.com/ultralytics/yolov3
+git clone https://github.com/ultralytics/yolo
 
 # do training
-cd yolov3
-python3  traing.py -img_size 864 -batch_size 4 -n_cpu 8 -epochs 360 -checkpoint_interval 40
+cd yolo
+python3  train.py -img_size 416 -batch_size 4 -n_cpu 2 -epochs 250 -checkpoint_interval 50
 
 # move checkpoint to fuse drive
 #mv yolov3/checkpoints/epoch0.pt drive

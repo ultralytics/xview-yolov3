@@ -243,7 +243,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
 
         precision.extend((TP / (TP + FP + 1e-16)).tolist())
         recall.extend((TP / (TP + FN + 1e-16)).tolist())
-        # nCorrect += TP.sum().item()
 
         nTP += TP.sum().item()
         # print(TP.sum(), FP.sum(), FN.sum())

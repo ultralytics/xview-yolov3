@@ -98,7 +98,7 @@ class YOLOLayer(nn.Module):
         self.mse_loss = nn.MSELoss()
 
         class_weights = 1 / xview_class_weights(torch.arange(num_classes))
-        self.bce_loss_cls = nn.BCELoss(weight = class_weights)
+        self.bce_loss_cls = nn.BCELoss(weight=class_weights)
         self.bce_loss = nn.BCELoss()
 
         if anchor_idxs[0] == 6:
@@ -119,14 +119,14 @@ class YOLOLayer(nn.Module):
         anchor_h = self.scaled_anchors.index_select(1, LongTensor([1]))
         self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, g_dim * g_dim).view(shape)
         self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, g_dim * g_dim).view(shape)
-        self.anchor_xywh = torch.cat((self.grid_x.unsqueeze(4),self.grid_y.unsqueeze(4),self.anchor_w.unsqueeze(4),self.anchor_h.unsqueeze(4)),4)
+        self.anchor_xywh = torch.cat((self.grid_x.unsqueeze(4), self.grid_y.unsqueeze(4), self.anchor_w.unsqueeze(4),
+                                      self.anchor_h.unsqueeze(4)), 4)
 
         # prepopulate target-class zero matrices for speed
         nB = batch_size
         self.tcls_zeros = torch.zeros(nB, nA, g_dim, g_dim, num_classes).float()  # predefined for 4 batch-size
 
-
-    #@profile
+    # @profile
     def forward(self, x, targets=None, current_img_path=None):
         bs = x.shape[0]
         g_dim = x.shape[2]
@@ -189,16 +189,16 @@ class YOLOLayer(nn.Module):
                 loss_y = self.lambda_coord * self.mse_loss(y[mask], ty[mask])
                 loss_w = self.lambda_coord * self.mse_loss(w[mask], tw[mask])
                 loss_h = self.lambda_coord * self.mse_loss(h[mask], th[mask])
-                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls) * 8
-                loss_conf = self.bce_loss(conf[mask], mask[mask].float()) * 8
+                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
+                loss_conf = self.bce_loss(conf[mask], mask[mask].float()) * 2
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
 
-            loss_conf += self.lambda_noobj * self.bce_loss(conf[~mask], mask[~mask].float()) * 8
+            loss_conf += self.lambda_noobj * self.bce_loss(conf[~mask], mask[~mask].float())
 
             loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
-                ap, nGT
+                   ap, nGT
 
         else:
             # If not in training phase return predictions
@@ -224,7 +224,7 @@ class Darknet(nn.Module):
         self.header_info = np.array([0, 0, 0, self.seen, 0])
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT']
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None):
         is_training = targets is not None
         output = []
