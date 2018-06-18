@@ -13,22 +13,22 @@ from utils.utils import *
 
 run_name = 'Adam'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=10, help='number of epochs')
-parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
+parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
+parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
 parser.add_argument('-model_config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
 parser.add_argument('-weights_path', type=str, default='checkpoints/Adam_epoch_0_416.pt', help='path to weights file')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.8, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
-parser.add_argument('-n_cpu', type=int, default=2, help='number of cpu threads to use during batch generation')
+parser.add_argument('-n_cpu', type=int, default=4, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 13, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=2, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=50, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
 print(opt)
 
 
-# @profile
+#@profile
 def main(opt):
     os.makedirs('output', exist_ok=True)
     os.makedirs('checkpoints', exist_ok=True)
@@ -58,7 +58,9 @@ def main(opt):
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    #optimizer = torch.optim.Adam(model.parameters(), lr=.01)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[50], gamma=0.5)
 
     # reload saved optimizer state
     resume_training = False
@@ -71,6 +73,7 @@ def main(opt):
 
     print('%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'AP', 'mAP', 'time'))
     for epoch in range(opt.epochs):
+        scheduler.step()
         t0 = time.time()
         epochAP = 0
 
@@ -78,11 +81,11 @@ def main(opt):
             imgs = imgs.to(device)
             targets = targets.to(device)
 
-            for j in range(100):
-                loss = model(imgs, targets)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+            #for j in range(2):
+            loss = model(imgs, targets)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
             epochAP = (epochAP * batch_i + model.losses['AP']) / (batch_i + 1)
             s = ('%10s%10s' + '%10.3g' * 10) % (
