@@ -60,7 +60,7 @@ def main(opt):
     optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=decay)
 
     #optimizer = torch.optim.Adam(model.parameters(), lr=.01)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30], gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100], gamma=0.5)
 
     # reload saved optimizer state
     resume_training = False
