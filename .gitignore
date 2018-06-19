@@ -13,10 +13,16 @@ xview_predictions
 !zidane.jpg
 !images/*
 
+
 output
 __pycache__
 checkpoints
-*esults.txt
+*results.txt
+
+*.mat
+!targets.mat
+temp-plot.html
+
 
 
 # GitHub Python GitIgnore ----------------------------------------------------------------------------------------------
@@ -208,5 +214,3 @@ com_crashlytics_export_strings.xml
 crashlytics.properties
 crashlytics-build.properties
 fabric.properties
-*.mat
-temp-plot.html

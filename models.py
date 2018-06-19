@@ -59,7 +59,7 @@ def create_modules(module_defs):
             num_classes = int(module_def['classes'])
             img_height = int(hyperparams['height'])
             # Define detection layer
-            yolo_layer = YOLOLayer(anchors, num_classes, img_height, anchor_idxs, hyperparams['batch_size'])
+            yolo_layer = YOLOLayer(anchors, num_classes, img_height, anchor_idxs)
             modules.add_module('yolo_%d' % i, yolo_layer)
 
         # Register module list and number of output filters
@@ -79,7 +79,7 @@ class EmptyLayer(nn.Module):
 class YOLOLayer(nn.Module):
     """Detection layer"""
 
-    def __init__(self, anchors, num_classes, img_dim, anchor_idxs, batch_size=1):
+    def __init__(self, anchors, num_classes, img_dim, anchor_idxs):
         super(YOLOLayer, self).__init__()
         FloatTensor = torch.FloatTensor
         LongTensor = torch.LongTensor
@@ -215,11 +215,10 @@ class YOLOLayer(nn.Module):
 class Darknet(nn.Module):
     """YOLOv3 object detection model"""
 
-    def __init__(self, config_path, img_size=416, batch_size=1):
+    def __init__(self, config_path, img_size=416):
         super(Darknet, self).__init__()
         self.module_defs = parse_model_config(config_path)
         self.module_defs[0]['height'] = img_size
-        self.module_defs[0]['batch_size'] = batch_size
 
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size

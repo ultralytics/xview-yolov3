@@ -3,7 +3,9 @@ import os
 
 import cv2
 import numpy as np
+import scipy.io
 import torch
+from PIL import Image
 from torch.utils.data import Dataset
 
 
@@ -35,134 +37,119 @@ class ImageFolder(Dataset):  # for eval-only
         return len(self.files)
 
 
-class ListDataset_xview(Dataset):  # for training
+class ListDataset_xview():  # for training
     def __init__(self, folder_path, img_size=416):
         p = folder_path + 'train_images'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         assert len(self.img_files) > 0, 'No images found in path %s' % p
-        self.img_shape = (img_size, img_size)
-        self.label_files = [path.replace('_images', '_labels').replace('.tif', '.txt') for path in self.img_files]
-        self.max_objects = 5000
-        self.mu = np.array([40.746, 49.697, 60.134])[:, np.newaxis, np.newaxis] / 255.0
-        self.std = np.array([22.046, 24.498, 29.99])[:, np.newaxis, np.newaxis] / 255.0
+        self.height = img_size
+        # self.label_files = [path.replace('_images3', '_labels').replace('.tif', '.txt') for path in self.img_files]
+        self.max_objects = 7607
+        # load targets
+        self.mat = scipy.io.loadmat('utils/targets.mat')
+        self.mat['id'] = self.mat['id'].squeeze()
+        # make folder for reduced size images
+        os.system('mkdir ' + p + '_' + str(img_size))
 
     # @profile
     def __getitem__(self, index):
+        index = index % len(self.img_files)
+        img_path = self.img_files[index]
 
-        # ---------
-        #  Image
-        # ---------
+        # load labels
+        chip = img_path.rsplit('/')[-1].replace('.tif', '')
+        i = np.nonzero(self.mat['id'] == np.array(float(chip)))[0]
+        labels = self.mat['targets'][i]
 
-        img_path = self.img_files[index % len(self.img_files)]
-        img = cv2.imread(img_path)
-        h, w, _ = img.shape
-
-
-        small_path = img_path.replace('train_images','train_images_' + str(self.img_shape[0]))
-        if os.path.isfile(small_path):
+        # img = cv2.imread(img_path)
+        # h, w, _ = img.shape
+        small_path = img_path.replace('train_images', 'train_images_' + str(self.height))
+        if not os.path.isfile(small_path):
             img = cv2.imread(img_path)
-            shape = img.shape[:2]  # shape = [height, width]
-            ratio = float(self.img_shape[0]) / max(shape)
-            new_shape = [int(shape[0] * ratio), int(shape[1] * ratio)]
-            dw = self.img_shape[0] - new_shape[1]  # width padding
-            dh = self.img_shape[0] - new_shape[0]  # height padding
-            top, bottom = dh // 2, dh - (dh // 2)
-            left, right = dw // 2, dw - (dw // 2)
-            img = cv2.resize(img, (new_shape[1], new_shape[0]),interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
-            cv2.imwrite(small_path,img)
+            h, w, _ = img.shape
+            ratio = float(self.height) / max(h,w)
+            img = cv2.resize(img, (int(w * ratio), int(h * ratio)),
+                             interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+            cv2.imwrite(small_path, img)
         else:
-           img = cv2.imread(small_path)
-
-        # random_affine(img, points=None, degrees=(-5, 5), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
-
-        dim_diff = np.abs(h - w)
-        # Upper (left) and lower (right) padding
-        pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
-        # Determine padding
-        pad = ((pad1, pad2), (0, 0), (0, 0)) if h <= w else ((0, 0), (pad1, pad2), (0, 0))
-        padded_h = max(h, w)
-        padded_w = padded_h
+            img = cv2.imread(small_path)
+            # load original image width and height
+            if len(labels) > 0:
+                w, h = self.mat['wh'][i[0]]
+            else:
+                w, h = Image.open(img_path).size
 
         # Add padding
-        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+        img = resize_square(img, height=self.height)
 
+        ratio = float(self.height) / max(h, w)
+        pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
+        if h > w:
+            padx = pad
+        elif h < w:
+            pady = pad
 
-
-
-        # # Add padding
-        # img = resize_square(img, height=self.img_shape[0])
-        #
-        # pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
-        # if h > w:
-        #     pady = pad
-        # elif h < w:
-        #     padx = pad
-        #
-        # label_path = self.label_files[index % len(self.img_files)]
+        # label_path = self.label_files[index]
         # with open(label_path, 'r') as file:
-        #     a = file.read().replace('\n', ' ').split()
+        #    a = file.read().replace('\n', ' ').split()
         # labels = np.array([float(x) for x in a]).reshape(-1, 5)
-        #
-        # labels[:, [1, 3]] *= w + padx
-        # labels[:, [2, 4]] *= h + pady
-        #
-        # x1, y1, x2, y2 = labels[:, 1:5].T.copy()
 
+        if len(labels) > 0:
+            labels[:, [1, 3]] += padx
+            labels[:, [2, 4]] += pady
+            labels[:, 1:5] *= ratio
 
+            # plot
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img)
+            # plt.plot(labels[:, 1], labels[:, 2], '.')
+            # plt.plot(labels[:, 3], labels[:, 4], '.')
+
+            # convert labels to xywh
+            labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
+
+        # random affine
+        # img, labels[:, 1:5] = random_affine(img, points=labels[:, 1:5], degrees=(-5, 5), translate=(.1, .1), scale=(.9, 1.1))
+
+        # random lr flip
+        if np.random.choice([True, False]):
+            img = np.fliplr(img)
+            if len(labels) > 0:
+                labels[:, 1] = 1 - labels[:, 1]
+
+        # random ud flip
+        if np.random.choice([True, False]):
+            img = np.flipud(img)
+            if len(labels) > 0:
+                labels[:, 2] = 1 - labels[:, 2]
 
         # Normalize
-        r, c = np.nonzero(img.sum(0))
+        img = np.ascontiguousarray(img)
+        img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+        r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
         img -= img[:, r, c].mean()
         img /= img[:, r, c].std()
 
-        # ---------
-        #  Label
-        # ---------
-
-        label_path = self.label_files[index % len(self.img_files)]
-
-        labels = None
-        if os.path.exists(label_path):
-            # labels0 = np.loadtxt(label_path)  # slower than with open() as file:
-            with open(label_path, 'r') as file:
-                a = file.read().replace('\n', ' ').split()
-            labels = np.array([float(x) for x in a]).reshape(-1, 5)
-
-            # convert from x1y1x2y2 to xywh (required to convert xview to coco)
-            cx = (labels[:, 1] + labels[:, 3]) / 2
-            cy = (labels[:, 2] + labels[:, 4]) / 2
-            cw = labels[:, 3] - labels[:, 1]
-            ch = labels[:, 4] - labels[:, 2]
-            labels[:, 1] = cx / w
-            labels[:, 2] = cy / h
-            labels[:, 3] = cw / w
-            labels[:, 4] = ch / h
-            # Extract coordinates for unpadded + unscaled image (coco)
-            x1 = w * (labels[:, 1] - labels[:, 3] / 2)
-            y1 = h * (labels[:, 2] - labels[:, 4] / 2)
-            x2 = w * (labels[:, 1] + labels[:, 3] / 2)
-            y2 = h * (labels[:, 2] + labels[:, 4] / 2)
-            # Adjust for added padding
-            x1 += pad[1][0]
-            y1 += pad[0][0]
-            x2 += pad[1][0]
-            y2 += pad[0][0]
-            # Calculate ratios from coordinates
-            labels[:, 1] = ((x1 + x2) / 2) / padded_w
-            labels[:, 2] = ((y1 + y2) / 2) / padded_h
-            labels[:, 3] *= w / padded_w
-            labels[:, 4] *= h / padded_h
-            # remap xview classes 11-94 to 0-61
-            labels[:, 0] = xview_classes2indices(labels[:, 0])
         # Fill matrix
         filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
-        if labels is not None:
-            nT = len(labels)  # number of targets
-            filled_labels[range(nT)[:self.max_objects]] = labels[:self.max_objects]
+        if len(labels) > 0:
+            # remap xview classes 11-94 to 0-61
+            labels[:, 0] = xview_classes2indices(labels[:, 0])
+            filled_labels[range(len(labels))[:self.max_objects]] = labels[:self.max_objects]
+
         return img_path, torch.from_numpy(img), torch.from_numpy(filled_labels)
 
     def __len__(self):
         return len(self.img_files)
+
+
+def xyxy2xywh(box):
+    xywh = np.zeros(box.shape)
+    xywh[:, 0] = (box[:, 0] + box[:, 2]) / 2
+    xywh[:, 1] = (box[:, 1] + box[:, 3]) / 2
+    xywh[:, 2] = box[:, 2] - box[:, 0]
+    xywh[:, 3] = box[:, 3] - box[:, 1]
+    return xywh
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
@@ -191,25 +178,35 @@ def random_affine(img, points=None, degrees=(-10, 10), translate=(.1, .1), scale
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
     a = np.random.rand(1) * (degrees[1] - degrees[0]) + degrees[0]
-    cx = img.shape[0] * (1 + np.random.rand(1) * translate[0])
-    cy = img.shape[1] * (1 + np.random.rand(1) * translate[1])
+    cx = img.shape[0] * (0.5 + np.random.rand(1) * translate[0])
+    cy = img.shape[1] * (0.5 + np.random.rand(1) * translate[1])
     s = np.random.rand(1) * (scale[1] - scale[0]) + scale[0]
 
-    M = cv2.getRotationMatrix2D(angle=a, center=(cy, cx), scale=s)
+    M = cv2.getRotationMatrix2D(angle=30, center=(cy, cx), scale=s)
     imw = cv2.warpAffine(img, M, dsize=(img.shape[1], img.shape[0]))
 
     # Return warped points as well
-    if points:
+    if points is not None:
+        # import matplotlib.pyplot as plt
+        # plt.imshow(img)
+        # plt.plot(points[:, 0], points[:, 1], '.')
+
+        center = np.array([cy, cx]).reshape(1, 2)  # order reversed for opencv
+
+        n = points.shape[0]
+
+        # 2x3 warp
+        xy1_a = points[:, :2] @ M
+
+        # 3x3 warp
         M3 = np.concatenate((M, np.zeros((1, 3))), axis=0)
         M3[2, 2] = 1
-        points_warped = 0
-        # x = np.array([[1, .2], [.3, .5], [.7, .8]], dtype=np.float32) * 2000
-        # M3 = M3.astype(np.float32)
-        # points_warped = cv2.perspectiveTransform(np.array([x]), M)
+        xy1_ = (np.concatenate((points[:, :2] - center, np.zeros((n, 1))), axis=1) @ M3.T)[:, :2] + center
 
-        # import matplotlib.pyplot as plt
-        # plt.imshow(imw)
-        # plt.plot(x[0],x[1])
-        return imw, points_warped
+        # points_warped = cv2.perspectiveTransform(np.array([x]), M)
+        plt.imshow(imw)
+        plt.plot(xy1_[:, 0], xy1_[:, 1], '.')
+
+        return imw, points
     else:
         return imw

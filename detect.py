@@ -16,12 +16,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('--config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
-parser.add_argument('--weights_path', type=str, default='checkpoints/Adam_IOUfix__final_epoch_249_608.pt', help='path to weights file')
+parser.add_argument('--weights_path', type=str, default='checkpoints/test__final_epoch_249_608.pt', help='path to weights file')
 parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('--conf_thres', type=float, default=0.995, help='object confidence threshold')
 parser.add_argument('--nms_thres', type=float, default=0.25, help='iou thresshold for non-maximum suppression')
 parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
+parser.add_argument('--n_cpu', type=int, default=2, help='number of cpu threads to use during batch generation')
 parser.add_argument('--img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('--plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -41,6 +41,7 @@ def main(opt):
         print('Network weights downloading. Please wait...\n')
         os.system('wget -c https://storage.googleapis.com/ultralytics/xvw1.pt')
         opt.weights_path = 'xvw1.pt'
+
     model = Darknet(opt.config_path, img_size=opt.img_size).to(device).eval()
     model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
 

@@ -1,11 +1,32 @@
 clc; clear; close
-load xview.mat
+load json_data.mat
 
 chip_id = zeros(numel(chips),1);
+chip_number = zeros(numel(chips),1);
 for i=1:numel(chips)
     chip_id(i) = find(strcmp(chips(i),uchips));
+    
+    s = chips{i};
+    s = s(1:end-4);
+    chip_number(i) = str2double(s);
 end
+
+% clean coordinates that fall off images (remove or crop)
+image_h = shapes(chip_id,1);
+image_w = shapes(chip_id,2);
+[coords, v] = clean_coords(coords, image_h, image_w);
+mean(v)
+
+chip_id = chip_id(v);
+chips = chips(v);
+classes = classes(v);
+image_h = image_h(v);
+image_w = image_w(v); 
+chip_number = chip_number(v); clear v i
+
+% max targes per image
 [~,~,~,n]=fcnunique(chip_id);
+max(n)
 fig; histogram(n)
 
 % Target box width and height
@@ -13,11 +34,18 @@ w = coords(:,3) - coords(:,1);
 h = coords(:,4) - coords(:,2);
 
 % Normalized with and height
-wn = w./shapes(chip_id,1);
-hn = h./shapes(chip_id,1);
-i = wn ~= Inf; wn = wn(i); hn = hn(i);
-[~, i] = fcnsigmarejection(wn,6,3);
-[~, j] = fcnsigmarejection(hn,6,3); wn = wn(i & j); hn = hn(i & j);
+wn = w./image_w;
+hn = h./image_h;
+
+% normalized coordinates (are they off the image??)
+x1 = coords(:,1)./ image_w;
+y1 = coords(:,2)./ image_h;
+x2 = coords(:,3)./ image_w;
+y2 = coords(:,4)./ image_h;
+
+fig; histogram(y1)
+mean(x1<0 | y1<0 | x2>1 | y2>1)
+mean(x2<0 | y2<0 | x1>1 | y1>1)
 
 % K-means normalized with and height for 9 points
 C = fcn_kmeans([wn hn], 9);
@@ -36,8 +64,57 @@ end
 % output
 mu = stat_means(1:3)   % dataset rgb mean
 std = stat_means(4:6)  % dataset rgb std mean
-anchor_boxes = C(:)  % anchor boxes
+anchor_boxes = vpa(C(:)',3)  % anchor boxes
 
+
+wh = single([image_w, image_h]);
+targets = single([classes(:), coords]);
+id = single(chip_number);
+save('targets.mat','wh','targets','id')
+
+
+function [coords, valid] = clean_coords(coords, image_h, image_w)
+x1 = coords(:,1);
+y1 = coords(:,2);
+x2 = coords(:,3);
+y2 = coords(:,4);
+w = x2-x1;
+h = y2-y1;
+area = w.*h;
+
+% crop
+x1 = min( max(x1,0), image_w);
+y1 = min( max(y1,0), image_h);
+x2 = min( max(x2,0), image_w);
+y2 = min( max(y2,0), image_h);
+w = x2-x1;
+h = y2-y1;
+new_area = w.*h;
+
+% no nans or infs in bounding boxes
+i0 = ~any(isnan(coords) | isinf(coords), 2);
+
+% sigma rejections on dimensions
+[~, i1] = fcnsigmarejection(area,12, 3);
+[~, i2] = fcnsigmarejection(w,15, 3);
+[~, i3] = fcnsigmarejection(h,15, 3);
+
+% manual dimension requirements
+i4 = area >= 20 & w > 3 & h > 3;  
+
+% extreme edges (i.e. don't start an x1 4 pixels from the right side)
+i5 = x1 < (image_w-10) & y1 < (image_h-10) & x2 > 10 & y2 > 10;  % border = 5
+
+% cut objects that lost >90% of their area during crop
+i6 = (new_area./ area) > 0.20;
+
+% no image oddities
+hw = [image_h image_w];
+i7 = ~any(isnan(hw) | isinf(hw) | hw < 32, 2);
+
+valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7;
+coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
+end
 
 
 

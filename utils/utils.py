@@ -162,11 +162,13 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
     tcls = torch.zeros(nB, nA, nG, nG, nC)  # nC = number of classes
 
     precision, recall, nGT= [], [], 0
-    TP = torch.zeros(nB, 7618)
-    FP = torch.zeros(nB, 7618)
-    FN = torch.zeros(nB, 7618)
+    TP = torch.zeros(nB, 7607)
+    FP = torch.zeros(nB, 7607)
+    FN = torch.zeros(nB, 7607)
     for b in range(nB):
         nT = torch.argmin(target[b, :, 4]).item()  # number of targets (measures index of first zero-height target box)
+        if nT == 0:
+            continue
         t = target[b, :nT]
         t[:, 1:] *= nG
         nGT += nT

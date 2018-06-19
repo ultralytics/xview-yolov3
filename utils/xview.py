@@ -34,8 +34,8 @@ def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
     results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).T
-    x, y, w, h, conf, cls, total, prec, recall, pmu, rmu, time = results[:, 0:]
-    plt.plot(pmu)
+    x, y, w, h, conf, cls, total, prec, recall, pmu, rmu, time = results[:, 7000:]
+    plt.plot(rmu)
 
 
 
@@ -74,6 +74,3 @@ for name in tqdm(np.unique(chips)):
 from PIL import Image
 img_path = '/Users/glennjocher/downloads/DATA/xview/train_images3/5.tif'
 img = Image.open(img_path)
-
-% timeit a=Image.open(img_path)
-% timeit a = cv2.imread('/Users/glennjocher/downloads/DATA/xview/train_images3/5.tif', 1)
