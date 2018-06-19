@@ -95,7 +95,7 @@ class YOLOLayer(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-        class_weights = xview_class_weights(torch.arange(num_classes))
+        class_weights = 1 / xview_class_weights(torch.arange(num_classes))
         self.mse_loss = nn.MSELoss(size_average=True)
         self.bce_loss = nn.BCELoss(size_average=True)
         self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
