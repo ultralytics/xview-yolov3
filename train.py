@@ -56,7 +56,7 @@ def main(opt):
     dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
                             batch_size=opt.batch_size, shuffle=True, num_workers=opt.n_cpu)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=.002, momentum=.90, weight_decay=decay)
+    optimizer = torch.optim.SGD(model.parameters(), lr=.002, momentum=.95, weight_decay=decay)
     # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100], gamma=0.5)
 
