@@ -31,7 +31,7 @@ def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
     results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).T
-    x, y, w, h, conf, cls, total, AP, mAP, time = results
+    x, y, w, h, conf, cls, total, AP, mAP, time = results[:,55000:]
     plt.plot(mAP)
 
 

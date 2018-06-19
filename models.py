@@ -95,11 +95,10 @@ class YOLOLayer(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
+        class_weights = xview_class_weights(torch.arange(num_classes))
         self.mse_loss = nn.MSELoss(size_average=True)
-
-        class_weights = 1 / xview_class_weights(torch.arange(num_classes))
-        self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
         self.bce_loss = nn.BCELoss(size_average=True)
+        # self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
 
         if anchor_idxs[0] == 6:
             stride = 32
@@ -119,24 +118,28 @@ class YOLOLayer(nn.Module):
         anchor_h = self.scaled_anchors.index_select(1, LongTensor([1]))
         self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_a = self.anchor_w * self.anchor_h
         self.anchor_xywh = torch.cat((self.grid_x.unsqueeze(4), self.grid_y.unsqueeze(4), self.anchor_w.unsqueeze(4),
                                       self.anchor_h.unsqueeze(4)), 4).squeeze()
 
-    # @profile
-    def forward(self, x, targets=None, current_img_path=None):
+    #@profile
+    def forward(self, x, targets=None):
         bs = x.shape[0]
         nG = x.shape[2]
         stride = self.img_dim / nG
         # Tensors for cuda support
         FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
 
+        # x.view(4, 3, 67, 13, 13) -- > (4, 3, 13, 13, 67)
         prediction = x.view(bs, self.num_anchors, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
         x = torch.sigmoid(prediction[..., 0])  # Center x
         y = torch.sigmoid(prediction[..., 1])  # Center y
-        w = prediction[..., 2]  # Width
-        h = prediction[..., 3]  # Height
+        # w = prediction[..., 2]  # Width
+        # h = prediction[..., 3]  # Height
+        w = torch.sigmoid(prediction[..., 2])  # Width
+        h = torch.sigmoid(prediction[..., 3])  # Height
         conf = torch.sigmoid(prediction[..., 4])  # Conf
         pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
@@ -147,18 +150,19 @@ class YOLOLayer(nn.Module):
             self.anchor_h = self.anchor_h.cuda()
             self.mse_loss = self.mse_loss.cuda()
             self.bce_loss = self.bce_loss.cuda()
-            self.anchor_xywh = self.anchor_xywh.cuda()
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FloatTensor(prediction[..., :4].shape)
-        pred_boxes[..., 0] = x.data + self.grid_x
-        pred_boxes[..., 1] = y.data + self.grid_y
-        pred_boxes[..., 2] = torch.exp(w.data) * self.anchor_w
-        pred_boxes[..., 3] = torch.exp(h.data) * self.anchor_h
+        pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 3 / 2
+        pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 3 / 2
+        pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 3 / 2
+        pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 3 / 2
+        # pred_boxes[..., 2] = torch.exp(w.data) * self.anchor_w
+        # pred_boxes[..., 3] = torch.exp(h.data) * self.anchor_h
 
         # Training
         if targets is not None:
-            nGT, ap, tx, ty, tw, th, mask, tcls = build_targets(pred_boxes,
+            nGT, ap, tx, ty, tw, th, mask, tcls = build_targets(pred_boxes.data.cpu(),
                                                                 conf.data.cpu(),
                                                                 pred_cls.data.cpu(),
                                                                 targets.data.cpu(),
@@ -166,7 +170,8 @@ class YOLOLayer(nn.Module):
                                                                 self.num_anchors,
                                                                 self.num_classes,
                                                                 nG,
-                                                                self.anchor_xywh)
+                                                                self.anchor_xywh,
+                                                                self.anchor_a)
 
             tcls = tcls[mask]
             if x.is_cuda:
@@ -183,7 +188,7 @@ class YOLOLayer(nn.Module):
                 loss_y = self.lambda_coord * self.mse_loss(y[mask], ty[mask])
                 loss_w = self.lambda_coord * self.mse_loss(w[mask], tw[mask])
                 loss_h = self.lambda_coord * self.mse_loss(h[mask], th[mask])
-                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
+                loss_cls = self.bce_loss(pred_cls[mask], tcls)
                 loss_conf = self.bce_loss(conf[mask], mask[mask].float())
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
@@ -195,6 +200,10 @@ class YOLOLayer(nn.Module):
                    ap, nGT
 
         else:
+            pred_boxes[..., 0] = x.data + self.grid_x
+            pred_boxes[..., 1] = y.data + self.grid_y
+            pred_boxes[..., 2] = w.data * self.anchor_w * 3
+            pred_boxes[..., 3] = h.data * self.anchor_h * 3
             # If not in training phase return predictions
             output = torch.cat(
                 (pred_boxes.view(bs, -1, 4) * stride, conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.num_classes)),
@@ -207,7 +216,6 @@ class Darknet(nn.Module):
 
     def __init__(self, config_path, img_size=416, batch_size=1):
         super(Darknet, self).__init__()
-        self.current_img_path = ''
         self.module_defs = parse_model_config(config_path)
         self.module_defs[0]['height'] = img_size
         self.module_defs[0]['batch_size'] = batch_size
@@ -236,7 +244,7 @@ class Darknet(nn.Module):
             elif module_def['type'] == 'yolo':
                 # Train phase: get loss
                 if is_training:
-                    x, *losses = module[0](x, targets, self.current_img_path)
+                    x, *losses = module[0](x, targets)
                     for name, loss in zip(self.loss_names, losses):
                         self.losses[name] += loss
                 # Test phase: Get detections

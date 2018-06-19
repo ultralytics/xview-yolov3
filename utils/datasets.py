@@ -37,12 +37,11 @@ class ImageFolder(Dataset):  # for eval-only
 
 class ListDataset_xview(Dataset):  # for training
     def __init__(self, folder_path, img_size=416):
-        p = folder_path + 'train_images'
+        p = folder_path + 'train_images3'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         assert len(self.img_files) > 0, 'No images found in path %s' % p
         self.img_shape = (img_size, img_size)
-        self.label_files = [path.replace('_images', '_labels').replace('.tif', '.txt') for path in self.img_files]
-        self.img_shape = (img_size, img_size)
+        self.label_files = [path.replace('_images3', '_labels').replace('.tif', '.txt') for path in self.img_files]
         self.max_objects = 5000
         self.mu = np.array([40.746, 49.697, 60.134])[:, np.newaxis, np.newaxis] / 255.0
         self.std = np.array([22.046, 24.498, 29.99])[:, np.newaxis, np.newaxis] / 255.0
@@ -56,6 +55,21 @@ class ListDataset_xview(Dataset):  # for training
 
         img_path = self.img_files[index % len(self.img_files)]
         img = cv2.imread(img_path)
+
+        #small_path = img_path.replace('train_images','train_images_' + str(self.img_shape[0]))
+        #if os.path.isfile(small_path):
+        #     img = cv2.imread(img_path)
+        #     shape = img.shape[:2]  # shape = [height, width]
+        #     ratio = float(self.img_shape[0]) / max(shape)
+        #     new_shape = [int(shape[0] * ratio), int(shape[1] * ratio)]
+        #     dw = self.img_shape[0] - new_shape[1]  # width padding
+        #     dh = self.img_shape[0] - new_shape[0]  # height padding
+        #     top, bottom = dh // 2, dh - (dh // 2)
+        #     left, right = dw // 2, dw - (dw // 2)
+        #     img = cv2.resize(img, (new_shape[1], new_shape[0]),interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+        #     cv2.imwrite(small_path,img)
+        # else:
+        #    img = cv2.imread(small_path)
 
         # random_affine(img, points=None, degrees=(-5, 5), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
 

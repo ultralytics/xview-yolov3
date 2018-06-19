@@ -16,9 +16,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('--config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
-parser.add_argument('--weights_path', type=str, default='checkpoints/Adam_clsfix_final_epoch_0_416.pt', help='path to weights file')
+parser.add_argument('--weights_path', type=str, default='checkpoints/Adam_sigmoidwh__final_epoch_0_416.pt', help='path to weights file')
 parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('--conf_thres', type=float, default=0.99, help='object confidence threshold')
+parser.add_argument('--conf_thres', type=float, default=0.95, help='object confidence threshold')
 parser.add_argument('--nms_thres', type=float, default=0.25, help='iou thresshold for non-maximum suppression')
 parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('--n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
@@ -105,9 +105,9 @@ def main(opt):
                     # Rescale coordinates to original dimensions
                     box_h = ((y2 - y1) / unpad_h) * img.shape[0]
                     box_w = ((x2 - x1) / unpad_w) * img.shape[1]
-                    y1 = (((y1 - pad_y // 2) / unpad_h) * img.shape[0]).round().item()
+                    y1 = (((y1 - pad_y // 2) / unpad_h) * img.shape[0] - 5).round().item()
                     x1 = (((x1 - pad_x // 2) / unpad_w) * img.shape[1]).round().item()
-                    x2 = (x1 + box_w).round().item()
+                    x2 = (x1 + box_w - 5).round().item()
                     y2 = (y1 + box_h).round().item()
 
                     # write to file

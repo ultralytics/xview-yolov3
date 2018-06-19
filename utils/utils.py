@@ -125,32 +125,49 @@ def bbox_iou(box1, box2, b1x1y1x2y2=True, b2x1y1x2y2=True):
     return iou
 
 
-# @profile
-def bbox_iou_training(box1, b1_area, box2):
+#@profile
+def bbox_iou_training(box1, box2):
     """
     Returns the IoU of two bounding boxes, optimized for speed
     """
     # Get the coordinates of bounding boxes
     b1_x1, b1_y1, b1_x2, b1_y2 = box1[:, 0], box1[:, 1], box1[:, 2], box1[:, 3]
-
-    # Transform from center and width to exact coordinates
-    b2_x1, b2_x2 = box2[:, 0] - box2[:, 2] / 2, box2[:, 0] + box2[:, 2] / 2
-    b2_y1, b2_y2 = box2[:, 1] - box2[:, 3] / 2, box2[:, 1] + box2[:, 3] / 2
+    b2_x1, b2_y1, b2_x2, b2_y2 = box2[:, 0], box2[:, 1], box2[:, 2], box2[:, 3]
 
     # get the coordinates of the intersection rectangle
-    inter_rect_x1 = torch.max(b1_x1, b2_x1)
-    inter_rect_y1 = torch.max(b1_y1, b2_y1)
     inter_rect_x2 = torch.min(b1_x2, b2_x2)
     inter_rect_y2 = torch.min(b1_y2, b2_y2)
     # Intersection area
-    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1, 0) * torch.clamp(inter_rect_y2 - inter_rect_y1, 0)
+    inter_area = torch.clamp(inter_rect_x2 - b1_x1, 0) * torch.clamp(inter_rect_y2 - b1_y1, 0)
     # Union Area
+    b1_area = (b1_x2 - b1_x1) * (b1_y2 - b1_y1)
     b2_area = (b2_x2 - b2_x1) * (b2_y2 - b2_y1)
 
     return inter_area / (b1_area + b2_area - inter_area + 1e-16)  # iou
 
+
 #@profile
-def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchors, nC, nG, anchor_xywh):
+def bbox_iou_wh(box1, box2):
+    # Get the coordinates of bounding boxes
+    b1_w, b1_h = box1[:, 0], box1[:, 1]
+    b2_w, b2_h = box2[:, 0], box2[:, 1]
+
+    # get the coordinates of the intersection rectangle
+    inter_rect_w = torch.min(b1_w, b2_w)
+    inter_rect_h = torch.min(b1_h, b2_h)
+    # Intersection area
+    inter_area = inter_rect_w * inter_rect_h
+    # Union Area
+    b1_area = b1_w * b1_h
+    b2_area = b2_w * b2_h
+
+    return inter_area / (b1_area + b2_area - inter_area + 1e-16)  # iou
+
+
+
+
+#@profile
+def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchors, nC, nG, anchor_xywh, anchor_a):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
@@ -185,30 +202,15 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
         tb[:, 2] = gx + gw / 2
         tb[:, 3] = gy + gh / 2
 
-        tc = torch.zeros(nT, 4)  # target boxes aligned to anchor grid
-        tc[:, 0] = gi.float()
-        tc[:, 1] = gj.float()
-        tc[:, 2] = gi.float() + gw
-        tc[:, 3] = gj.float() + gh
-
-        tb_area = gw * gh  # target box area
         iou_pred = torch.zeros(nT, nA)  # iou of predicted boxes
         iou_anch = torch.zeros(nT, nA)  # iou of nearest anchor boxes
-
-        if pred_boxes.is_cuda:
-            tc = tc.cuda()
-            tb = tb.cuda()
-            tb_area = tb_area.cuda()
-            iou_pred = iou_pred.cuda()
-            iou_anch = iou_anch.cuda()
-
         for i in range(nA):
-            iou_pred[:, i] = bbox_iou_training(tb, tb_area, pred_boxes[b, i, gj, gi])  # iou of targets-predictions
-            iou_anch[:, i] = bbox_iou_training(tc, tb_area, anchor_xywh[i, gj, gi])  # iou of targets-anchors
+            iou_pred[:, i] = bbox_iou_training(tb, pred_boxes[b, i, gj, gi])  # iou of targets-predictions
+            iou_anch[:, i] = bbox_iou_wh(t[:,3:5], anchor_xywh[i, gj, gi, 2:])  # iou of targets-anchors
 
         # Select best iou_pred and anchor
-        iou_pred, _ = iou_pred.cpu().max(1)
-        iou_anch, a = iou_anch.cpu().max(1)  # best anchor [0-2] for each target
+        iou_pred, _ = iou_pred.max(1)
+        iou_anch, a = iou_anch.max(1)  # best anchor [0-2] for each target
 
         # Two targets can not claim the same anchor
         if nT > 1:
@@ -224,8 +226,10 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, a, gj, gi] = torch.log(gw / anchor_wh[a, 0] + 1e-16)
-        th[b, a, gj, gi] = torch.log(gh / anchor_wh[a, 1] + 1e-16)
+        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 3
+        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 3
+        # tw[b, a, gj, gi] = torch.log(gw / anchor_wh[a, 0] + 1e-16)
+        # th[b, a, gj, gi] = torch.log(gh / anchor_wh[a, 1] + 1e-16)
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
