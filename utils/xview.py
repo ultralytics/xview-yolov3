@@ -1,6 +1,9 @@
 import json
 
+import cv2
 import numpy as np
+import os
+import scipy.io
 from tqdm import tqdm
 
 
@@ -30,9 +33,10 @@ def get_labels(fname):
 def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
-    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).T
-    x, y, w, h, conf, cls, total, AP, mAP, time = results[:,85000:]
-    plt.plot(mAP)
+    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).T
+    x, y, w, h, conf, cls, total, prec, recall, pmu, rmu, time = results[:, 0:]
+    plt.plot(pmu)
+
 
 
 path = '/Users/glennjocher/Downloads/DATA/xview/'
@@ -44,8 +48,6 @@ uchips = np.unique(chips)
 n = len(uchips)
 shapes = np.zeros((n, 2))
 stats = np.zeros((n, 6))
-import cv2
-
 for i, chip in enumerate(path + 'train_images/' + uchips):
     print(i)
     img = cv2.imread(chip)
@@ -55,18 +57,23 @@ for i, chip in enumerate(path + 'train_images/' + uchips):
             stats[i, j] = img[:, :, j].mean()
             stats[i, j + 3] = img[:, :, j].std()
 
-import scipy.io
-
 scipy.io.savemat('xview.mat', {'coords': coords, 'chips': chips, 'classes': classes, 'shapes': shapes, 'stats': stats,
                                'uchips': uchips})
 
-## create train_labels folder in coco format
-# nF = []  # number of features
-# os.makedirs(path + 'train_labels/', exist_ok=True)
-# for name in tqdm(np.unique(chips)):
-#    rows = [i for i, x in enumerate(chips) if x == name]
-#    nF.append(len(rows))
-#    if any(rows):
-#        with open(path + 'train_labels/' + name.replace('.tif', '.txt'), 'a') as file:
-#            for i in rows:
-#                file.write('%g %g %g %g %g\n' % (classes[i], *coords[i]))
+# create train_labels folder in coco format
+nF = []  # number of features
+os.makedirs(path + 'train_labels/', exist_ok=True)
+for name in tqdm(np.unique(chips)):
+    rows = [i for i, x in enumerate(chips) if x == name]
+    nF.append(len(rows))
+    if any(rows):
+        with open(path + 'train_labels/' + name.replace('.tif', '.txt'), 'a') as file:
+            for i in rows:
+                file.write('%g %g %g %g %g\n' % (classes[i], *coords[i]))
+
+from PIL import Image
+img_path = '/Users/glennjocher/downloads/DATA/xview/train_images3/5.tif'
+img = Image.open(img_path)
+
+% timeit a=Image.open(img_path)
+% timeit a = cv2.imread('/Users/glennjocher/downloads/DATA/xview/train_images3/5.tif', 1)

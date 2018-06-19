@@ -3,9 +3,10 @@ from collections import defaultdict
 import numpy as np
 import torch
 import torch.nn as nn
+from utils.utils import xview_class_weights
 
 from utils.parse_config import *
-from utils.utils import build_targets, xview_class_weights
+from utils.utils import build_targets
 
 
 # @profile
@@ -95,10 +96,10 @@ class YOLOLayer(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-        class_weights = 1 / xview_class_weights(torch.arange(num_classes))
+        #class_weights = 1 / xview_class_weights(torch.arange(num_classes)) * 0 + 1
         self.mse_loss = nn.MSELoss(size_average=True)
         self.bce_loss = nn.BCELoss(size_average=True)
-        self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
+        #self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
 
         if anchor_idxs[0] == 6:
             stride = 32
@@ -122,7 +123,7 @@ class YOLOLayer(nn.Module):
         self.anchor_xywh = torch.cat((self.grid_x.unsqueeze(4), self.grid_y.unsqueeze(4), self.anchor_w.unsqueeze(4),
                                       self.anchor_h.unsqueeze(4)), 4).squeeze()
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None):
         bs = x.shape[0]
         nG = x.shape[2]
@@ -162,16 +163,16 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
-            nGT, ap, tx, ty, tw, th, mask, tcls = build_targets(pred_boxes.data.cpu(),
-                                                                conf.data.cpu(),
-                                                                pred_cls.data.cpu(),
-                                                                targets.data.cpu(),
-                                                                self.scaled_anchors,
-                                                                self.num_anchors,
-                                                                self.num_classes,
-                                                                nG,
-                                                                self.anchor_xywh,
-                                                                self.anchor_a)
+            nGT, ap, tx, ty, tw, th, mask, tcls, TP, FP, FN = build_targets(pred_boxes.data.cpu(),
+                                                                            conf.data.cpu(),
+                                                                            pred_cls.data.cpu(),
+                                                                            targets.data.cpu(),
+                                                                            self.scaled_anchors,
+                                                                            self.num_anchors,
+                                                                            self.num_classes,
+                                                                            nG,
+                                                                            self.anchor_xywh,
+                                                                            self.anchor_a)
 
             tcls = tcls[mask]
             if x.is_cuda:
@@ -188,7 +189,7 @@ class YOLOLayer(nn.Module):
                 loss_y = self.lambda_coord * self.mse_loss(y[mask], ty[mask])
                 loss_w = self.lambda_coord * self.mse_loss(w[mask], tw[mask])
                 loss_h = self.lambda_coord * self.mse_loss(h[mask], th[mask])
-                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
+                loss_cls = self.bce_loss(pred_cls[mask], tcls)
                 loss_conf = self.bce_loss(conf[mask], mask[mask].float())
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
@@ -197,7 +198,7 @@ class YOLOLayer(nn.Module):
 
             loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
-                   ap, nGT
+                   ap, nGT, TP, FP, FN
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
@@ -224,7 +225,9 @@ class Darknet(nn.Module):
         self.img_size = img_size
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen, 0])
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT']
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN']
+        self.precision = 0
+        self.recall = 0
 
     # @profile
     def forward(self, x, targets=None):
@@ -254,7 +257,13 @@ class Darknet(nn.Module):
             layer_outputs.append(x)
 
         if is_training:
-            self.losses['nGT'] /= 3
-            self.losses['AP'] /= 3
+            TP = (self.losses['TP'] > 0).float()
+            FP = (self.losses['FP'] > 0).float()
+            FN = (self.losses['FN'] == 3).float()
+
+            # print(TP.sum(), FP.sum(), FN.sum(), self.losses['nGT']/3)
+
+            self.precision = TP.sum() / (TP.sum() + FP.sum())
+            self.recall = TP.sum() / (TP.sum() + FN.sum())
 
         return sum(output) if is_training else torch.cat(output, 1)

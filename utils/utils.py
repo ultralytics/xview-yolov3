@@ -147,26 +147,6 @@ def bbox_iou_training(box1, box2):
 
 
 #@profile
-def bbox_iou_wh(box1, box2):
-    # Get the coordinates of bounding boxes
-    b1_w, b1_h = box1[:, 0], box1[:, 1]
-    b2_w, b2_h = box2[:, 0], box2[:, 1]
-
-    # get the coordinates of the intersection rectangle
-    inter_rect_w = torch.min(b1_w, b2_w)
-    inter_rect_h = torch.min(b1_h, b2_h)
-    # Intersection area
-    inter_area = inter_rect_w * inter_rect_h
-    # Union Area
-    b1_area = b1_w * b1_h
-    b2_area = b2_w * b2_h
-
-    return inter_area / (b1_area + b2_area - inter_area + 1e-16)  # iou
-
-
-
-
-#@profile
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchors, nC, nG, anchor_xywh, anchor_a):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
@@ -181,8 +161,10 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
     tconf = torch.zeros(nB, nA, nG, nG)
     tcls = torch.zeros(nB, nA, nG, nG, nC)  # nC = number of classes
 
-    nTP, nGT = 0, 0
-    precision, recall = [], []
+    precision, recall, nGT= [], [], 0
+    TP = torch.zeros(nB, 7618)
+    FP = torch.zeros(nB, 7618)
+    FN = torch.zeros(nB, 7618)
     for b in range(nB):
         nT = torch.argmin(target[b, :, 4]).item()  # number of targets (measures index of first zero-height target box)
         t = target[b, :nT]
@@ -202,15 +184,20 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
         tb[:, 2] = gx + gw / 2
         tb[:, 3] = gy + gh / 2
 
+        # iou of targets-anchors (using wh only)
+        box1 = t[:,3:5]
+        box2 = anchor_xywh[:, gj, gi, 2:]
+        inter_area = torch.min(box1, box2).prod(2)
+        iou_anch = inter_area / (box1.prod(1) + box2.prod(2) - inter_area + 1e-16)
+
+        # iou of targets-predictions
         iou_pred = torch.zeros(nT, nA)  # iou of predicted boxes
-        iou_anch = torch.zeros(nT, nA)  # iou of nearest anchor boxes
         for i in range(nA):
-            iou_pred[:, i] = bbox_iou_training(tb, pred_boxes[b, i, gj, gi])  # iou of targets-predictions
-            iou_anch[:, i] = bbox_iou_wh(t[:,3:5], anchor_xywh[i, gj, gi, 2:])  # iou of targets-anchors
+            iou_pred[:, i] = bbox_iou_training(tb, pred_boxes[b, i, gj, gi])
 
         # Select best iou_pred and anchor
         iou_pred, _ = iou_pred.max(1)
-        iou_anch, a = iou_anch.max(1)  # best anchor [0-2] for each target
+        iou_anch, a = iou_anch.max(0)  # best anchor [0-2] for each target
 
         # Two targets can not claim the same anchor
         if nT > 1:
@@ -219,6 +206,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
             _, first_unique = np.unique(u[:, iou_anch_order], axis=1, return_index=True)  # first unique indices
             i = iou_anch_order[first_unique]
             a, gj, gi, t, iou_pred = a[i], gj[i], gi[i], t[i], iou_pred[i]
+        else:
+            i = 0
 
         tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1], t[:, 2], t[:, 3], t[:, 4]
 
@@ -237,18 +226,16 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, num_anchor
         pcls = torch.argmax(pred_cls[b, a, gj, gi], 1)
         pconf = pred_conf[b, a, gj, gi]
 
-        TP = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls == tc)).float()
-        FP = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls != tc)).float()
-        FN = ((iou_pred < 0.5) | (pconf < 0.5)).float()
+        TP[b, i] = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls == tc)).float()
+        FP[b, i] = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls != tc)).float()
+        FN[b, :nT] = 1.0
+        FN[b, i] = ((TP[b, i]==0) & (FP[b, i]==0)).float()
 
-        precision.extend((TP / (TP + FP + 1e-16)).tolist())
-        recall.extend((TP / (TP + FN + 1e-16)).tolist())
-
-        nTP += TP.sum().item()
-        # print(TP.sum(), FP.sum(), FN.sum())
-
-    ap = nTP / nGT  # compute_ap(recall, precision)
-    return nGT, ap, tx, ty, tw, th, tconf == 1, tcls
+    #precision = TP.sum() / (TP + FP + 1e-16).float()
+    #recall = TP.float() / (TP + FN + 1e-16).float()
+    #ap = nTP / nGT  # compute_ap(recall, precision)
+    ap = 0
+    return nGT, ap, tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN
 
 def to_categorical(y, num_classes):
     """ 1-hot encodes a tensor """

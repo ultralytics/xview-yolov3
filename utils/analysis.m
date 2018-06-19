@@ -5,6 +5,8 @@ chip_id = zeros(numel(chips),1);
 for i=1:numel(chips)
     chip_id(i) = find(strcmp(chips(i),uchips));
 end
+[~,~,~,n]=fcnunique(chip_id);
+fig; histogram(n)
 
 % Target box width and height
 w = coords(:,3) - coords(:,1);
@@ -19,13 +21,13 @@ i = wn ~= Inf; wn = wn(i); hn = hn(i);
 
 % K-means normalized with and height for 9 points
 C = fcn_kmeans([wn hn], 9);
-i = sort(C(:,1).*C(:,2))
+[~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
 % image mean and std
 i = ~all(stats==0,2);
 shapes=shapes(i,:);
-stats=stats(i,:);
+stats=stats(i,:);  % rgb_mean, rgb_std
 stat_means = zeros(1,6);
 for i=1:6
     stat_means(i) = mean(fcnsigmarejection(stats(:,i),6,3));
@@ -47,6 +49,7 @@ rng('default'); % For reproducibility
 %opts = statset('Display','iter','MaxIter',300);
 %[idx,C, sumd] = kmedoids(X,n,'Distance','cityblock','Options',opts);
 [idx,C, sumd] = kmeans(X,n,'MaxIter',400,'OnlinePhase','on');
+sumd
 
 
 fig;
@@ -55,7 +58,6 @@ for i = 1:numel(unique(idx))
 end
 
 plot(C(:,1),C(:,2),'co','MarkerSize',7,'LineWidth',1.5)
-%plot(Cm(:,1),Cm(:,2),'co','MarkerSize',7,'LineWidth',1.5)
 legend('Cluster 1','Cluster 2','Medoids','Location','NW');
 title('Cluster Assignments and Medoids');
 hold off

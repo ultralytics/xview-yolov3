@@ -55,25 +55,26 @@ class ListDataset_xview(Dataset):  # for training
 
         img_path = self.img_files[index % len(self.img_files)]
         img = cv2.imread(img_path)
+        h, w, _ = img.shape
 
-        #small_path = img_path.replace('train_images','train_images_' + str(self.img_shape[0]))
-        #if os.path.isfile(small_path):
-        #     img = cv2.imread(img_path)
-        #     shape = img.shape[:2]  # shape = [height, width]
-        #     ratio = float(self.img_shape[0]) / max(shape)
-        #     new_shape = [int(shape[0] * ratio), int(shape[1] * ratio)]
-        #     dw = self.img_shape[0] - new_shape[1]  # width padding
-        #     dh = self.img_shape[0] - new_shape[0]  # height padding
-        #     top, bottom = dh // 2, dh - (dh // 2)
-        #     left, right = dw // 2, dw - (dw // 2)
-        #     img = cv2.resize(img, (new_shape[1], new_shape[0]),interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
-        #     cv2.imwrite(small_path,img)
-        # else:
-        #    img = cv2.imread(small_path)
+
+        small_path = img_path.replace('train_images','train_images_' + str(self.img_shape[0]))
+        if os.path.isfile(small_path):
+            img = cv2.imread(img_path)
+            shape = img.shape[:2]  # shape = [height, width]
+            ratio = float(self.img_shape[0]) / max(shape)
+            new_shape = [int(shape[0] * ratio), int(shape[1] * ratio)]
+            dw = self.img_shape[0] - new_shape[1]  # width padding
+            dh = self.img_shape[0] - new_shape[0]  # height padding
+            top, bottom = dh // 2, dh - (dh // 2)
+            left, right = dw // 2, dw - (dw // 2)
+            img = cv2.resize(img, (new_shape[1], new_shape[0]),interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+            cv2.imwrite(small_path,img)
+        else:
+           img = cv2.imread(small_path)
 
         # random_affine(img, points=None, degrees=(-5, 5), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
 
-        h, w, _ = img.shape
         dim_diff = np.abs(h - w)
         # Upper (left) and lower (right) padding
         pad1, pad2 = dim_diff // 2, dim_diff - dim_diff // 2
@@ -84,6 +85,30 @@ class ListDataset_xview(Dataset):  # for training
 
         # Add padding
         img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+
+
+
+
+        # # Add padding
+        # img = resize_square(img, height=self.img_shape[0])
+        #
+        # pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
+        # if h > w:
+        #     pady = pad
+        # elif h < w:
+        #     padx = pad
+        #
+        # label_path = self.label_files[index % len(self.img_files)]
+        # with open(label_path, 'r') as file:
+        #     a = file.read().replace('\n', ' ').split()
+        # labels = np.array([float(x) for x in a]).reshape(-1, 5)
+        #
+        # labels[:, [1, 3]] *= w + padx
+        # labels[:, [2, 4]] *= h + pady
+        #
+        # x1, y1, x2, y2 = labels[:, 1:5].T.copy()
+
+
 
         # Normalize
         r, c = np.nonzero(img.sum(0))
