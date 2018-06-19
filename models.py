@@ -98,7 +98,7 @@ class YOLOLayer(nn.Module):
         class_weights = xview_class_weights(torch.arange(num_classes))
         self.mse_loss = nn.MSELoss(size_average=True)
         self.bce_loss = nn.BCELoss(size_average=True)
-        # self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
+        self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
 
         if anchor_idxs[0] == 6:
             stride = 32
@@ -188,7 +188,7 @@ class YOLOLayer(nn.Module):
                 loss_y = self.lambda_coord * self.mse_loss(y[mask], ty[mask])
                 loss_w = self.lambda_coord * self.mse_loss(w[mask], tw[mask])
                 loss_h = self.lambda_coord * self.mse_loss(h[mask], th[mask])
-                loss_cls = self.bce_loss(pred_cls[mask], tcls)
+                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
                 loss_conf = self.bce_loss(conf[mask], mask[mask].float())
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
