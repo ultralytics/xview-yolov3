@@ -21,7 +21,7 @@ parser.add_argument('-class_path', type=str, default='data/xview.names', help='p
 parser.add_argument('-conf_thres', type=float, default=0.8, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=4, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 27, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=50, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -79,7 +79,7 @@ def main(opt):
             imgs = imgs.to(device)
             targets = targets.to(device)
 
-            for _ in range(1):
+            for _ in range(2):
                 loss = model(imgs, targets)
                 optimizer.zero_grad()
                 loss.backward()
