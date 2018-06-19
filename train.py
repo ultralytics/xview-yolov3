@@ -79,7 +79,7 @@ def main(opt):
             imgs = imgs.to(device)
             targets = targets.to(device)
 
-            for _ in range(1):
+            for _ in range(10):
                 loss = model(imgs, targets)
                 optimizer.zero_grad()
                 loss.backward()
