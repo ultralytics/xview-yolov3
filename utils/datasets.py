@@ -37,11 +37,11 @@ class ImageFolder(Dataset):  # for eval-only
 
 class ListDataset_xview(Dataset):  # for training
     def __init__(self, folder_path, img_size=416):
-        p = folder_path + 'train_images3'
+        p = folder_path + 'train_images'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         assert len(self.img_files) > 0, 'No images found in path %s' % p
         self.img_shape = (img_size, img_size)
-        self.label_files = [path.replace('_images3', '_labels').replace('.tif', '.txt') for path in self.img_files]
+        self.label_files = [path.replace('_images', '_labels').replace('.tif', '.txt') for path in self.img_files]
         self.max_objects = 5000
         self.mu = np.array([40.746, 49.697, 60.134])[:, np.newaxis, np.newaxis] / 255.0
         self.std = np.array([22.046, 24.498, 29.99])[:, np.newaxis, np.newaxis] / 255.0
