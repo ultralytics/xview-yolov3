@@ -1,6 +1,6 @@
 import argparse
-import time
 import os
+import time
 
 try:
     from torch.utils.data import DataLoader
@@ -11,36 +11,42 @@ except:  # required packaged not installed
 from models import *
 from utils.datasets import *
 from utils.utils import *
+from scoring import score
+
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--image_folder', type=str, default='data/train_images8', help='path to images')
+parser.add_argument('--image_folder', type=str, default='data/train_images3', help='path to images')
 parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('--config_path', type=str, default='cfg/yolovx.cfg', help='path to model cfg file')
-parser.add_argument('--weights_path', type=str, default='checkpoints/test__final_epoch_249_608.pt', help='path to weights file')
+parser.add_argument('--config_path', type=str, default='cfg/yolovx_18.cfg', help='path to model cfg file')
+parser.add_argument('--weights_path', type=str, default='checkpoints/test_final_epoch_249_608.pt',
+                    help='path to weights file')
 parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('--conf_thres', type=float, default=0.995, help='object confidence threshold')
-parser.add_argument('--nms_thres', type=float, default=0.25, help='iou thresshold for non-maximum suppression')
+parser.add_argument('--conf_thres', type=float, default=0.9, help='object confidence threshold')
+parser.add_argument('--nms_thres', type=float, default=0.1, help='iou thresshold for non-maximum suppression')
 parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('--n_cpu', type=int, default=2, help='number of cpu threads to use during batch generation')
-parser.add_argument('--img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('--n_cpu', type=int, default=1, help='number of cpu threads to use during batch generation')
+parser.add_argument('--img_size', type=int, default=32 * 13, help='size of each image dimension')
 parser.add_argument('--plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
 
-def main(opt):
+def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.makedirs(opt.output_folder, exist_ok=True)
+    opt.img_size = int(opt.weights_path.rsplit('_')[-1][:-3])
+
 
     cuda = torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
     Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
     # Set up model
-    if not os.path.isfile(opt.weights_path):
-        print('Network weights downloading. Please wait...\n')
-        os.system('wget -c https://storage.googleapis.com/ultralytics/xvw1.pt')
-        opt.weights_path = 'xvw1.pt'
+    assert os.path.isfile(opt.weights_path), 'Weights file not found'
+    # if not os.path.isfile(opt.weights_path):
+    #     print('Network weights downloading. Please wait...\n')
+    #     os.system('wget -c https://storage.googleapis.com/ultralytics/xvw1.pt')
+    #     opt.weights_path = 'xvw1.pt'
 
     model = Darknet(opt.config_path, img_size=opt.img_size).to(device).eval()
     model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
@@ -69,7 +75,6 @@ def main(opt):
         imgs.extend(img_paths)
         img_detections.extend(detections)
 
-
     # Bounding-box colors
     color_list = [[random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)] for _ in range(len(classes))]
 
@@ -97,6 +102,8 @@ def main(opt):
             if os.path.isfile(results_path + '.txt'):
                 os.remove(results_path + '.txt')
 
+            results_img_path = os.path.join(opt.output_folder + '_img', path.split('/')[-1])
+
             with open(results_path + '.txt', 'a') as file:
                 for i in unique_classes:
                     n = (detections[:, -1].cpu() == i).sum()
@@ -111,6 +118,11 @@ def main(opt):
                     x2 = (x1 + box_w - 3).round().item()
                     y2 = (y1 + box_h).round().item()
 
+                    x1 = max(x1, 0)
+                    y1 = max(y1, 0)
+                    x2 = max(x2, 0)
+                    y2 = max(y2, 0)
+
                     # write to file
                     file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, xview_indices2classes(int(cls_pred)), conf))
 
@@ -122,8 +134,11 @@ def main(opt):
 
             if opt.plot_flag:
                 # Save generated image with detections
-                cv2.imwrite(results_path, img)
+                cv2.imwrite(results_img_path, img)
+
+    score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
+                '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson','.')
 
 
 if __name__ == '__main__':
-    main(opt)
+    detect(opt)

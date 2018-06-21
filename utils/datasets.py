@@ -1,5 +1,6 @@
 import glob
 import os
+import random
 
 import cv2
 import numpy as np
@@ -28,9 +29,9 @@ class ImageFolder(Dataset):  # for eval-only
         img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
 
         # Normalize
-        r, c = np.nonzero(img.sum(0))
-        img -= img[:, r, c].mean()
-        img /= img[:, r, c].std()
+        r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
+        img[:, r, c] -= img[:, r, c].mean()
+        img[:, r, c] /= img[:, r, c].std()
         return img_path, torch.from_numpy(img)
 
     def __len__(self):
@@ -49,7 +50,8 @@ class ListDataset_xview():  # for training
         self.mat = scipy.io.loadmat('utils/targets.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
-        os.system('mkdir ' + p + '_' + str(img_size))
+        self.small_folder = p + '_' + str(img_size) + '/'
+        os.system('mkdir ' + self.small_folder)
 
     # @profile
     def __getitem__(self, index):
@@ -63,11 +65,11 @@ class ListDataset_xview():  # for training
 
         # img = cv2.imread(img_path)
         # h, w, _ = img.shape
-        small_path = img_path.replace('train_images', 'train_images_' + str(self.height))
+        small_path = self.small_folder + str(chip) + '.tif'
         if not os.path.isfile(small_path):
             img = cv2.imread(img_path)
             h, w, _ = img.shape
-            ratio = float(self.height) / max(h,w)
+            ratio = float(self.height) / max(h, w)
             img = cv2.resize(img, (int(w * ratio), int(h * ratio)),
                              interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
             cv2.imwrite(small_path, img)
@@ -100,42 +102,51 @@ class ListDataset_xview():  # for training
             labels[:, 1:5] *= ratio
 
             # plot
-            # import matplotlib.pyplot as plt
-            # plt.imshow(img)
-            # plt.plot(labels[:, 1], labels[:, 2], '.')
-            # plt.plot(labels[:, 3], labels[:, 4], '.')
-
-            # convert labels to xywh
-            labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
+            #import matplotlib.pyplot as plt
+            #plt.imshow(img[0])
+            #plt.plot(labels[:, 1], labels[:, 2], '.')
+            #plt.plot(labels[:, 3], labels[:, 4], '.')
 
         # random affine
-        # img, labels[:, 1:5] = random_affine(img, points=labels[:, 1:5], degrees=(-5, 5), translate=(.1, .1), scale=(.9, 1.1))
+        img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
+        nL = len(labels)
+
+        # convert labels to xywh
+        if nL > 0:
+            labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
 
         # random lr flip
-        if np.random.choice([True, False]):
+        if random.random() > 0.5:
             img = np.fliplr(img)
-            if len(labels) > 0:
+            if nL > 0:
                 labels[:, 1] = 1 - labels[:, 1]
 
         # random ud flip
-        if np.random.choice([True, False]):
+        if random.random() > 0.5:
             img = np.flipud(img)
-            if len(labels) > 0:
+            if nL > 0:
                 labels[:, 2] = 1 - labels[:, 2]
+
+        # random 90deg rotation
+        #if random.random() > 0.5:
+        #    img = np.rot90(img)
+
 
         # Normalize
         img = np.ascontiguousarray(img)
         img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
         r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
-        img -= img[:, r, c].mean()
-        img /= img[:, r, c].std()
+        img[:, r, c] -= img[:, r, c].mean()
+        img[:, r, c] /= img[:, r, c].std()
+
+
 
         # Fill matrix
         filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
-        if len(labels) > 0:
+        if nL > 0:
             # remap xview classes 11-94 to 0-61
             labels[:, 0] = xview_classes2indices(labels[:, 0])
-            filled_labels[range(len(labels))[:self.max_objects]] = labels[:self.max_objects]
+            filled_labels[range(nL)[:self.max_objects]] = labels[:self.max_objects]
 
         return img_path, torch.from_numpy(img), torch.from_numpy(filled_labels)
 
@@ -155,8 +166,8 @@ def xyxy2xywh(box):
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
     indices = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14,
                15, -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34,
-               35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, 50, 51, 52, -1, 53, -1,
-               -1, 54, 55, 56, -1, 57, -1, -1, 58, -1, 59, -1, 60, 61]
+               35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, -1, 50, 51, -1, 52, -1,
+               -1, -1, 53, 54, -1, 55, -1, -1, 56, -1, 57, -1, 58, 59]
     return [indices[int(c)] for c in classes]
 
 
@@ -173,40 +184,53 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, points=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
+def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
-    a = np.random.rand(1) * (degrees[1] - degrees[0]) + degrees[0]
-    cx = img.shape[0] * (0.5 + np.random.rand(1) * translate[0])
-    cy = img.shape[1] * (0.5 + np.random.rand(1) * translate[1])
-    s = np.random.rand(1) * (scale[1] - scale[0]) + scale[0]
+    a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
+    cx = img.shape[0] * (0.5 + (random.random() * 2 - 1) * translate[0])
+    cy = img.shape[1] * (0.5 + (random.random() * 2 - 1) * translate[1])
+    s = random.random() * (scale[1] - scale[0]) + scale[0]
 
-    M = cv2.getRotationMatrix2D(angle=30, center=(cy, cx), scale=s)
-    imw = cv2.warpAffine(img, M, dsize=(img.shape[1], img.shape[0]))
+    M = cv2.getRotationMatrix2D(angle=a, center=(cy, cx), scale=s)
+    imw = cv2.warpAffine(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_CUBIC)
 
-    # Return warped points as well
-    if points is not None:
-        # import matplotlib.pyplot as plt
-        # plt.imshow(img)
-        # plt.plot(points[:, 0], points[:, 1], '.')
-
+    # Return warped points also
+    if targets is not None:
         center = np.array([cy, cx]).reshape(1, 2)  # order reversed for opencv
+        points = targets[:,1:5].copy()
 
-        n = points.shape[0]
+        # rotation matrix
+        M3 = np.eye(3)
+        M3[:2] = M
 
-        # 2x3 warp
-        xy1_a = points[:, :2] @ M
+        # add shear (TODO)
+        #Mshear = np.eye(3)
+        #M3 = M3 @ Mshear
 
-        # 3x3 warp
-        M3 = np.concatenate((M, np.zeros((1, 3))), axis=0)
-        M3[2, 2] = 1
-        xy1_ = (np.concatenate((points[:, :2] - center, np.zeros((n, 1))), axis=1) @ M3.T)[:, :2] + center
+        # warp points
+        n = targets.shape[0]
+        xy = np.zeros((n * 4, 3))
+        xy[:, :2] = points[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2) - center  # x1y1, x2y2, x1y2, x2y1
+        xy = ((xy @ M3.T)[:, :2] + center).reshape(n, 8)
 
-        # points_warped = cv2.perspectiveTransform(np.array([x]), M)
-        plt.imshow(imw)
-        plt.plot(xy1_[:, 0], xy1_[:, 1], '.')
+        # create new boxes
+        x = xy[:, [0, 2, 4, 6]]
+        y = xy[:, [1, 3, 5, 7]]
+        xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4,n).T
 
-        return imw, points
+        # reject warped points outside of image
+        i = np.all((xy > 0) & (xy < img.shape[0]), 1)
+        xy = xy[i]
+
+        # plot
+        #import matplotlib.pyplot as plt
+        #plt.imshow(imw)
+        #plt.plot(xy[:,[0, 2]], xy[:,[1, 3]], '.')
+
+        targets = targets[i]
+        targets[:, 1:5] = xy
+        return imw, targets
     else:
         return imw

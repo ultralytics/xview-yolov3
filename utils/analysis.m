@@ -14,7 +14,7 @@ end
 % clean coordinates that fall off images (remove or crop)
 image_h = shapes(chip_id,1);
 image_w = shapes(chip_id,2);
-[coords, v] = clean_coords(coords, image_h, image_w);
+[coords, v] = clean_coords(coords, classes, image_h, image_w);
 mean(v)
 
 chip_id = chip_id(v);
@@ -24,10 +24,20 @@ image_h = image_h(v);
 image_w = image_w(v); 
 chip_number = chip_number(v); clear v i
 
-% max targes per image
-[~,~,~,n]=fcnunique(chip_id);
+% reject images with < 10 targets
+[uchip_number,~,~,n]=fcnunique(chip_number);
 max(n)
-fig; histogram(n)
+fig; histogram(n,linspace(0,300,301))
+sortrows([n, uchip_number],-1)
+
+%coords = coords(v);
+%chip_id = chip_id(v);
+%chips = chips(v);
+%classes = classes(v);
+%image_h = image_h(v);
+%image_w = image_w(v); 
+%chip_number = chip_number(v); clear v i
+
 
 % Target box width and height
 w = coords(:,3) - coords(:,1);
@@ -48,7 +58,7 @@ mean(x1<0 | y1<0 | x2>1 | y2>1)
 mean(x2<0 | y2<0 | x1>1 | y1>1)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([wn hn], 9);
+C = fcn_kmeans([wn hn], 30);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -70,10 +80,10 @@ anchor_boxes = vpa(C(:)',3)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets.mat','wh','targets','id')
+save('targets30.mat','wh','targets','id')
 
 
-function [coords, valid] = clean_coords(coords, image_h, image_w)
+function [coords, valid] = clean_coords(coords, classes, image_h, image_w)
 x1 = coords(:,1);
 y1 = coords(:,2);
 x2 = coords(:,3);
@@ -112,7 +122,10 @@ i6 = (new_area./ area) > 0.20;
 hw = [image_h image_w];
 i7 = ~any(isnan(hw) | isinf(hw) | hw < 32, 2);
 
-valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7;
+% remove invalid classes 75 and 82:
+i8 = ~any(classes(:) == [75, 82],2);
+
+valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
 end
 

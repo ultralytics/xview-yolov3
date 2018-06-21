@@ -34,8 +34,8 @@ def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
     results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).T
-    x, y, w, h, conf, cls, total, prec, recall, pmu, rmu, time = results[:, 7000:]
-    plt.plot(rmu)
+    x, y, w, h, conf, cls, total, prec, recall, pmu, rmu, time = results[:, :]
+    plt.plot(total)
 
 
 
