@@ -33,9 +33,9 @@ def get_labels(fname):
 def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
-    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]).T
-    x, y, w, h, conf, cls, total, prec, recall, pmu, rmu, time = results[:, :]
-    plt.plot(total)
+    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).T
+    x, y, w, h, conf, cls, total, prec, recall, time = results[:, -3400:]
+    plt.plot(total[-1000:])
 
 
 

@@ -85,6 +85,9 @@ def compute_ap(recall, precision):
 
 
 def bbox_iou(box1, box2, x1y1x2y2=True):
+    if len(box1.shape) == 1:
+        box1 = box1.reshape(1, 4)
+
     """
     Returns the IoU of two bounding boxes
     """
@@ -117,99 +120,84 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
 
 
 #@profile
-def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_xywh, anchor_a):
+def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
-
     nB = target.shape[0]
     tx = torch.zeros(nB, nA, nG, nG)  # batch size (4), number of anchors (3), number of grid points (13)
     ty = torch.zeros(nB, nA, nG, nG)
     tw = torch.zeros(nB, nA, nG, nG)
     th = torch.zeros(nB, nA, nG, nG)
     tconf = torch.zeros(nB, nA, nG, nG)
-    #tcls = torch.zeros(nB, nA, nG, nG, nC)  # nC = number of classes
-    tcls = torch.cuda.FloatTensor(nB, nA, nG, nG, nC).fill_(0)
-
-    precision, recall, nGT = [], [], 0
+    tcls = torch.FloatTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
     TP = torch.zeros(nB, 7607)
     FP = torch.zeros(nB, 7607)
     FN = torch.zeros(nB, 7607)
+
+    precision, recall, nGT = [], [], 0
+    nT = torch.argmin(target[:, :, 4], 1)  # targets per image
     for b in range(nB):
-        nT = torch.argmin(target[b, :, 4]).item()  # number of targets (measures index of first zero-height target box)
-        if nT == 0:
+        nTb = nT[b]  # number of targets (measures index of first zero-height target box)
+        if nTb == 0:
             continue
-        t = target[b, :nT]
-        t[:, 1:] *= nG
-        nGT += nT
+        t = target[b, :nTb]
+        nGT += nTb
 
         # Convert to position relative to box
-        gx, gy, gw, gh = t[:, 1], t[:, 2], t[:, 3], t[:, 4]
+        gx, gy, gw, gh = t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
         gi = torch.clamp(gx.long(), min=0, max=nG - 1)
         gj = torch.clamp(gy.long(), min=0, max=nG - 1)
-        # Calculate ious between ground truth and each of the 3 anchors
-
-        tb = torch.zeros(nT, 4)  # target boxes
-        tb[:, 0] = gx - gw / 2
-        tb[:, 1] = gy - gh / 2
-        tb[:, 2] = gx + gw / 2
-        tb[:, 3] = gy + gh / 2
-
         # iou of targets-anchors (using wh only)
-        box1 = t[:, 3:5]
-        box2 = anchor_xywh[:, gj, gi, 2:]
+        box1 = t[:, 3:5] * nG
+        box2 = anchor_grid_wh[:, gj, gi]
         inter_area = torch.min(box1, box2).prod(2)
-        iou_anch = inter_area / (gw*gh + box2.prod(2) - inter_area + 1e-16)
-
-        # iou of targets-predictions
-        iou_pred = torch.zeros(nT, nA)  # iou of predicted boxes
-        #for i in range(nA):
-            #iou_pred[:, i] = bbox_iou(tb, pred_boxes[b, i, gj, gi])
+        iou_anch = inter_area / (gw * gh + box2.prod(2) - inter_area + 1e-16)
 
         # Select best iou_pred and anchor
-        iou_pred, _ = iou_pred.max(1)
         iou_anch_best, a = iou_anch.max(0)  # best anchor [0-2] for each target
 
         # Two targets can not claim the same anchor
-        if nT > 1:
-            u = np.concatenate((gi.numpy(), gj.numpy(), a.numpy()), 0).reshape(3, -1)
-            iou_anch_order = np.argsort(-iou_anch_best)  # best to worst
-            _, first_unique = np.unique(u[:, iou_anch_order], axis=1, return_index=True)  # first unique indices
-            i = iou_anch_order[first_unique]
-            a, gj, gi, t, iou_pred = a[i], gj[i], gi[i], t[i], iou_pred[i]
+        if nTb > 1:
+            iou_order = np.argsort(-iou_anch_best)  # best to worst
+            # u = torch.cat((gi, gj, a), 0).view(3, -1).numpy()
+            # _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
+            u = gi.float() * 0.4361538773074043 + gj.float() * 0.28012496588736746 + a.float() * 0.6627147212460307
+            _, first_unique = np.unique(u[iou_order], return_index=True)  # first unique indices
+            # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
+            i = iou_order[first_unique]
+            a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
             i = 0
 
-        tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1], t[:, 2], t[:, 3], t[:, 4]
+        tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
 
         # Coordinates
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
-        # print(len(torch.nonzero(tx - A)), nT)
-
         # Width and height
-        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 3
-        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 3
-        # tw[b, a, gj, gi] = torch.log(gw / anchor_wh[a, 0] + 1e-16)
-        # th[b, a, gj, gi] = torch.log(gh / anchor_wh[a, 1] + 1e-16)
+        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 4
+        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 4
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
-        # predicted classes and confidence
-        # pcls = torch.argmax(pred_cls[b, a, gj, gi], 1)
-        # pconf = pred_conf[b, a, gj, gi]
 
-        #TP[b, i] = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls == tc)).float()
-        #FP[b, i] = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls != tc)).float()
-        #FN[b, :nT] = 1.0
-        #FN[b, i] = ((TP[b, i] == 0) & (FP[b, i] == 0)).float()
+        # # predicted classes and confidence
+        # tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
+        # pcls = torch.argmax(pred_cls[b, a, gj, gi].cpu(), 1)
+        # pconf = pred_conf[b, a, gj, gi].cpu()
+        # iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
+        # TP[b, i] = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls == tc)).float()
+        # FP[b, i] = ((iou_pred > 0.5) & (pconf > 0.5) & (pcls != tc)).float()
+        # FN[b, :nTb] = 1.0
+        # FN[b, i] = ((TP[b, i] == 0) & (FP[b, i] == 0)).float()
 
     # precision = TP.sum() / (TP + FP + 1e-16).float()
     # recall = TP.float() / (TP + FN + 1e-16).float()
     # ap = nTP / nGT  # compute_ap(recall, precision)
     ap = 0
-    return nGT, ap, tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, nGT, ap
 
 
 def to_categorical(y, num_classes):

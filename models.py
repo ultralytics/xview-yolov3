@@ -3,10 +3,10 @@ from collections import defaultdict
 import numpy as np
 import torch
 import torch.nn as nn
-from utils.utils import xview_class_weights
 
 from utils.parse_config import *
 from utils.utils import build_targets
+from utils.utils import xview_class_weights
 
 
 # @profile
@@ -79,7 +79,7 @@ class EmptyLayer(nn.Module):
 class YOLOLayer(nn.Module):
     """Detection layer"""
 
-    def __init__(self, anchors, num_classes, img_dim, anchor_idxs):
+    def __init__(self, anchors, nC, img_dim, anchor_idxs):
         super(YOLOLayer, self).__init__()
         FloatTensor = torch.FloatTensor
         LongTensor = torch.LongTensor
@@ -88,20 +88,20 @@ class YOLOLayer(nn.Module):
         nA = len(anchors)
 
         self.anchors = anchors
-        self.num_anchors = nA
-        self.num_classes = num_classes
-        self.bbox_attrs = 5 + num_classes
+        self.nA = nA  # number of anchors (3)
+        self.nC = nC  # number of classes (60)
+        self.bbox_attrs = 5 + nC
         self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
         self.ignore_thres = 0.5
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-        class_weights = xview_class_weights(torch.arange(num_classes))*0 + 1
+        class_weights = xview_class_weights(torch.arange(nC))
         self.mse_loss = nn.MSELoss(size_average=True)
         self.bce_loss = nn.BCELoss(size_average=True)
         self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
 
-        if anchor_idxs[0] == (nA*2):  # 6
+        if anchor_idxs[0] == (nA * 2):  # 6
             stride = 32
         elif anchor_idxs[0] == nA:  # 3
             stride = 16
@@ -111,7 +111,7 @@ class YOLOLayer(nn.Module):
         # Build anchor grids
         nG = int(self.img_dim / stride)
         nB = 1  # batch_size set to 1
-        shape = [nB, self.num_anchors, nG, nG]
+        shape = [nB, self.nA, nG, nG]
         self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
         self.scaled_anchors = FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
@@ -119,32 +119,30 @@ class YOLOLayer(nn.Module):
         anchor_h = self.scaled_anchors.index_select(1, LongTensor([1]))
         self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_a = self.anchor_w * self.anchor_h
-        self.anchor_xywh = torch.cat((self.grid_x.unsqueeze(4), self.grid_y.unsqueeze(4), self.anchor_w.unsqueeze(4),
-                                      self.anchor_h.unsqueeze(4)), 4).squeeze()
+        self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze()
+        self.nGtotal = (self.img_dim / 32) ** 2 + (self.img_dim / 16) ** 2 + (self.img_dim / 8) ** 2
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None):
         bs = x.shape[0]
         nG = x.shape[2]
         stride = self.img_dim / nG
         # Tensors for cuda support
-        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
 
         # x.view(4, 3, 67, 13, 13) -- > (4, 3, 13, 13, 67)
-        prediction = x.view(bs, self.num_anchors, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
+        prediction = torch.sigmoid(x).view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = torch.sigmoid(prediction[..., 0])  # Center x
-        y = torch.sigmoid(prediction[..., 1])  # Center y
-        # w = prediction[..., 2]  # Width
-        # h = prediction[..., 3]  # Height
-        w = torch.sigmoid(prediction[..., 2])  # Width
-        h = torch.sigmoid(prediction[..., 3])  # Height
-        conf = torch.sigmoid(prediction[..., 4])  # Conf
-        pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
+        x = prediction[..., 0]  # Center x
+        y = prediction[..., 1]  # Center y
+        w = prediction[..., 2]  # Width
+        h = prediction[..., 3]  # Height
+        pred_conf = prediction[..., 4]  # Conf
+        pred_cls = prediction[..., 5:]  # Cls pred.
 
+        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
         if x.is_cuda and not self.grid_x.is_cuda:
+            device = torch.device('cuda:0' if x.is_cuda else 'cpu')
             self.grid_x = self.grid_x.cuda()
             self.grid_y = self.grid_y.cuda()
             self.anchor_w = self.anchor_w.cuda()
@@ -153,67 +151,63 @@ class YOLOLayer(nn.Module):
             self.bce_loss = self.bce_loss.cuda()
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
-        #pred_boxes = FloatTensor(prediction[..., :4].shape)
-        #pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 3 / 2
-        #pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 3 / 2
-        #pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 3 / 2
-        #pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 3 / 2
-
-        #pred_boxes.data.cpu()  # feed to build_targets!
-
-        # pred_boxes[..., 2] = torch.exp(w.data) * self.anchor_w
-        # pred_boxes[..., 3] = torch.exp(h.data) * self.anchor_h
+        pred_boxes = FloatTensor(prediction[..., :4].shape)
+        pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 5 / 2
+        pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 5 / 2
+        pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 5 / 2
+        pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 5 / 2
 
         # Training
         if targets is not None:
-            nGT, ap, tx, ty, tw, th, mask, tcls, TP, FP, FN = build_targets(nG,
-                                                                            conf.data,
-                                                                            pred_cls.data,
-                                                                            targets.data.cpu(),
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, nGT, ap = build_targets(pred_boxes,
+                                                                            pred_conf,
+                                                                            pred_cls,
+                                                                            targets,
                                                                             self.scaled_anchors,
-                                                                            self.num_anchors,
-                                                                            self.num_classes,
+                                                                            self.nA,
+                                                                            self.nC,
                                                                             nG,
-                                                                            self.anchor_xywh,
-                                                                            self.anchor_a)
+                                                                            self.anchor_wh)
 
-            #tcls = tcls[mask]
+            tcls = tcls[mask]
             if x.is_cuda:
                 mask = mask.cuda()
                 tx = tx.cuda()
                 ty = ty.cuda()
                 tw = tw.cuda()
                 th = th.cuda()
-                #tcls = tcls.cuda()
-                tcls = tcls[mask]
-
+                tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
+            nT = torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
+            n = mask.sum().float()
+            weight = n / nT
+
             if nGT > 0:
-                loss_x = self.lambda_coord * self.mse_loss(x[mask], tx[mask])
-                loss_y = self.lambda_coord * self.mse_loss(y[mask], ty[mask])
-                loss_w = self.lambda_coord * self.mse_loss(w[mask], tw[mask])
-                loss_h = self.lambda_coord * self.mse_loss(h[mask], th[mask])
-                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls)
-                loss_conf = self.bce_loss(conf[mask], mask[mask].float())
+                loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
+                loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight
+                loss_w = 1 * self.mse_loss(w[mask], tw[mask]) * weight
+                loss_h = 1 * self.mse_loss(h[mask], th[mask]) * weight
+                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls) * weight
+                loss_conf = self.bce_loss(pred_conf[mask], mask[mask].float()) * weight
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
 
-            loss_conf += self.lambda_noobj * self.bce_loss(conf[~mask], mask[~mask].float())
+            loss_conf += 0.5 * self.bce_loss(pred_conf[~mask], mask[~mask].float()) * weight
 
-            loss = loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls
+            loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
-                   ap, nGT, TP, FP, FN
+                   ap, nGT, TP, FP, FN, 0, 0
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
             pred_boxes[..., 1] = y.data + self.grid_y
-            pred_boxes[..., 2] = w.data * self.anchor_w * 3
-            pred_boxes[..., 3] = h.data * self.anchor_h * 3
+            pred_boxes[..., 2] = w.data * self.anchor_w * 5
+            pred_boxes[..., 3] = h.data * self.anchor_h * 5
             # If not in training phase return predictions
+
             output = torch.cat(
-                (pred_boxes.view(bs, -1, 4) * stride, conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.num_classes)),
-                -1)
+                (pred_boxes.view(bs, -1, 4) * stride, pred_conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.nC)), -1)
             return output.data
 
 
@@ -229,10 +223,9 @@ class Darknet(nn.Module):
         self.img_size = img_size
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen, 0])
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN']
-        #self.nA = int(self.module_defs[106]['num']) # number of anchors
-        self.precision = 0
-        self.recall = 0
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN', 'precision',
+                           'recall']
+        # self.nA = int(self.module_defs[106]['num']) # number of anchors
 
     # @profile
     def forward(self, x, targets=None):
@@ -262,11 +255,11 @@ class Darknet(nn.Module):
             layer_outputs.append(x)
 
         if is_training:
-            TP = (self.losses['TP'] > 0).float()
-            FP = (self.losses['FP'] > 0).float()
-            FN = (self.losses['FN'] == 3).float()
-
-            self.precision = TP.sum() / (TP.sum() + FP.sum())
-            self.recall = TP.sum() / (TP.sum() + FN.sum())
+            TP = (self.losses['TP'] > 0).float().sum()
+            FP = (self.losses['FP'] > 0).float().sum()
+            FN = (self.losses['FN'] == 3).float().sum()
+            self.losses['precision'] = TP / (TP + FP)
+            self.losses['recall'] = TP / (TP + FN)
+            self.losses['TP'], self.losses['FP'], self.losses['FN'], = TP, FP, FN
 
         return sum(output) if is_training else torch.cat(output, 1)

@@ -13,16 +13,15 @@ from utils.datasets import *
 from utils.utils import *
 from scoring import score
 
-
 parser = argparse.ArgumentParser()
-parser.add_argument('--image_folder', type=str, default='data/train_images3', help='path to images')
+parser.add_argument('--image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('--config_path', type=str, default='cfg/yolovx_18.cfg', help='path to model cfg file')
-parser.add_argument('--weights_path', type=str, default='checkpoints/test_final_epoch_249_608.pt',
+parser.add_argument('--weights_path', type=str, default='checkpoints/anchors18_final_e249_416.pt',
                     help='path to weights file')
 parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('--conf_thres', type=float, default=0.9, help='object confidence threshold')
-parser.add_argument('--nms_thres', type=float, default=0.1, help='iou thresshold for non-maximum suppression')
+parser.add_argument('--nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
 parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('--n_cpu', type=int, default=1, help='number of cpu threads to use during batch generation')
 parser.add_argument('--img_size', type=int, default=32 * 13, help='size of each image dimension')
@@ -35,7 +34,6 @@ def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.makedirs(opt.output_folder, exist_ok=True)
     opt.img_size = int(opt.weights_path.rsplit('_')[-1][:-3])
-
 
     cuda = torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
@@ -117,11 +115,7 @@ def detect(opt):
                     x1 = (((x1 - pad_x // 2) / unpad_w) * img.shape[1]).round().item()
                     x2 = (x1 + box_w - 3).round().item()
                     y2 = (y1 + box_h).round().item()
-
-                    x1 = max(x1, 0)
-                    y1 = max(y1, 0)
-                    x2 = max(x2, 0)
-                    y2 = max(y2, 0)
+                    x1, y1, x2, y2 = max(x1, 0), max(y1, 0), max(x2, 0), max(y2, 0)
 
                     # write to file
                     file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, xview_indices2classes(int(cls_pred)), conf))
@@ -137,7 +131,7 @@ def detect(opt):
                 cv2.imwrite(results_img_path, img)
 
     score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
-                '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson','.')
+                '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
 
 
 if __name__ == '__main__':

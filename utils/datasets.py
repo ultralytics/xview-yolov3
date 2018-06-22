@@ -40,7 +40,7 @@ class ImageFolder(Dataset):  # for eval-only
 
 class ListDataset_xview():  # for training
     def __init__(self, folder_path, img_size=416):
-        p = folder_path + 'train_images'
+        p = folder_path + 'train_images3'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         assert len(self.img_files) > 0, 'No images found in path %s' % p
         self.height = img_size
@@ -52,6 +52,9 @@ class ListDataset_xview():  # for training
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
         os.system('mkdir ' + self.small_folder)
+
+
+        print('initialized!!')
 
     # @profile
     def __getitem__(self, index):
@@ -83,7 +86,6 @@ class ListDataset_xview():  # for training
 
         # Add padding
         img = resize_square(img, height=self.height)
-
         ratio = float(self.height) / max(h, w)
         pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
         if h > w:
@@ -102,13 +104,13 @@ class ListDataset_xview():  # for training
             labels[:, 1:5] *= ratio
 
             # plot
-            #import matplotlib.pyplot as plt
-            #plt.imshow(img[0])
-            #plt.plot(labels[:, 1], labels[:, 2], '.')
-            #plt.plot(labels[:, 3], labels[:, 4], '.')
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img[0])
+            # plt.plot(labels[:, 1], labels[:, 2], '.')
+            # plt.plot(labels[:, 3], labels[:, 4], '.')
 
         # random affine
-        img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
+        # img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
         nL = len(labels)
 
         # convert labels to xywh
@@ -116,21 +118,20 @@ class ListDataset_xview():  # for training
             labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
 
         # random lr flip
-        if random.random() > 0.5:
-            img = np.fliplr(img)
-            if nL > 0:
-                labels[:, 1] = 1 - labels[:, 1]
-
-        # random ud flip
-        if random.random() > 0.5:
-            img = np.flipud(img)
-            if nL > 0:
-                labels[:, 2] = 1 - labels[:, 2]
+        # if random.random() > 0.5:
+        #     img = np.fliplr(img)
+        #     if nL > 0:
+        #         labels[:, 1] = 1 - labels[:, 1]
+        #
+        # # random ud flip
+        # if random.random() > 0.5:
+        #     img = np.flipud(img)
+        #     if nL > 0:
+        #         labels[:, 2] = 1 - labels[:, 2]
 
         # random 90deg rotation
-        #if random.random() > 0.5:
+        # if random.random() > 0.5:
         #    img = np.rot90(img)
-
 
         # Normalize
         img = np.ascontiguousarray(img)
@@ -138,8 +139,6 @@ class ListDataset_xview():  # for training
         r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
         img[:, r, c] -= img[:, r, c].mean()
         img[:, r, c] /= img[:, r, c].std()
-
-
 
         # Fill matrix
         filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
@@ -199,15 +198,15 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # Return warped points also
     if targets is not None:
         center = np.array([cy, cx]).reshape(1, 2)  # order reversed for opencv
-        points = targets[:,1:5].copy()
+        points = targets[:, 1:5].copy()
 
         # rotation matrix
         M3 = np.eye(3)
         M3[:2] = M
 
         # add shear (TODO)
-        #Mshear = np.eye(3)
-        #M3 = M3 @ Mshear
+        # Mshear = np.eye(3)
+        # M3 = M3 @ Mshear
 
         # warp points
         n = targets.shape[0]
@@ -218,16 +217,16 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         # create new boxes
         x = xy[:, [0, 2, 4, 6]]
         y = xy[:, [1, 3, 5, 7]]
-        xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4,n).T
+        xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
         # reject warped points outside of image
         i = np.all((xy > 0) & (xy < img.shape[0]), 1)
         xy = xy[i]
 
         # plot
-        #import matplotlib.pyplot as plt
-        #plt.imshow(imw)
-        #plt.plot(xy[:,[0, 2]], xy[:,[1, 3]], '.')
+        # import matplotlib.pyplot as plt
+        # plt.imshow(imw)
+        # plt.plot(xy[:,[0, 2]], xy[:,[1, 3]], '.')
 
         targets = targets[i]
         targets[:, 1:5] = xy
