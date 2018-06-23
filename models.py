@@ -133,10 +133,10 @@ class YOLOLayer(nn.Module):
         prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = torch.sigmoid(prediction[..., 0])  # Center x
+        x = torch.sigmoid(prediction[..., 0]) # Center x
         y = torch.sigmoid(prediction[..., 1])  # Center y
         w = torch.sigmoid(prediction[..., 2])  # Width
-        h = torch.sigmoid(prediction[..., 3])  # Height
+        h = torch.sigmoid(prediction[..., 3]) # Height
         pred_conf = torch.sigmoid(prediction[..., 4])  # Conf
         pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
@@ -179,14 +179,16 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nT = FloatTensor([sum([len(x) for x in targets])])
-            weight = mask.sum().float() / nT
+            nT = FloatTensor([sum([len(x) for x in targets])]) # torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
+            n = mask.sum().float()
+            weight = n/nT
+
             if nGT > 0:
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
                 loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight
                 loss_w = 5 * self.mse_loss(w[mask], tw[mask]) * weight
                 loss_h = 5 * self.mse_loss(h[mask], th[mask]) * weight
-                loss_cls = self.bce_loss(pred_cls[mask], tcls.float()) * weight
+                loss_cls = self.bce_loss(pred_cls[mask], tcls) * weight
                 loss_conf = self.bce_loss(pred_conf[mask], mask[mask].float()) * weight
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
@@ -194,8 +196,8 @@ class YOLOLayer(nn.Module):
             loss_conf += 0.5 * self.bce_loss(pred_conf[~mask], mask[~mask].float()) * weight
 
             loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
-            return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), \
-                   loss_cls.item(), ap, nGT, TP, FP, FN, 0, 0
+            return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
+                   ap, nGT, TP, FP, FN, 0, 0
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
