@@ -1,6 +1,7 @@
 import glob
 import os
 import random
+import math
 
 import cv2
 import numpy as np
@@ -20,41 +21,188 @@ class ImageFolder(Dataset):  # for eval-only
         except:
             print('Error: no files or folders found in supplied path.')
 
+        self.img_mean = np.array([0.15979, 0.19489, 0.23582]).reshape((3, 1, 1))
+        self.img_std = np.array([0.086454, 0.096072, 0.11761]).reshape((3, 1, 1))
+
         self.img_shape = (img_size, img_size)
 
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
         # Add padding
-        img = cv2.imread(img_path)
+        img = cv2.imread(img_path)  # BGR
         img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
 
+        #im2 = img.transpose(1, 2, 0)
+        #import matplotlib.pyplot as plt
+        #plt.imshow(im2)
+
         # Normalize
-        r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
-        img[:, r, c] -= img[:, r, c].mean()
-        img[:, r, c] /= img[:, r, c].std()
+        # r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
+        # img[:, r, c] -= img[:, r, c].mean()
+        # img[:, r, c] /= img[:, r, c].std()
+        img -= self.img_mean
+        img /= self.img_std
+
         return img_path, torch.from_numpy(img)
 
     def __len__(self):
         return len(self.files)
 
 
-class ListDataset_xview():  # for training
-    def __init__(self, folder_path, img_size=416):
-        p = folder_path + 'train_images3'
+class ListDataset_xview_fast():  # for training
+    def __init__(self, folder_path, batch_size=1, img_size=416):
+        p = folder_path + 'train_images'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
-        assert len(self.img_files) > 0, 'No images found in path %s' % p
+        self.len = math.ceil(len(self.img_files) / batch_size)
+        self.batch_size = batch_size
+        assert self.len > 0, 'No images found in path %s' % p
         self.height = img_size
-        # self.label_files = [path.replace('_images3', '_labels').replace('.tif', '.txt') for path in self.img_files]
         self.max_objects = 7607
         # load targets
         self.mat = scipy.io.loadmat('utils/targets.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
-        os.system('mkdir ' + self.small_folder)
+        self.count = -1
+        os.makedirs(self.small_folder, exist_ok=True)
+
+        self.img_mean = np.array([0.15979, 0.19489, 0.23582]).reshape((3, 1, 1))
+        self.img_std = np.array([0.086454, 0.096072, 0.11761]).reshape((3, 1, 1))
+
+    def __iter__(self):
+        return self
+
+    #@profile
+    def __next__(self):
+        self.count += 1
+        if self.count == self.len:
+            self.count = -1
+            raise StopIteration
+
+        ia = self.count*self.batch_size
+        ib = min((self.count+1) * self.batch_size, len(self.img_files))
+        indices = list(range(ia,ib))
+
+        img_all = np.zeros((len(indices),3,self.height,self.height), dtype=np.float32)
+        labels_all = [] # np.zeros((len(indices), self.max_objects, 5), dtype=np.float32)
+        for index, files_index in enumerate(indices):
+            img_path = self.img_files[files_index]
+
+            # load labels
+            chip = img_path.rsplit('/')[-1].replace('.tif', '')
+            i = np.nonzero(self.mat['id'] == np.array(float(chip)))[0]
+            labels = self.mat['targets'][i]
+
+            # img = cv2.imread(img_path)
+            # h, w, _ = img.shape
+            small_path = self.small_folder + str(chip) + '.tif'
+            if not os.path.isfile(small_path):
+                img = cv2.imread(img_path)
+                h, w, _ = img.shape
+                ratio = float(self.height) / max(h, w)
+                img = cv2.resize(img, (int(w * ratio), int(h * ratio)),
+                                 interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+                cv2.imwrite(small_path, img)
+            else:
+                img = cv2.imread(small_path)
+                # load original image width and height
+                if len(labels) > 0:
+                    w, h = self.mat['wh'][i[0]]
+                else:
+                    w, h = Image.open(img_path).size
+
+            # Add padding
+            img = resize_square(img, height=self.height)
+            ratio = float(self.height) / max(h, w)
+            pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
+            if h > w:
+                padx = pad
+            elif h < w:
+                pady = pad
+
+            # label_path = self.label_files[index]
+            # with open(label_path, 'r') as file:
+            #    a = file.read().replace('\n', ' ').split()
+            # labels = np.array([float(x) for x in a]).reshape(-1, 5)
+
+            if len(labels) > 0:
+                labels[:, [1, 3]] += padx
+                labels[:, [2, 4]] += pady
+                labels[:, 1:5] *= ratio
+
+                # plot
+                # import matplotlib.pyplot as plt
+                # plt.imshow(img[0])
+                # plt.plot(labels[:, 1], labels[:, 2], '.')
+                # plt.plot(labels[:, 3], labels[:, 4], '.')
+
+            # random affine
+            #img, labels = random_affine(img, targets=labels, degrees=(-2, 2), translate=(.05, .05),  scale=(.95, 1.05))
+            nL = len(labels)
+
+            # convert labels to xywh
+            if nL > 0:
+                labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
+
+            # # random lr flip
+            # if random.random() > 0.5:
+            #     img = np.fliplr(img)
+            #     if nL > 0:
+            #         labels[:, 1] = 1 - labels[:, 1]
+            #
+            # # random ud flip
+            # if random.random() > 0.5:
+            #     img = np.flipud(img)
+            #     if nL > 0:
+            #         labels[:, 2] = 1 - labels[:, 2]
+
+            # random 90deg rotation
+            # if random.random() > 0.5:
+            #    img = np.rot90(img)
+
+            # Normalize
+            img = np.ascontiguousarray(img)
+            img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+            # r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
+            # img[:, r, c] -= img[:, r, c].mean()
+            # img[:, r, c] /= img[:, r, c].std()
+            img -= self.img_mean
+            img /= self.img_std
+
+            # Fill matrix
+            #filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
+            if nL > 0:
+                # remap xview classes 11-94 to 0-61
+                labels[:, 0] = xview_classes2indices(labels[:, 0])
+                #filled_labels[range(nL)[:self.max_objects]] = labels[:self.max_objects]
+
+            img_all[index] = img
+            #labels_all[index] = filled_labels
+            labels_all.append(labels)
+
+        return torch.from_numpy(img_all), labels_all
+
+    def __len__(self):
+        return self.len
 
 
-        print('initialized!!')
+class ListDataset_xview():  # for training
+    def __init__(self, folder_path, batch_size=1, img_size=416):
+        p = folder_path + 'train_images8'
+        self.img_files = sorted(glob.glob('%s/*.*' % p))
+        assert len(self.img_files ) > 0, 'No images found in path %s' % p
+        self.height = img_size
+        self.max_objects = 7607
+        # load targets
+        self.mat = scipy.io.loadmat('utils/targets.mat')
+        self.mat['id'] = self.mat['id'].squeeze()
+        # make folder for reduced size images
+        self.small_folder = p + '_' + str(img_size) + '/'
+        os.makedirs(self.small_folder, exist_ok=True)
+
+        self.img_mean = np.array([0.15979, 0.19489, 0.23582]).reshape((3, 1, 1))
+        self.img_std = np.array([0.086454, 0.096072, 0.11761]).reshape((3, 1, 1))
+
 
     # @profile
     def __getitem__(self, index):
@@ -110,14 +258,14 @@ class ListDataset_xview():  # for training
             # plt.plot(labels[:, 3], labels[:, 4], '.')
 
         # random affine
-        # img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
+        #img, labels = random_affine(img, targets=labels, degrees=(-2, 2), translate=(.05, .05),  scale=(.95, 1.05))
         nL = len(labels)
 
         # convert labels to xywh
         if nL > 0:
             labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
 
-        # random lr flip
+        # # random lr flip
         # if random.random() > 0.5:
         #     img = np.fliplr(img)
         #     if nL > 0:
@@ -136,9 +284,11 @@ class ListDataset_xview():  # for training
         # Normalize
         img = np.ascontiguousarray(img)
         img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
-        r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
-        img[:, r, c] -= img[:, r, c].mean()
-        img[:, r, c] /= img[:, r, c].std()
+        # r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
+        # img[:, r, c] -= img[:, r, c].mean()
+        # img[:, r, c] /= img[:, r, c].std()
+        img -= self.img_mean
+        img /= self.img_std
 
         # Fill matrix
         filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
@@ -147,7 +297,7 @@ class ListDataset_xview():  # for training
             labels[:, 0] = xview_classes2indices(labels[:, 0])
             filled_labels[range(nL)[:self.max_objects]] = labels[:self.max_objects]
 
-        return img_path, torch.from_numpy(img), torch.from_numpy(filled_labels)
+        return torch.from_numpy(img), torch.from_numpy(filled_labels)
 
     def __len__(self):
         return len(self.img_files)

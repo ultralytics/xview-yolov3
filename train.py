@@ -12,32 +12,37 @@ from utils.utils import *
 
 run_name = 'june22'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1000, help='number of epochs')
-parser.add_argument('-image_folder', type=str, default='data/train_images3', help='path to images')
+parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_18.cfg', help='path to model cfg file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/test_final_epoch_249_416.pt', help='weights')
+parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_30.cfg', help='path to model cfg file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.9, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
-parser.add_argument('-n_cpu', type=int, default=4, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=100, help='interval between saving model weights')
+parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
+parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
+parser.add_argument('-checkpoint_interval', type=int, default=250, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
 
-# @profile
+#@profile
 def main(opt):
     os.makedirs('checkpoints', exist_ok=True)
-
     cuda = torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
-    torch.manual_seed(1)
-    random.seed(1)
+
+    random.seed(0)
+    np.random.seed(0)
+    torch.manual_seed(0)
+    #torch.backends.cudnn.deterministic = True
+    if cuda:
+        torch.cuda.manual_seed(0)
+        torch.cuda.manual_seed_all(0)
 
     # Get data configuration
     if platform == 'darwin':  # macos
@@ -56,31 +61,36 @@ def main(opt):
     model = Darknet(opt.config_path, opt.img_size).to(device).train()
 
     # Get dataloader
-    dataloader = DataLoader(ListDataset_xview(train_path, opt.img_size),
-                            batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
+    #dataloader = DataLoader(ListDataset_xview(train_path, opt.batch_size, opt.img_size),
+    #                        batch_size=opt.batch_size, num_workers=opt.n_cpu)
+
+    dataloader = ListDataset_xview_fast(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.9, weight_decay=decay, nesterov=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[300, 600], gamma=0.1)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
-        model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
+        model.load_state_dict(torch.load('weights/init.pt', map_location=device.type))
         # optimizer.load_state_dict(torch.load('optim.pth'))
         # optimizer.state = defaultdict(dict, optimizer.state)
     else:
         model.apply(weights_init_normal)  # initialize with random weights
+        torch.save(model.state_dict(), 'weights/init.pt')
+
+    # modelinfo(model)
 
     t0 = time.time()
+    t1 = time.time()
+    best_loss = float('inf')
     print('%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'time'))
     for epoch in range(opt.epochs):
-        # scheduler.step()
-        t1 = time.time()
-
-        rloss = defaultdict(float)
-        for i, (impath, imgs, targets) in enumerate(dataloader):
+        rloss = defaultdict(float)  # running loss
+        for i, (imgs, targets) in enumerate(dataloader):
             imgs = imgs.to(device)
+
+            print(imgs.shape, len(targets))
 
             loss = model(imgs, targets)
             optimizer.zero_grad()
@@ -92,18 +102,18 @@ def main(opt):
 
             s = ('%10s%10s' + '%10.3g' * 10) % (
                 '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
-                rloss['y'], model.losses['w'], model.losses['h'], model.losses['conf'], model.losses['cls'],
+                rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
                 rloss['loss'], rloss['precision'], rloss['recall'], time.time() - t1)
+            t1 = time.time()
             print(s)
 
             with open('printedResults.txt', 'a') as file:
                 file.write(s + '\n')
 
-            t1 = time.time()
             model.seen += imgs.shape[0]
 
-        if (epoch > 0) & (epoch % opt.checkpoint_interval == 0):
-            torch.save(model.state_dict(), '%s/%s_e%d_%g.pt' % (opt.checkpoint_dir, run_name, epoch, opt.img_size))
+        if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
+            torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))
 
     # save final model
     dt = time.time() - t0
@@ -112,7 +122,7 @@ def main(opt):
     torch.save(model.state_dict(), s)
 
     opt.weights_path = s
-    detect(opt)
+    #detect(opt)
 
 
 if __name__ == '__main__':

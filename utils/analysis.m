@@ -58,7 +58,7 @@ mean(x1<0 | y1<0 | x2>1 | y2>1)
 mean(x2<0 | y2<0 | x1>1 | y1>1)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([wn hn], 30);
+C = fcn_kmeans([wn hn], 18);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -80,7 +80,7 @@ anchor_boxes = vpa(C(:)',3)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets30.mat','wh','targets','id')
+save('targets18.mat','wh','targets','id')
 
 
 function [coords, valid] = clean_coords(coords, classes, image_h, image_w)

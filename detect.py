@@ -12,20 +12,20 @@ from models import *
 from utils.datasets import *
 from utils.utils import *
 from scoring import score
+import tqdm
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--image_folder', type=str, default='data/train_images8', help='path to images')
-parser.add_argument('--output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('--config_path', type=str, default='cfg/yolovx_18.cfg', help='path to model cfg file')
-parser.add_argument('--weights_path', type=str, default='checkpoints/anchors18_final_e249_416.pt',
-                    help='path to weights file')
-parser.add_argument('--class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('--conf_thres', type=float, default=0.9, help='object confidence threshold')
-parser.add_argument('--nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
-parser.add_argument('--batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('--n_cpu', type=int, default=1, help='number of cpu threads to use during batch generation')
-parser.add_argument('--img_size', type=int, default=32 * 13, help='size of each image dimension')
-parser.add_argument('--plot_flag', type=bool, default=True, help='plots predicted images if True')
+parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
+parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_18.cfg', help='path to model cfg file')
+parser.add_argument('-weights_path', type=str, default='checkpoints/june22_final_e199_416.pt', help='weights path')
+parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
+parser.add_argument('-conf_thres', type=float, default=0.90, help='object confidence threshold')
+parser.add_argument('-nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
+parser.add_argument('-batch_size', type=int, default=8, help='size of the batches')
+parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
+parser.add_argument('-img_size', type=int, default=32 * 13, help='size of each image dimension')
+parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
@@ -67,7 +67,7 @@ def detect(opt):
             detections = non_max_suppression(model(img), opt.conf_thres, opt.nms_thres)
 
         # Log progress
-        print('Batch %d... (Done %.3fs)' % (batch_i, time.time() - prev_time))
+        # print('Batch %d... (Done %.3fs)' % (batch_i, time.time() - prev_time))
         prev_time = time.time()
 
         imgs.extend(img_paths)

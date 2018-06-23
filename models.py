@@ -37,8 +37,7 @@ def create_modules(module_defs):
                 modules.add_module('leaky_%d' % i, nn.LeakyReLU(0.1))
 
         elif module_def['type'] == 'upsample':
-            upsample = nn.Upsample(scale_factor=int(module_def['stride']),
-                                   mode='nearest')
+            upsample = nn.Upsample(scale_factor=int(module_def['stride']), mode='bilinear', align_corners=True)
             modules.add_module('upsample_%d' % i, upsample)
 
         elif module_def['type'] == 'route':
@@ -97,6 +96,7 @@ class YOLOLayer(nn.Module):
         self.lambda_noobj = 0.5
 
         class_weights = xview_class_weights(torch.arange(nC))
+        class_weights = class_weights / class_weights.mean()
         self.mse_loss = nn.MSELoss(size_average=True)
         self.bce_loss = nn.BCELoss(size_average=True)
         self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
@@ -122,7 +122,7 @@ class YOLOLayer(nn.Module):
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze()
         self.nGtotal = (self.img_dim / 32) ** 2 + (self.img_dim / 16) ** 2 + (self.img_dim / 8) ** 2
 
-    # @profile
+    #@profile
     def forward(self, x, targets=None):
         bs = x.shape[0]
         nG = x.shape[2]
@@ -130,15 +130,15 @@ class YOLOLayer(nn.Module):
         # Tensors for cuda support
 
         # x.view(4, 3, 67, 13, 13) -- > (4, 3, 13, 13, 67)
-        prediction = torch.sigmoid(x).view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
+        prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = prediction[..., 0]  # Center x
-        y = prediction[..., 1]  # Center y
-        w = prediction[..., 2]  # Width
-        h = prediction[..., 3]  # Height
-        pred_conf = prediction[..., 4]  # Conf
-        pred_cls = prediction[..., 5:]  # Cls pred.
+        x = torch.sigmoid(prediction[..., 0]) # Center x
+        y = torch.sigmoid(prediction[..., 1])  # Center y
+        w = torch.sigmoid(prediction[..., 2])  # Width
+        h = torch.sigmoid(prediction[..., 3]) # Height
+        pred_conf = torch.sigmoid(prediction[..., 4])  # Conf
+        pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
         FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
         if x.is_cuda and not self.grid_x.is_cuda:
@@ -179,16 +179,16 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nT = torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
+            nT = FloatTensor([sum([len(x) for x in targets])]) # torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
             n = mask.sum().float()
-            weight = n / nT
+            weight = n/nT
 
             if nGT > 0:
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
                 loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight
-                loss_w = 1 * self.mse_loss(w[mask], tw[mask]) * weight
-                loss_h = 1 * self.mse_loss(h[mask], th[mask]) * weight
-                loss_cls = self.bce_loss_cls(pred_cls[mask], tcls) * weight
+                loss_w = 5 * self.mse_loss(w[mask], tw[mask]) * weight
+                loss_h = 5 * self.mse_loss(h[mask], th[mask]) * weight
+                loss_cls = self.bce_loss(pred_cls[mask], tcls) * weight
                 loss_conf = self.bce_loss(pred_conf[mask], mask[mask].float()) * weight
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
