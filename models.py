@@ -188,7 +188,7 @@ class YOLOLayer(nn.Module):
                 loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight
                 loss_w = 5 * self.mse_loss(w[mask], tw[mask]) * weight
                 loss_h = 5 * self.mse_loss(h[mask], th[mask]) * weight
-                loss_cls = self.bce_loss(pred_cls[mask], tcls) * weight
+                loss_cls = self.bce_loss(pred_cls[mask], tcls.float()) * weight
                 loss_conf = self.bce_loss(pred_conf[mask], mask[mask].float()) * weight
             else:
                 loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
@@ -260,6 +260,6 @@ class Darknet(nn.Module):
             FN = (self.losses['FN'] == 3).float().sum()
             self.losses['precision'] = TP / (TP + FP)
             self.losses['recall'] = TP / (TP + FN)
-            self.losses['TP'], self.losses['FP'], self.losses['FN'], = TP, FP, FN
+            self.losses['TP'], self.losses['FP'], self.losses['FN'] = TP, FP, FN
 
         return sum(output) if is_training else torch.cat(output, 1)

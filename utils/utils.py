@@ -212,6 +212,9 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         FN[b, :nTb] = 1.0
         FN[b, i] = (pconf < 0.5).float()  # confidence score is too low (set to zero)
 
+        if np.isnan(FN).sum() > 0:
+            x=1
+
     # precision = TP.sum() / (TP + FP + 1e-16).float()
     # recall = TP.float() / (TP + FN + 1e-16).float()
     # ap = nTP / nGT  # compute_ap(recall, precision)

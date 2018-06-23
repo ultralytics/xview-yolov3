@@ -45,7 +45,7 @@ class ImageFolder():  # for eval-only
 
 class ListDataset_xview_fast():  # for training
     def __init__(self, folder_path, batch_size=1, img_size=416):
-        p = folder_path + 'train_images8'
+        p = folder_path + 'train_images'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         self.len = math.ceil(len(self.img_files) / batch_size)
         self.batch_size = batch_size
@@ -121,19 +121,20 @@ class ListDataset_xview_fast():  # for training
                 labels[:, [2, 4]] += pady
                 labels[:, 1:5] *= ratio
 
-                # plot
-                # import matplotlib.pyplot as plt
-                # plt.imshow(img[0])
-                # plt.plot(labels[:, 1], labels[:, 2], '.')
-                # plt.plot(labels[:, 3], labels[:, 4], '.')
-
             # random affine
-            # img, labels = random_affine(img, targets=labels, degrees=(-2, 2), translate=(.05, .05),  scale=(.95, 1.05))
+            img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
             nL = len(labels)
 
-            # convert labels to xywh
+            # plot
+            #import matplotlib.pyplot as plt
+            #plt.imshow(img)
+            #plt.plot(labels[:,[1, 3]], labels[:,[2, 4]], '.')
+
             if nL > 0:
+                # convert labels to xywh
                 labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
+                # remap xview classes 11-94 to 0-61
+                labels[:, 0] = xview_classes2indices(labels[:, 0])
 
             # # random lr flip
             # if random.random() > 0.5:
@@ -150,11 +151,6 @@ class ListDataset_xview_fast():  # for training
             # random 90deg rotation
             # if random.random() > 0.5:
             #    img = np.rot90(img)
-
-            # Fill matrix
-            if nL > 0:
-                # remap xview classes 11-94 to 0-61
-                labels[:, 0] = xview_classes2indices(labels[:, 0])
 
             # img_all.append(torch.from_numpy(img))
             img_all[index] = img

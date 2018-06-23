@@ -29,7 +29,6 @@ parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted
 opt = parser.parse_args()
 print(opt)
 
-
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.makedirs(opt.output_folder, exist_ok=True)
