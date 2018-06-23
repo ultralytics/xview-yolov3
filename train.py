@@ -12,7 +12,7 @@ from utils.utils import *
 
 run_name = 'june22'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=1000, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
@@ -23,7 +23,7 @@ parser.add_argument('-conf_thres', type=float, default=0.9, help='object confide
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=250, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=200, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -80,7 +80,6 @@ def main(opt):
         torch.save(model.state_dict(), 'weights/init.pt')
 
     # modelinfo(model)
-
     t0 = time.time()
     t1 = time.time()
     best_loss = float('inf')

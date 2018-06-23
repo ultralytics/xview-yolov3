@@ -96,10 +96,10 @@ class YOLOLayer(nn.Module):
         self.lambda_noobj = 0.5
 
         class_weights = xview_class_weights(torch.arange(nC))
-        class_weights = class_weights / class_weights.mean()
+        # class_weights = class_weights / class_weights.mean()
         self.mse_loss = nn.MSELoss(size_average=True)
         self.bce_loss = nn.BCELoss(size_average=True)
-        self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
+        # self.bce_loss_cls = nn.BCELoss(size_average=True, weight=class_weights)
 
         if anchor_idxs[0] == (nA * 2):  # 6
             stride = 32
@@ -122,7 +122,7 @@ class YOLOLayer(nn.Module):
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze()
         self.nGtotal = (self.img_dim / 32) ** 2 + (self.img_dim / 16) ** 2 + (self.img_dim / 8) ** 2
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None):
         bs = x.shape[0]
         nG = x.shape[2]
@@ -133,10 +133,10 @@ class YOLOLayer(nn.Module):
         prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = torch.sigmoid(prediction[..., 0]) # Center x
+        x = torch.sigmoid(prediction[..., 0])  # Center x
         y = torch.sigmoid(prediction[..., 1])  # Center y
         w = torch.sigmoid(prediction[..., 2])  # Width
-        h = torch.sigmoid(prediction[..., 3]) # Height
+        h = torch.sigmoid(prediction[..., 3])  # Height
         pred_conf = torch.sigmoid(prediction[..., 4])  # Conf
         pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
@@ -179,9 +179,10 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nT = FloatTensor([sum([len(x) for x in targets])]) # torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
+            nT = FloatTensor([sum([len(x) for x in
+                                   targets])])  # torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
             n = mask.sum().float()
-            weight = n/nT
+            weight = n / nT
 
             if nGT > 0:
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
