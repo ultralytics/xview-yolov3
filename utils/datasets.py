@@ -1,17 +1,19 @@
 import glob
+import math
 import os
 import random
-import math
 
 import cv2
 import numpy as np
 import scipy.io
 import torch
 from PIL import Image
-from torch.utils.data import Dataset
+
+# from torch.utils.data import Dataset
+from utils.utils import xyxy2xywh
 
 
-class ImageFolder(Dataset):  # for eval-only
+class ImageFolder():  # for eval-only
     def __init__(self, path, img_size=416):
         try:
             if os.path.isdir(path):
@@ -21,25 +23,17 @@ class ImageFolder(Dataset):  # for eval-only
         except:
             print('Error: no files or folders found in supplied path.')
 
-        self.img_mean = np.array([0.15979, 0.19489, 0.23582]).reshape((3, 1, 1))
-        self.img_std = np.array([0.086454, 0.096072, 0.11761]).reshape((3, 1, 1))
-
+        # RGB normalization values
+        self.img_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
+        self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
         self.img_shape = (img_size, img_size)
 
     def __getitem__(self, index):
         img_path = self.files[index % len(self.files)]
         # Add padding
         img = cv2.imread(img_path)  # BGR
-        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
-
-        #im2 = img.transpose(1, 2, 0)
-        #import matplotlib.pyplot as plt
-        #plt.imshow(im2)
-
-        # Normalize
-        # r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
-        # img[:, r, c] -= img[:, r, c].mean()
-        # img[:, r, c] /= img[:, r, c].std()
+        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32)
+        # Normalize RGB
         img -= self.img_mean
         img /= self.img_std
 
@@ -51,46 +45,46 @@ class ImageFolder(Dataset):  # for eval-only
 
 class ListDataset_xview_fast():  # for training
     def __init__(self, folder_path, batch_size=1, img_size=416):
-        p = folder_path + 'train_images'
+        p = folder_path + 'train_images8'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         self.len = math.ceil(len(self.img_files) / batch_size)
         self.batch_size = batch_size
         assert self.len > 0, 'No images found in path %s' % p
         self.height = img_size
-        self.max_objects = 7607
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets.mat')
+        self.mat = scipy.io.loadmat('utils/targets30_no18_no73_classes.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
         self.count = -1
         os.makedirs(self.small_folder, exist_ok=True)
 
-        self.img_mean = np.array([0.15979, 0.19489, 0.23582]).reshape((3, 1, 1))
-        self.img_std = np.array([0.086454, 0.096072, 0.11761]).reshape((3, 1, 1))
+        # RGB normalization values
+        self.img_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
         return self
 
-    #@profile
+    # @profile
     def __next__(self):
         self.count += 1
         if self.count == self.len:
             self.count = -1
             raise StopIteration
 
-        ia = self.count*self.batch_size
-        ib = min((self.count+1) * self.batch_size, len(self.img_files))
-        indices = list(range(ia,ib))
+        ia = self.count * self.batch_size
+        ib = min((self.count + 1) * self.batch_size, len(self.img_files))
+        indices = list(range(ia, ib))
 
-        img_all = np.zeros((len(indices),3,self.height,self.height), dtype=np.float32)
-        labels_all = [] # np.zeros((len(indices), self.max_objects, 5), dtype=np.float32)
+        img_all = np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
+        labels_all = []
         for index, files_index in enumerate(indices):
-            img_path = self.img_files[files_index]
+            img_path = self.img_files[files_index]  # B G R
 
             # load labels
             chip = img_path.rsplit('/')[-1].replace('.tif', '')
-            i = np.nonzero(self.mat['id'] == np.array(float(chip)))[0]
+            i = np.nonzero(self.mat['id'] == float(chip))[0]
             labels = self.mat['targets'][i]
 
             # img = cv2.imread(img_path)
@@ -99,9 +93,7 @@ class ListDataset_xview_fast():  # for training
             if not os.path.isfile(small_path):
                 img = cv2.imread(img_path)
                 h, w, _ = img.shape
-                ratio = float(self.height) / max(h, w)
-                img = cv2.resize(img, (int(w * ratio), int(h * ratio)),
-                                 interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+                img = resize_square(img, height=self.height)
                 cv2.imwrite(small_path, img)
             else:
                 img = cv2.imread(small_path)
@@ -112,7 +104,6 @@ class ListDataset_xview_fast():  # for training
                     w, h = Image.open(img_path).size
 
             # Add padding
-            img = resize_square(img, height=self.height)
             ratio = float(self.height) / max(h, w)
             pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
             if h > w:
@@ -137,7 +128,7 @@ class ListDataset_xview_fast():  # for training
                 # plt.plot(labels[:, 3], labels[:, 4], '.')
 
             # random affine
-            #img, labels = random_affine(img, targets=labels, degrees=(-2, 2), translate=(.05, .05),  scale=(.95, 1.05))
+            # img, labels = random_affine(img, targets=labels, degrees=(-2, 2), translate=(.05, .05),  scale=(.95, 1.05))
             nL = len(labels)
 
             # convert labels to xywh
@@ -160,156 +151,29 @@ class ListDataset_xview_fast():  # for training
             # if random.random() > 0.5:
             #    img = np.rot90(img)
 
-            # Normalize
-            img = np.ascontiguousarray(img)
-            img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
-            # r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
-            # img[:, r, c] -= img[:, r, c].mean()
-            # img[:, r, c] /= img[:, r, c].std()
-            img -= self.img_mean
-            img /= self.img_std
-
             # Fill matrix
-            #filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
             if nL > 0:
                 # remap xview classes 11-94 to 0-61
                 labels[:, 0] = xview_classes2indices(labels[:, 0])
-                #filled_labels[range(nL)[:self.max_objects]] = labels[:self.max_objects]
 
+            # img_all.append(torch.from_numpy(img))
             img_all[index] = img
-            #labels_all[index] = filled_labels
             labels_all.append(labels)
+
+        # Normalize
+        img_all = np.ascontiguousarray(img_all)
+        img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32)  # BGR to RGB
+
+        # r, c = np.nonzero(img.sum(0))  # normalizes image in RGB order
+        # img[:, r, c] -= img[:, r, c].mean()
+        # img[:, r, c] /= img[:, r, c].std()
+        img_all -= self.img_mean
+        img_all /= self.img_std
 
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
         return self.len
-
-
-class ListDataset_xview():  # for training
-    def __init__(self, folder_path, batch_size=1, img_size=416):
-        p = folder_path + 'train_images8'
-        self.img_files = sorted(glob.glob('%s/*.*' % p))
-        assert len(self.img_files ) > 0, 'No images found in path %s' % p
-        self.height = img_size
-        self.max_objects = 7607
-        # load targets
-        self.mat = scipy.io.loadmat('utils/targets.mat')
-        self.mat['id'] = self.mat['id'].squeeze()
-        # make folder for reduced size images
-        self.small_folder = p + '_' + str(img_size) + '/'
-        os.makedirs(self.small_folder, exist_ok=True)
-
-        self.img_mean = np.array([0.15979, 0.19489, 0.23582]).reshape((3, 1, 1))
-        self.img_std = np.array([0.086454, 0.096072, 0.11761]).reshape((3, 1, 1))
-
-
-    # @profile
-    def __getitem__(self, index):
-        index = index % len(self.img_files)
-        img_path = self.img_files[index]
-
-        # load labels
-        chip = img_path.rsplit('/')[-1].replace('.tif', '')
-        i = np.nonzero(self.mat['id'] == np.array(float(chip)))[0]
-        labels = self.mat['targets'][i]
-
-        # img = cv2.imread(img_path)
-        # h, w, _ = img.shape
-        small_path = self.small_folder + str(chip) + '.tif'
-        if not os.path.isfile(small_path):
-            img = cv2.imread(img_path)
-            h, w, _ = img.shape
-            ratio = float(self.height) / max(h, w)
-            img = cv2.resize(img, (int(w * ratio), int(h * ratio)),
-                             interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
-            cv2.imwrite(small_path, img)
-        else:
-            img = cv2.imread(small_path)
-            # load original image width and height
-            if len(labels) > 0:
-                w, h = self.mat['wh'][i[0]]
-            else:
-                w, h = Image.open(img_path).size
-
-        # Add padding
-        img = resize_square(img, height=self.height)
-        ratio = float(self.height) / max(h, w)
-        pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
-        if h > w:
-            padx = pad
-        elif h < w:
-            pady = pad
-
-        # label_path = self.label_files[index]
-        # with open(label_path, 'r') as file:
-        #    a = file.read().replace('\n', ' ').split()
-        # labels = np.array([float(x) for x in a]).reshape(-1, 5)
-
-        if len(labels) > 0:
-            labels[:, [1, 3]] += padx
-            labels[:, [2, 4]] += pady
-            labels[:, 1:5] *= ratio
-
-            # plot
-            # import matplotlib.pyplot as plt
-            # plt.imshow(img[0])
-            # plt.plot(labels[:, 1], labels[:, 2], '.')
-            # plt.plot(labels[:, 3], labels[:, 4], '.')
-
-        # random affine
-        #img, labels = random_affine(img, targets=labels, degrees=(-2, 2), translate=(.05, .05),  scale=(.95, 1.05))
-        nL = len(labels)
-
-        # convert labels to xywh
-        if nL > 0:
-            labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
-
-        # # random lr flip
-        # if random.random() > 0.5:
-        #     img = np.fliplr(img)
-        #     if nL > 0:
-        #         labels[:, 1] = 1 - labels[:, 1]
-        #
-        # # random ud flip
-        # if random.random() > 0.5:
-        #     img = np.flipud(img)
-        #     if nL > 0:
-        #         labels[:, 2] = 1 - labels[:, 2]
-
-        # random 90deg rotation
-        # if random.random() > 0.5:
-        #    img = np.rot90(img)
-
-        # Normalize
-        img = np.ascontiguousarray(img)
-        img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
-        # r, c = np.nonzero(img.sum(0))  # image must be [3, 416, 416] ordere here
-        # img[:, r, c] -= img[:, r, c].mean()
-        # img[:, r, c] /= img[:, r, c].std()
-        img -= self.img_mean
-        img /= self.img_std
-
-        # Fill matrix
-        filled_labels = np.zeros((self.max_objects, 5), dtype=np.float32)
-        if nL > 0:
-            # remap xview classes 11-94 to 0-61
-            labels[:, 0] = xview_classes2indices(labels[:, 0])
-            filled_labels[range(nL)[:self.max_objects]] = labels[:self.max_objects]
-
-        return torch.from_numpy(img), torch.from_numpy(filled_labels)
-
-    def __len__(self):
-        return len(self.img_files)
-
-
-def xyxy2xywh(box):
-    xywh = np.zeros(box.shape)
-    xywh[:, 0] = (box[:, 0] + box[:, 2]) / 2
-    xywh[:, 1] = (box[:, 1] + box[:, 3]) / 2
-    xywh[:, 2] = box[:, 2] - box[:, 0]
-    xywh[:, 3] = box[:, 3] - box[:, 1]
-    return xywh
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
@@ -324,12 +188,12 @@ def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
 def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular image to a padded square
     shape = img.shape[:2]  # shape = [height, width]
     ratio = float(height) / max(shape)
-    new_shape = [int(shape[0] * ratio), int(shape[1] * ratio)]
+    new_shape = [round(shape[0] * ratio), round(shape[1] * ratio)]
     dw = height - new_shape[1]  # width padding
     dh = height - new_shape[0]  # height padding
     top, bottom = dh // 2, dh - (dh // 2)
     left, right = dw // 2, dw - (dw // 2)
-    img = cv2.resize(img, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA if ratio < 1 else cv2.INTER_CUBIC)
+    img = cv2.resize(img, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA)
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 

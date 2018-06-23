@@ -24,20 +24,11 @@ image_h = image_h(v);
 image_w = image_w(v); 
 chip_number = chip_number(v); clear v i
 
-% reject images with < 10 targets
+% % reject images with < 10 targets
 [uchip_number,~,~,n]=fcnunique(chip_number);
-max(n)
-fig; histogram(n,linspace(0,300,301))
-sortrows([n, uchip_number],-1)
-
-%coords = coords(v);
-%chip_id = chip_id(v);
-%chips = chips(v);
-%classes = classes(v);
-%image_h = image_h(v);
-%image_w = image_w(v); 
-%chip_number = chip_number(v); clear v i
-
+fprintf('Images target count range: %g-%g\n',min(n),max(n))
+% fig; histogram(n,linspace(0,300,301))
+% sortrows([n, uchip_number],-1)
 
 % Target box width and height
 w = coords(:,3) - coords(:,1);
@@ -58,7 +49,7 @@ mean(x1<0 | y1<0 | x2>1 | y2>1)
 mean(x2<0 | y2<0 | x1>1 | y1>1)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([wn hn], 18);
+C = fcn_kmeans([wn hn], 30);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -71,16 +62,16 @@ for i=1:6
     stat_means(i) = mean(fcnsigmarejection(stats(:,i),6,3));
 end
 
-% output
-mu = stat_means(1:3)   % dataset rgb mean
-std = stat_means(4:6)  % dataset rgb std mean
+% output RGB stats (comes in BGR from cv2.imread)
+mu = stat_means([3 2 1])   % dataset RGB mean
+std = stat_means([6 5 4])  % dataset RGB std mean
 anchor_boxes = vpa(C(:)',3)  % anchor boxes
 
 
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets18.mat','wh','targets','id')
+save('targets30_no18_no73_classes.mat','wh','targets','id')
 
 
 function [coords, valid] = clean_coords(coords, classes, image_h, image_w)
@@ -105,27 +96,30 @@ new_area = w.*h;
 i0 = ~any(isnan(coords) | isinf(coords), 2);
 
 % sigma rejections on dimensions
-[~, i1] = fcnsigmarejection(area,12, 3);
+[~, i1] = fcnsigmarejection(area,15, 3);
 [~, i2] = fcnsigmarejection(w,15, 3);
 [~, i3] = fcnsigmarejection(h,15, 3);
 
 % manual dimension requirements
 i4 = area >= 20 & w > 3 & h > 3;  
 
-% extreme edges (i.e. don't start an x1 4 pixels from the right side)
+% extreme edges (i.e. don't start an x1 10 pixels from the right side)
 i5 = x1 < (image_w-10) & y1 < (image_h-10) & x2 > 10 & y2 > 10;  % border = 5
 
 % cut objects that lost >90% of their area during crop
-i6 = (new_area./ area) > 0.20;
+i6 = (new_area./ area) > 0.10;
 
-% no image oddities
+% no image dimension nans or infs, or smaller than 32 pix
 hw = [image_h image_w];
 i7 = ~any(isnan(hw) | isinf(hw) | hw < 32, 2);
 
-% remove invalid classes 75 and 82:
+% remove invalid classes 75 and 82 ('None' class, wtf?)
 i8 = ~any(classes(:) == [75, 82],2);
 
-valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
+% remove 18 and 73 (small cars and buildings) as an experiment
+i9 = ~any(classes(:) == [18, 73],2);
+
+valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8 & i9;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
 end
 

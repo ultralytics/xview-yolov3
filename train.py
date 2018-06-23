@@ -10,16 +10,16 @@ from utils.datasets import *
 from utils.parse_config import *
 from utils.utils import *
 
-run_name = 'june22'
+run_name = 'june23'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=250, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_30.cfg', help='path to model cfg file')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_no73_classes.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.9, help='object confidence threshold')
+parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
@@ -61,9 +61,6 @@ def main(opt):
     model = Darknet(opt.config_path, opt.img_size).to(device).train()
 
     # Get dataloader
-    #dataloader = DataLoader(ListDataset_xview(train_path, opt.batch_size, opt.img_size),
-    #                        batch_size=opt.batch_size, num_workers=opt.n_cpu)
-
     dataloader = ListDataset_xview_fast(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.9, weight_decay=decay, nesterov=True)
@@ -80,7 +77,6 @@ def main(opt):
         torch.save(model.state_dict(), 'weights/init.pt')
 
     # modelinfo(model)
-
     t0 = time.time()
     t1 = time.time()
     best_loss = float('inf')
@@ -89,8 +85,6 @@ def main(opt):
         rloss = defaultdict(float)  # running loss
         for i, (imgs, targets) in enumerate(dataloader):
             imgs = imgs.to(device)
-
-            print(imgs.shape, len(targets))
 
             loss = model(imgs, targets)
             optimizer.zero_grad()
@@ -114,6 +108,7 @@ def main(opt):
 
         if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))
+            best_loss = rloss['loss']
 
     # save final model
     dt = time.time() - t0
@@ -122,7 +117,7 @@ def main(opt):
     torch.save(model.state_dict(), s)
 
     opt.weights_path = s
-    #detect(opt)
+    detect(opt)
 
 
 if __name__ == '__main__':

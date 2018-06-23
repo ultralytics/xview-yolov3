@@ -17,14 +17,14 @@ import tqdm
 parser = argparse.ArgumentParser()
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_18.cfg', help='path to model cfg file')
-parser.add_argument('-weights_path', type=str, default='checkpoints/june22_final_e199_416.pt', help='weights path')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_no73_classes.cfg', help='cfg file path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/june23_final_e249_544.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.90, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
+parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
+parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=8, help='size of the batches')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 13, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
@@ -111,20 +111,22 @@ def detect(opt):
                     # Rescale coordinates to original dimensions
                     box_h = ((y2 - y1) / unpad_h) * img.shape[0]
                     box_w = ((x2 - x1) / unpad_w) * img.shape[1]
-                    y1 = (((y1 - pad_y // 2) / unpad_h) * img.shape[0] - 3).round().item()
+                    y1 = (((y1 - pad_y // 2) / unpad_h) * img.shape[0]).round().item()
                     x1 = (((x1 - pad_x // 2) / unpad_w) * img.shape[1]).round().item()
-                    x2 = (x1 + box_w - 3).round().item()
+                    x2 = (x1 + box_w).round().item()
                     y2 = (y1 + box_h).round().item()
                     x1, y1, x2, y2 = max(x1, 0), max(y1, 0), max(x2, 0), max(y2, 0)
 
                     # write to file
-                    file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, xview_indices2classes(int(cls_pred)), conf))
+                    xvc = xview_indices2classes(int(cls_pred)) # xview class
+                    if (xvc != 73) & (xvc !=18):
+                        file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, xvc, conf))
 
                     if opt.plot_flag:
                         # Add the bbox to the plot
                         # label = classes[int(cls_pred)]
                         color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
-                        plot_one_box([x1, y1, x2, y2], img, color=color, line_thickness=2)
+                        plot_one_box([x1, y1, x2, y2], img, color=color, line_thickness=1)
 
             if opt.plot_flag:
                 # Save generated image with detections

@@ -66,6 +66,14 @@ def weights_init_normal(m):
         torch.nn.init.normal_(m.weight.data, 1.0, 0.03)
         torch.nn.init.constant_(m.bias.data, 0.0)
 
+def xyxy2xywh(box):
+    xywh = np.zeros(box.shape)
+    xywh[:, 0] = (box[:, 0] + box[:, 2]) / 2
+    xywh[:, 1] = (box[:, 1] + box[:, 3]) / 2
+    xywh[:, 2] = box[:, 2] - box[:, 0]
+    xywh[:, 3] = box[:, 3] - box[:, 1]
+    return xywh
+
 
 def compute_ap(recall, precision):
     """ Compute the average precision, given the recall and precision curves.
@@ -118,18 +126,18 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     inter_rect_x2 = torch.min(b1_x2, b2_x2)
     inter_rect_y2 = torch.min(b1_y2, b2_y2)
     # Intersection area
-    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1 + 1, 0) * \
-                 torch.clamp(inter_rect_y2 - inter_rect_y1 + 1, 0)
+    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1, 0) * \
+                 torch.clamp(inter_rect_y2 - inter_rect_y1, 0)
     # Union Area
-    b1_area = (b1_x2 - b1_x1 + 1) * (b1_y2 - b1_y1 + 1)
-    b2_area = (b2_x2 - b2_x1 + 1) * (b2_y2 - b2_y1 + 1)
+    b1_area = (b1_x2 - b1_x1) * (b1_y2 - b1_y1)
+    b2_area = (b2_x2 - b2_x1) * (b2_y2 - b2_y1)
 
     iou = inter_area / (b1_area + b2_area - inter_area + 1e-16)
 
     return iou
 
 
-# @profile
+#@profile
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
@@ -140,8 +148,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     ty = torch.zeros(nB, nA, nG, nG)
     tw = torch.zeros(nB, nA, nG, nG)
     th = torch.zeros(nB, nA, nG, nG)
-    tconf = torch.zeros(nB, nA, nG, nG)
-    tcls = torch.FloatTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
+    tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
+    tcls = torch.ByteTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
     TP = torch.zeros(nB, max(nT))
     FP = torch.zeros(nB, max(nT))
     FN = torch.zeros(nB, max(nT))
@@ -273,18 +281,21 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
             output[image_i] = max_detections if output[image_i] is None else torch.cat(
                 (output[image_i], max_detections))
 
-        # suppress boxes from other classes
-        thresh = 0.25
+        # suppress boxes from other classes (with worse conf) if iou over threshold
+        thresh = 0.9
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 5])]  # sort best to worst
+        xywh = torch.from_numpy(xyxy2xywh(a[:,:4].cpu().numpy().copy()))
 
-        radius = 20  # area to search for cross-class ious
+        radius = 30  # area to search for cross-class ious
         for i in range(len(a)):
             if i >= len(a) - 1:
                 break
+
             close = torch.nonzero(
-                (abs(a[i, 0] - a[i + 1:, 0]) < radius) & (abs(a[i, 1] - a[i + 1:, 1]) < radius)) + i + 1
+                (abs(xywh[i, 0] - xywh[i + 1:, 0]) < radius) & (abs(xywh[i, 1] - xywh[i + 1:, 1]) < radius)) + i + 1
+
             if len(close) > 0:
                 iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4))
                 bad = close[iou > thresh]
@@ -292,6 +303,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                     mask = torch.ones(len(a)).type(torch.ByteTensor)
                     mask[bad] = 0
                     a = a[mask]
+                    xywh =xywh[mask]
 
         # if prediction.is_cuda:
         #    a = a.cuda()
