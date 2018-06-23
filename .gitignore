@@ -16,9 +16,10 @@ scoring
 
 
 output
-__pycache__
 checkpoints
-*results.txt
+results.txt
+metrics.txt
+printedResults.txt
 
 *.mat
 !targets.mat
