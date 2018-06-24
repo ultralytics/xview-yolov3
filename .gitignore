@@ -22,7 +22,7 @@ metrics.txt
 printedResults.txt
 
 *.mat
-!targets.mat
+!targets*.mat
 temp-plot.html
 
 
