@@ -10,12 +10,12 @@ from utils.datasets import *
 from utils.parse_config import *
 from utils.utils import *
 
-run_name = 'june24'
+run_name = 'june25_weights1'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=1000, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_no73_classes.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
@@ -40,6 +40,7 @@ def main(opt):
     np.random.seed(0)
     torch.manual_seed(0)
     #torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True  # https://medium.com/@u39kun/deep-learning-on-nvidia-titan-v-first-look-1d368d3443fb
     if cuda:
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
@@ -49,13 +50,6 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         train_path = '../'
-
-    # Get hyper parameters
-    hyperparams = parse_model_config(opt.config_path)[0]
-    lr = float(hyperparams['learning_rate'])
-    momentum = float(hyperparams['momentum'])
-    decay = float(hyperparams['decay'])
-    burn_in = int(hyperparams['burn_in'])
 
     # Initiate model
     model = Darknet(opt.config_path, opt.img_size).to(device).train()
@@ -68,13 +62,13 @@ def main(opt):
 
     # reload saved optimizer state
     resume_training = True
-    if resume_training:
+    if (platform == 'darwin') and resume_training:
         model.load_state_dict(torch.load('weights/init.pt', map_location=device.type))
         # optimizer.load_state_dict(torch.load('optim.pth'))
         # optimizer.state = defaultdict(dict, optimizer.state)
     else:
         model.apply(weights_init_normal)  # initialize with random weights
-        torch.save(model.state_dict(), 'weights/init.pt')
+        #torch.save(model.state_dict(), 'weights/init.pt')
 
     # modelinfo(model)
     t0 = time.time()
@@ -118,7 +112,7 @@ def main(opt):
     torch.save(model.state_dict(), s)
 
     opt.weights_path = s
-    detect(opt)
+    #detect(opt)
 
 
 if __name__ == '__main__':

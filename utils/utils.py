@@ -202,16 +202,16 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
 
-        # predicted classes and confidence
-        tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
-        pcls = torch.argmax(pred_cls[b, a, gj, gi].cpu(), 1)
-        pconf = pred_conf[b, a, gj, gi].cpu()
-        iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
-
-        TP[b, i] = ((pconf > 0.5) & (iou_pred > 0.5) & (pcls == tc)).float()
-        FP[b, i] = ((pconf > 0.5) & ((iou_pred < 0.5) | (pcls != tc))).float()  # coordinates or class are wrong
-        FN[b, :nTb] = 1.0
-        FN[b, i] = (pconf < 0.5).float()  # confidence score is too low (set to zero)
+        # # predicted classes and confidence
+        # tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
+        # pcls = torch.argmax(pred_cls[b, a, gj, gi].cpu(), 1)
+        # pconf = pred_conf[b, a, gj, gi].cpu()
+        # iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
+        #
+        # TP[b, i] = ((pconf > 0.5) & (iou_pred > 0.5) & (pcls == tc)).float()
+        # FP[b, i] = ((pconf > 0.5) & ((iou_pred < 0.5) | (pcls != tc))).float()  # coordinates or class are wrong
+        # FN[b, :nTb] = 1.0
+        # FN[b, i] = (pconf < 0.5).float()  # confidence score is too low (set to zero)
 
     # precision = TP.sum() / (TP + FP + 1e-16).float()
     # recall = TP.float() / (TP + FN + 1e-16).float()

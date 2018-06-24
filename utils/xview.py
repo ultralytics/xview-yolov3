@@ -1,8 +1,8 @@
 import json
+import os
 
 import cv2
 import numpy as np
-import os
 import scipy.io
 from tqdm import tqdm
 
@@ -33,10 +33,15 @@ def get_labels(fname):
 def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
-    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).T
-    x, y, w, h, conf, cls, loss, prec, recall, time = results[:,:]
-    plt.plot(x[:])
-
+    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
+    s = ['x','y','w','h','conf','cls','loss','prec','recall']
+    plt.figure(figsize=(18, 9))
+    for i in range(9):
+        plt.subplot(2, 5, i+1)
+        plt.plot(results[i, :505])
+        plt.plot(results[i, 506:506+510] * 1.59)
+        plt.plot(results[i, 506+510:])
+        plt.title(s[i])
 
 path = '/Users/glennjocher/Downloads/DATA/xview/'
 # path = ''
@@ -71,5 +76,6 @@ for name in tqdm(np.unique(chips)):
                 file.write('%g %g %g %g %g\n' % (classes[i], *coords[i]))
 
 from PIL import Image
+
 img_path = '/Users/glennjocher/downloads/DATA/xview/train_images3/5.tif'
 img = Image.open(img_path)

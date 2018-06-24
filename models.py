@@ -124,10 +124,10 @@ class YOLOLayer(nn.Module):
 
     #@profile
     def forward(self, x, targets=None):
+        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
         bs = x.shape[0]
         nG = x.shape[2]
         stride = self.img_dim / nG
-        # Tensors for cuda support
 
         # x.view(4, 3, 67, 13, 13) -- > (4, 3, 13, 13, 67)
         prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
@@ -140,7 +140,6 @@ class YOLOLayer(nn.Module):
         pred_conf = torch.sigmoid(prediction[..., 4])  # Conf
         pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
 
-        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
         if x.is_cuda and not self.grid_x.is_cuda:
             device = torch.device('cuda:0' if x.is_cuda else 'cpu')
             self.grid_x = self.grid_x.cuda()
@@ -179,8 +178,9 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nT = FloatTensor([sum([len(x) for x in targets])])
-            weight = mask.sum().float()/nT
+            #nT = FloatTensor([sum([len(x) for x in targets])])
+            #weight = mask.sum().float()/nT  # weigh by fraction of targets found in each of the 3 yolo layers
+            weight = 1
             if nGT > 0:
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
                 loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight

@@ -15,17 +15,17 @@ from scoring import score
 import tqdm
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images', help='path to images')
+parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_no73_classes.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/june23_best_544.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/june24_best_544.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
-parser.add_argument('-plot_flag', type=bool, default=False, help='plots predicted images if True')
+parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
@@ -35,7 +35,7 @@ def detect(opt):
     os.makedirs(opt.output_folder, exist_ok=True)
     opt.img_size = int(opt.weights_path.rsplit('_')[-1][:-3])
 
-    cuda = torch.cuda.is_available()
+    cuda = False # torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # Set up model
@@ -47,6 +47,7 @@ def detect(opt):
 
     model = Darknet(opt.config_path, img_size=opt.img_size).to(device).eval()
     model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
+    #torch.load('my_file.pt', map_location=lambda storage, loc: storage)
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
