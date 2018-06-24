@@ -34,9 +34,8 @@ def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
     results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).T
-    x, y, w, h, conf, cls, total, prec, recall, time = results[:,:]
-    plt.plot(prec[-2000:])
-
+    x, y, w, h, conf, cls, loss, prec, recall, time = results[:,:]
+    plt.plot(x[:])
 
 
 path = '/Users/glennjocher/Downloads/DATA/xview/'

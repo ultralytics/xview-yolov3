@@ -179,10 +179,8 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nT = FloatTensor([sum([len(x) for x in targets])]) # torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
-            n = mask.sum().float()
-            weight = 1 # n/nT
-
+            nT = FloatTensor([sum([len(x) for x in targets])])
+            weight = mask.sum().float()/nT
             if nGT > 0:
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
                 loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight

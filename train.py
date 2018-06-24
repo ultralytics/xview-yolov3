@@ -10,7 +10,7 @@ from utils.datasets import *
 from utils.parse_config import *
 from utils.utils import *
 
-run_name = 'june23'
+run_name = 'june24'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=1000, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')

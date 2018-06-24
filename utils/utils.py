@@ -24,7 +24,8 @@ def modelinfo(model):
     print('\n%4s %70s %9s %12s %20s %12s %12s' % ('', 'name', 'gradient', 'parameters', 'shape', 'mu', 'sigma'))
     for i, (name, p) in enumerate(model.named_parameters()):
         name = name.replace('module_list.', '')
-        print('%4g %70s %9s %12g %20s %12g %12g' % (i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
+        print('%4g %70s %9s %12g %20s %12g %12g' % (
+        i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
     print('\n%g layers, %g parameters, %g gradients' % (i + 1, nparams, ngradients))
 
 
@@ -66,6 +67,7 @@ def weights_init_normal(m):
         torch.nn.init.normal_(m.weight.data, 1.0, 0.03)
         torch.nn.init.constant_(m.bias.data, 0.0)
 
+
 def xyxy2xywh(box):
     xywh = np.zeros(box.shape)
     xywh[:, 0] = (box[:, 0] + box[:, 2]) / 2
@@ -102,23 +104,24 @@ def compute_ap(recall, precision):
     return ap
 
 
+#@profile
 def bbox_iou(box1, box2, x1y1x2y2=True):
-    if len(box1.shape) == 1:
-        box1 = box1.reshape(1, 4)
+    # if len(box1.shape) == 1:
+    #    box1 = box1.reshape(1, 4)
 
     """
     Returns the IoU of two bounding boxes
     """
-    if not x1y1x2y2:
+    if x1y1x2y2:
+        # Get the coordinates of bounding boxes
+        b1_x1, b1_y1, b1_x2, b1_y2 = box1[:, 0], box1[:, 1], box1[:, 2], box1[:, 3]
+        b2_x1, b2_y1, b2_x2, b2_y2 = box2[:, 0], box2[:, 1], box2[:, 2], box2[:, 3]
+    else:
         # Transform from center and width to exact coordinates
         b1_x1, b1_x2 = box1[:, 0] - box1[:, 2] / 2, box1[:, 0] + box1[:, 2] / 2
         b1_y1, b1_y2 = box1[:, 1] - box1[:, 3] / 2, box1[:, 1] + box1[:, 3] / 2
         b2_x1, b2_x2 = box2[:, 0] - box2[:, 2] / 2, box2[:, 0] + box2[:, 2] / 2
         b2_y1, b2_y2 = box2[:, 1] - box2[:, 3] / 2, box2[:, 1] + box2[:, 3] / 2
-    else:
-        # Get the coordinates of bounding boxes
-        b1_x1, b1_y1, b1_x2, b1_y2 = box1[:, 0], box1[:, 1], box1[:, 2], box1[:, 3]
-        b2_x1, b2_y1, b2_x2, b2_y2 = box2[:, 0], box2[:, 1], box2[:, 2], box2[:, 3]
 
     # get the corrdinates of the intersection rectangle
     inter_rect_x1 = torch.max(b1_x1, b2_x1)
@@ -132,18 +135,16 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     b1_area = (b1_x2 - b1_x1) * (b1_y2 - b1_y1)
     b2_area = (b2_x2 - b2_x1) * (b2_y2 - b2_y1)
 
-    iou = inter_area / (b1_area + b2_area - inter_area + 1e-16)
-
-    return iou
+    return inter_area / (b1_area + b2_area - inter_area + 1e-16)
 
 
-#@profile
+# @profile
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
-    nB = len(target) # target.shape[0]
-    nT = [len(x) for x in target] # torch.argmin(target[:, :, 4], 1)  # targets per image
+    nB = len(target)  # target.shape[0]
+    nT = [len(x) for x in target]  # torch.argmin(target[:, :, 4], 1)  # targets per image
     tx = torch.zeros(nB, nA, nG, nG)  # batch size (4), number of anchors (3), number of grid points (13)
     ty = torch.zeros(nB, nA, nG, nG)
     tw = torch.zeros(nB, nA, nG, nG)
@@ -159,7 +160,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         nTb = nT[b]  # number of targets (measures index of first zero-height target box)
         if nTb == 0:
             continue
-        t = torch.from_numpy(target[b]) # target[b, :nTb]
+        t = torch.from_numpy(target[b])  # target[b, :nTb]
         nGT += nTb
 
         # Convert to position relative to box
@@ -208,7 +209,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
         TP[b, i] = ((pconf > 0.5) & (iou_pred > 0.5) & (pcls == tc)).float()
-        FP[b, i] = ((pconf > 0.5) & ((iou_pred < 0.5) | (pcls != tc))).float() # coordinates or class are wrong
+        FP[b, i] = ((pconf > 0.5) & ((iou_pred < 0.5) | (pcls != tc))).float()  # coordinates or class are wrong
         FN[b, :nTb] = 1.0
         FN[b, i] = (pconf < 0.5).float()  # confidence score is too low (set to zero)
 
@@ -224,6 +225,7 @@ def to_categorical(y, num_classes):
     return torch.from_numpy(np.eye(num_classes, dtype='uint8')[y])
 
 
+#@profile
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     """
     Removes detections with lower object confidence score than 'conf_thres' and performs
@@ -286,7 +288,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 5])]  # sort best to worst
-        xywh = torch.from_numpy(xyxy2xywh(a[:,:4].cpu().numpy().copy()))
+        xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
 
         radius = 30  # area to search for cross-class ious
         for i in range(len(a)):
@@ -303,7 +305,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                     mask = torch.ones(len(a)).type(torch.ByteTensor)
                     mask[bad] = 0
                     a = a[mask]
-                    xywh =xywh[mask]
+                    xywh = xywh[mask]
 
         # if prediction.is_cuda:
         #    a = a.cuda()

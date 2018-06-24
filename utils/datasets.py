@@ -14,40 +14,50 @@ from utils.utils import xyxy2xywh
 
 
 class ImageFolder():  # for eval-only
-    def __init__(self, path, img_size=416):
-        try:
-            if os.path.isdir(path):
-                self.files = sorted(glob.glob('%s/*.*' % path))
-            elif os.path.isfile(path):
-                self.files = [path]
-        except:
-            print('Error: no files or folders found in supplied path.')
+    def __init__(self, path, batch_size=1, img_size=416):
+        if os.path.isdir(path):
+            self.files = sorted(glob.glob('%s/*.*' % path))
+        elif os.path.isfile(path):
+            self.files = [path]
+
+        self.nF = len(self.files)  # number of image files
+        self.nB = math.ceil(self.nF / batch_size)  # number of batches
+        self.batch_size = batch_size
+        self.height = img_size
+        assert self.nF > 0, 'No images found in path %s' % path
 
         # RGB normalization values
         self.img_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
         self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
-        self.img_shape = (img_size, img_size)
 
-    def __getitem__(self, index):
-        img_path = self.files[index % len(self.files)]
+    def __iter__(self):
+        self.count = -1
+        return self
+
+    def __next__(self):
+        self.count += 1
+        if self.count == self.nB:
+            raise StopIteration
+
+        img_path = self.files[self.count]
         # Add padding
         img = cv2.imread(img_path)  # BGR
-        img = resize_square(img, height=self.img_shape[0])[:, :, ::-1].transpose(2, 0, 1).astype(np.float32)
+        img = resize_square(img, height=self.height)[:, :, ::-1].transpose(2, 0, 1).astype(np.float32)
         # Normalize RGB
         img -= self.img_mean
         img /= self.img_std
 
-        return img_path, torch.from_numpy(img)
+        return [img_path], torch.from_numpy(img).unsqueeze(0)
 
     def __len__(self):
-        return len(self.files)
+        return self.nB # number of batches
 
 
 class ListDataset_xview_fast():  # for training
     def __init__(self, folder_path, batch_size=1, img_size=416):
         p = folder_path + 'train_images'
-        self.img_files = sorted(glob.glob('%s/*.*' % p))
-        self.nF = len(self.img_files)  # number of image files
+        self.files = sorted(glob.glob('%s/*.*' % p))
+        self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size) # number of batches
         self.batch_size = batch_size
         assert self.nB > 0, 'No images found in path %s' % p
@@ -81,7 +91,7 @@ class ListDataset_xview_fast():  # for training
         img_all = np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
         for index, files_index in enumerate(indices):
-            img_path = self.img_files[self.shuffled_vector[files_index]]  # B G R
+            img_path = self.files[self.shuffled_vector[files_index]]  # B G R
 
             # load labels
             chip = img_path.rsplit('/')[-1].replace('.tif', '')

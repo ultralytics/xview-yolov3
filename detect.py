@@ -15,20 +15,21 @@ from scoring import score
 import tqdm
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
+parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_no73_classes.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/june23_final_e249_736.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/june23_best_544.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
-parser.add_argument('-batch_size', type=int, default=8, help='size of the batches')
+parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
-parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
+parser.add_argument('-plot_flag', type=bool, default=False, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
+#@profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.makedirs(opt.output_folder, exist_ok=True)
@@ -36,7 +37,6 @@ def detect(opt):
 
     cuda = torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
-    Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 
     # Set up model
     assert os.path.isfile(opt.weights_path), 'Weights file not found'
@@ -50,8 +50,7 @@ def detect(opt):
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
-    dataloader = DataLoader(ImageFolder(opt.image_folder, img_size=opt.img_size),
-                            batch_size=opt.batch_size, shuffle=False, num_workers=opt.n_cpu)
+    dataloader = ImageFolder(opt.image_folder, batch_size=opt.batch_size, img_size=opt.img_size)
 
     imgs = []  # Stores image paths
     img_detections = []  # Stores detections for each image index
@@ -59,7 +58,9 @@ def detect(opt):
     print('\nRunning inference:')
     for batch_i, (img_paths, img) in enumerate(dataloader):
         # Configure input
-        img = img.type(Tensor)
+        img = img.to(device)
+
+        print(batch_i, img.shape)
 
         # Get detections
         with torch.no_grad():
@@ -129,7 +130,7 @@ def detect(opt):
 
             if opt.plot_flag:
                 # Save generated image with detections
-                cv2.imwrite(results_img_path, img)
+                cv2.imwrite(results_img_path.replace('.tif','.bmp'), img)
 
     score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
                 '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
