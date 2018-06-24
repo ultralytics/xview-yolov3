@@ -45,7 +45,7 @@ class ImageFolder():  # for eval-only
 
 class ListDataset_xview_fast():  # for training
     def __init__(self, folder_path, batch_size=1, img_size=416):
-        p = folder_path + 'train_images8'
+        p = folder_path + 'train_images'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
         self.nF = len(self.img_files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size) # number of batches
