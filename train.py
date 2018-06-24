@@ -2,12 +2,9 @@ import argparse
 import time
 from sys import platform
 
-from torch.utils.data import DataLoader
-
-from detect import detect
+# from detect import detect
 from models import *
 from utils.datasets import *
-from utils.parse_config import *
 from utils.utils import *
 
 run_name = 'june25_weights1'
