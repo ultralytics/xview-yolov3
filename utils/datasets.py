@@ -45,18 +45,18 @@ class ImageFolder():  # for eval-only
 
 class ListDataset_xview_fast():  # for training
     def __init__(self, folder_path, batch_size=1, img_size=416):
-        p = folder_path + 'train_images'
+        p = folder_path + 'train_images8'
         self.img_files = sorted(glob.glob('%s/*.*' % p))
-        self.len = math.ceil(len(self.img_files) / batch_size)
+        self.nF = len(self.img_files)  # number of image files
+        self.nB = math.ceil(self.nF / batch_size) # number of batches
         self.batch_size = batch_size
-        assert self.len > 0, 'No images found in path %s' % p
+        assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
         self.mat = scipy.io.loadmat('utils/targets30_no18_no73_classes.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
-        self.count = -1
         os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
@@ -64,32 +64,34 @@ class ListDataset_xview_fast():  # for training
         self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
+        self.count = -1
+        self.shuffled_vector = np.random.permutation(self.nF)         # shuffled vector
         return self
 
-    # @profile
+    #@profile
     def __next__(self):
         self.count += 1
-        if self.count == self.len:
-            self.count = -1
+        if self.count == self.nB:
             raise StopIteration
 
         ia = self.count * self.batch_size
-        ib = min((self.count + 1) * self.batch_size, len(self.img_files))
+        ib = min((self.count + 1) * self.batch_size, self.nF)
         indices = list(range(ia, ib))
 
         img_all = np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
         for index, files_index in enumerate(indices):
-            img_path = self.img_files[files_index]  # B G R
+            img_path = self.img_files[self.shuffled_vector[files_index]]  # B G R
 
             # load labels
             chip = img_path.rsplit('/')[-1].replace('.tif', '')
             i = np.nonzero(self.mat['id'] == float(chip))[0]
             labels = self.mat['targets'][i]
+            nL = len(labels)
 
             # img = cv2.imread(img_path)
             # h, w, _ = img.shape
-            small_path = self.small_folder + str(chip) + '.tif'
+            small_path = self.small_folder + str(chip) + '.bmp'
             if not os.path.isfile(small_path):
                 img = cv2.imread(img_path)
                 h, w, _ = img.shape
@@ -98,7 +100,7 @@ class ListDataset_xview_fast():  # for training
             else:
                 img = cv2.imread(small_path)
                 # load original image width and height
-                if len(labels) > 0:
+                if nL > 0:
                     w, h = self.mat['wh'][i[0]]
                 else:
                     w, h = Image.open(img_path).size
@@ -116,13 +118,13 @@ class ListDataset_xview_fast():  # for training
             #    a = file.read().replace('\n', ' ').split()
             # labels = np.array([float(x) for x in a]).reshape(-1, 5)
 
-            if len(labels) > 0:
+            if nL > 0:
                 labels[:, [1, 3]] += padx
                 labels[:, [2, 4]] += pady
                 labels[:, 1:5] *= ratio
 
             # random affine
-            img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
+            # img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
             nL = len(labels)
 
             # plot
@@ -169,7 +171,7 @@ class ListDataset_xview_fast():  # for training
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
-        return self.len
+        return self.nB # number of batches
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61

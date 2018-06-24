@@ -12,7 +12,7 @@ from utils.utils import *
 
 run_name = 'june23'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=1000, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
@@ -30,7 +30,7 @@ opt = parser.parse_args()
 print(opt)
 
 
-#@profile
+# @profile
 def main(opt):
     os.makedirs('checkpoints', exist_ok=True)
     cuda = torch.cuda.is_available()
@@ -101,10 +101,11 @@ def main(opt):
             t1 = time.time()
             print(s)
 
-            with open('printedResults.txt', 'a') as file:
-                file.write(s + '\n')
-
             model.seen += imgs.shape[0]
+
+
+        with open('printedResults.txt', 'a') as file:
+           file.write(s + '\n')
 
         if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))

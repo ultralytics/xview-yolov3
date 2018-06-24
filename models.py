@@ -181,7 +181,7 @@ class YOLOLayer(nn.Module):
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nT = FloatTensor([sum([len(x) for x in targets])]) # torch.argmin(targets[:, :, 4], 1).sum().float().cuda()  # targets per image
             n = mask.sum().float()
-            weight = n/nT
+            weight = 1 # n/nT
 
             if nGT > 0:
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
@@ -218,14 +218,12 @@ class Darknet(nn.Module):
         super(Darknet, self).__init__()
         self.module_defs = parse_model_config(config_path)
         self.module_defs[0]['height'] = img_size
-
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
         self.seen = 0
         self.header_info = np.array([0, 0, 0, self.seen, 0])
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN', 'precision',
                            'recall']
-        # self.nA = int(self.module_defs[106]['num']) # number of anchors
 
     # @profile
     def forward(self, x, targets=None):
@@ -258,8 +256,8 @@ class Darknet(nn.Module):
             TP = (self.losses['TP'] > 0).float().sum()
             FP = (self.losses['FP'] > 0).float().sum()
             FN = (self.losses['FN'] == 3).float().sum()
-            self.losses['precision'] = TP / (TP + FP)
-            self.losses['recall'] = TP / (TP + FN)
+            self.losses['precision'] = TP / (TP + FP + 1e-16)
+            self.losses['recall'] = TP / (TP + FN + 1e-16)
             self.losses['TP'], self.losses['FP'], self.losses['FN'] = TP, FP, FN
 
         return sum(output) if is_training else torch.cat(output, 1)
