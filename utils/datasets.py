@@ -90,7 +90,6 @@ class ListDataset_xview_fast():  # for training
         img_all = np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
         for index, files_index in enumerate(indices):
-            files_index = 6
             img_path = self.files[self.shuffled_vector[files_index]]  # B G R
 
             # load labels
