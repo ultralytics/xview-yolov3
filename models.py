@@ -138,7 +138,7 @@ class YOLOLayer(nn.Module):
             self.bce_loss = self.bce_loss.cuda()
 
         # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
-        prediction = torch.sigmoid(x).view(bs, self.nA * 4, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4,2).contiguous()
+        prediction = torch.sigmoid(x).view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4,2).contiguous()
 
         # Get outputs
         x = prediction[..., 0]  # Center x
