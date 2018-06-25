@@ -78,7 +78,7 @@ class ListDataset_xview_fast():  # for training
         self.shuffled_vector = np.random.permutation(self.nF)         # shuffled vector
         return self
 
-    #@profile
+    @profile
     def __next__(self):
         self.count += 1
         if self.count == self.nB:
@@ -109,26 +109,21 @@ class ListDataset_xview_fast():  # for training
                 cv2.imwrite(small_path, img)
             else:
                 img = cv2.imread(small_path)
-                # load original image width and height
-                if nL > 0:
-                    w, h = self.mat['wh'][i[0]]
-                else:
-                    w, h = Image.open(img_path).size
-
-            # Add padding
-            ratio = float(self.height) / max(h, w)
-            pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
-            if h > w:
-                padx = pad
-            elif h < w:
-                pady = pad
 
             # label_path = self.label_files[index]
             # with open(label_path, 'r') as file:
             #    a = file.read().replace('\n', ' ').split()
             # labels = np.array([float(x) for x in a]).reshape(-1, 5)
-
             if nL > 0:
+                # Add padding
+                w, h = self.mat['wh'][i[0]]
+                ratio = float(self.height) / max(h, w)
+                pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
+                if h > w:
+                    padx = pad
+                elif h < w:
+                    pady = pad
+
                 labels[:, [1, 3]] += padx
                 labels[:, [2, 4]] += pady
                 labels[:, 1:5] *= ratio
