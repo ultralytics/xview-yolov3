@@ -139,23 +139,23 @@ class ListDataset_xview_fast():  # for training
             #plt.subplot(2, 2, 2).imshow(img)
             #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
-            # random lr flip
-            if random.random() > 0:
-                img = np.fliplr(img)
-                if nL > 0:
-                    # labels[:, 1] = 1 - labels[:, 1]
-                    labels[:, [1, 3]] = self.height - labels[:, [1, 3]]
-                    #plt.subplot(2, 2, 3).imshow(img)
-                    #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
-
-            # random ud flip
-            if random.random() > 0:
-                img = np.flipud(img)
-                if nL > 0:
-                    # abels[:, 2] = 1 - labels[:, 2]
-                    labels[:, [2, 4]] = self.height - labels[:, [2, 4]]
-                    #plt.subplot(2, 2, 4).imshow(img)
-                    #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+            # # random lr flip
+            # if random.random() > 0:
+            #     img = np.fliplr(img)
+            #     if nL > 0:
+            #         # labels[:, 1] = 1 - labels[:, 1]
+            #         labels[:, [1, 3]] = self.height - labels[:, [1, 3]]
+            #         #plt.subplot(2, 2, 3).imshow(img)
+            #         #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+            #
+            # # random ud flip
+            # if random.random() > 0:
+            #     img = np.flipud(img)
+            #     if nL > 0:
+            #         # abels[:, 2] = 1 - labels[:, 2]
+            #         labels[:, [2, 4]] = self.height - labels[:, [2, 4]]
+            #         #plt.subplot(2, 2, 4).imshow(img)
+            #         #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
             if nL > 0:
                 # convert labels to xywh
