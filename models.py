@@ -188,7 +188,9 @@ class YOLOLayer(nn.Module):
                 loss_cls = self.bce_loss(pred_cls[mask], tcls.float()) * weight
                 loss_conf = self.bce_loss(pred_conf[mask], mask[mask].float()) * weight
             else:
-                loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = 0, 0, 0, 0, 0, 0
+                loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0]), \
+                                                                      FloatTensor([0]), FloatTensor([0]), \
+                                                                      FloatTensor([0]), FloatTensor([0])
 
             loss_conf += 0.5 * self.bce_loss(pred_conf[~mask], mask[~mask].float()) * weight
 
