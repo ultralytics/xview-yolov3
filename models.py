@@ -158,7 +158,7 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, nGT, ap = build_targets(pred_boxes,
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap = build_targets(pred_boxes,
                                                                             pred_conf,
                                                                             pred_cls,
                                                                             targets,
@@ -178,9 +178,9 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nT = FloatTensor([sum([len(x) for x in targets])])
-            weight = mask.sum().float()/nT  # weigh by fraction of targets found in each of the 3 yolo layers
+            nGT = FloatTensor([sum([len(x) for x in targets])])
             if nGT > 0:
+                weight = mask.sum().float() / nGT
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
                 loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight
                 loss_w = 5 * self.mse_loss(w[mask], tw[mask]) * weight
@@ -188,12 +188,11 @@ class YOLOLayer(nn.Module):
                 loss_cls = self.bce_loss(pred_cls[mask], tcls.float()) * weight
                 loss_conf = self.bce_loss(pred_conf[mask], mask[mask].float()) * weight
             else:
-                loss_x, loss_y, loss_w, loss_h, loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0]), \
-                                                                      FloatTensor([0]), FloatTensor([0]), \
-                                                                      FloatTensor([0]), FloatTensor([0])
+                loss_x, loss_y, loss_w, loss_h = FloatTensor([0]), FloatTensor([0]), FloatTensor([0]), FloatTensor([0])
+                loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
+                weight = FloatTensor([1])
 
             loss_conf += 0.5 * self.bce_loss(pred_conf[~mask], mask[~mask].float()) * weight
-
             loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
                    ap, nGT, TP, FP, FN, 0, 0

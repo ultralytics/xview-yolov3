@@ -155,13 +155,11 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     FP = torch.zeros(nB, max(nT))
     FN = torch.zeros(nB, max(nT))
 
-    precision, recall, nGT = [], [], 0
     for b in range(nB):
         nTb = nT[b]  # number of targets (measures index of first zero-height target box)
         if nTb == 0:
             continue
         t = torch.from_numpy(target[b])  # target[b, :nTb]
-        nGT += nTb
 
         # Convert to position relative to box
         gx, gy, gw, gh = t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
@@ -217,7 +215,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     # recall = TP.float() / (TP + FN + 1e-16).float()
     # ap = nTP / nGT  # compute_ap(recall, precision)
     ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, nGT, ap
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, ap
 
 
 def to_categorical(y, num_classes):
