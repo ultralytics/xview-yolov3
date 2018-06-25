@@ -122,26 +122,14 @@ class YOLOLayer(nn.Module):
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze()
         self.nGtotal = (self.img_dim / 32) ** 2 + (self.img_dim / 16) ** 2 + (self.img_dim / 8) ** 2
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None):
         FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
         bs = x.shape[0]
         nG = x.shape[2]
         stride = self.img_dim / nG
 
-        # x.view(4, 3, 67, 13, 13) -- > (4, 3, 13, 13, 67)
-        prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
-
-        # Get outputs
-        x = torch.sigmoid(prediction[..., 0]) # Center x
-        y = torch.sigmoid(prediction[..., 1])  # Center y
-        w = torch.sigmoid(prediction[..., 2])  # Width
-        h = torch.sigmoid(prediction[..., 3]) # Height
-        pred_conf = torch.sigmoid(prediction[..., 4])  # Conf
-        pred_cls = torch.sigmoid(prediction[..., 5:])  # Cls pred.
-
         if x.is_cuda and not self.grid_x.is_cuda:
-            device = torch.device('cuda:0' if x.is_cuda else 'cpu')
             self.grid_x = self.grid_x.cuda()
             self.grid_y = self.grid_y.cuda()
             self.anchor_w = self.anchor_w.cuda()
@@ -149,24 +137,35 @@ class YOLOLayer(nn.Module):
             self.mse_loss = self.mse_loss.cuda()
             self.bce_loss = self.bce_loss.cuda()
 
+        # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
+        prediction = torch.sigmoid(x).view(bs, self.nA * 4, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4,2).contiguous()
+
+        # Get outputs
+        x = prediction[..., 0]  # Center x
+        y = prediction[..., 1]  # Center y
+        w = prediction[..., 2]  # Width
+        h = prediction[..., 3]  # Height
+        pred_conf = prediction[..., 4]  # Conf
+        pred_cls = prediction[..., 5:]  # Class
+
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FloatTensor(prediction[..., :4].shape)
         pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 5 / 2
         pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 5 / 2
         pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 5 / 2
-        pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 5 / 2
+        # pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 5 / 2
 
         # Training
         if targets is not None:
             tx, ty, tw, th, mask, tcls, TP, FP, FN, ap = build_targets(pred_boxes,
-                                                                            pred_conf,
-                                                                            pred_cls,
-                                                                            targets,
-                                                                            self.scaled_anchors,
-                                                                            self.nA,
-                                                                            self.nC,
-                                                                            nG,
-                                                                            self.anchor_wh)
+                                                                       pred_conf,
+                                                                       pred_cls,
+                                                                       targets,
+                                                                       self.scaled_anchors,
+                                                                       self.nA,
+                                                                       self.nC,
+                                                                       nG,
+                                                                       self.anchor_wh)
 
             tcls = tcls[mask]
             if x.is_cuda:

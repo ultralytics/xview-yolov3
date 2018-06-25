@@ -18,5 +18,3 @@ python3 train.py -batch_size 4 -img_size 736
 # move checkpoint to fuse drive
 #mv yolov3/checkpoints/epoch0.pt drive
 
-
-#sudo shutdown

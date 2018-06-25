@@ -49,8 +49,15 @@ def plotResults():
         plt.subplot(2, 5, i+1)
         plt.plot(results[i, :])
 
+    results = np.loadtxt('/Users/glennjocher/Downloads/printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
+    for i in range(9):
+        plt.subplot(2, 5, i+1)
+        plt.plot(results[i, :])
 
-
+    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
+    for i in range(9):
+        plt.subplot(2, 5, i+1)
+        plt.plot(results[i, :])
 
 path = '/Users/glennjocher/Downloads/DATA/xview/'
 # path = ''

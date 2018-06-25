@@ -166,6 +166,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
         gi = torch.clamp(gx.long(), min=0, max=nG - 1)
         gj = torch.clamp(gy.long(), min=0, max=nG - 1)
+
         # iou of targets-anchors (using wh only)
         box1 = t[:, 3:5] * nG
         box2 = anchor_grid_wh[:, gj, gi]
