@@ -33,15 +33,24 @@ def get_labels(fname):
 def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
-    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
     s = ['x','y','w','h','conf','cls','loss','prec','recall']
     plt.figure(figsize=(18, 9))
+
+    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
     for i in range(9):
         plt.subplot(2, 5, i+1)
         plt.plot(results[i, :505])
         plt.plot(results[i, 506:506+510] * 1.59)
         plt.plot(results[i, 506+510:])
         plt.title(s[i])
+
+    results = np.loadtxt('/Users/glennjocher/Downloads/printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
+    for i in range(9):
+        plt.subplot(2, 5, i+1)
+        plt.plot(results[i, :])
+
+
+
 
 path = '/Users/glennjocher/Downloads/DATA/xview/'
 # path = ''

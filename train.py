@@ -7,20 +7,20 @@ from models import *
 from utils.datasets import *
 from utils.utils import *
 
-run_name = 'june25_weights1'
+run_name = 'june25_fullaugment_'
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1000, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=5000, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=2, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_no73_classes.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=200, help='interval between saving model weights')
+parser.add_argument('-img_size', type=int, default=32 * 33, help='size of each image dimension')
+parser.add_argument('-checkpoint_interval', type=int, default=100, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -36,8 +36,6 @@ def main(opt):
     random.seed(0)
     np.random.seed(0)
     torch.manual_seed(0)
-    #torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True  # https://medium.com/@u39kun/deep-learning-on-nvidia-titan-v-first-look-1d368d3443fb
     if cuda:
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
@@ -46,6 +44,7 @@ def main(opt):
     if platform == 'darwin':  # macos
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
+        torch.backends.cudnn.benchmark = True
         train_path = '../'
 
     # Initiate model

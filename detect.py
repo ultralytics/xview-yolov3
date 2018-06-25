@@ -12,13 +12,12 @@ from models import *
 from utils.datasets import *
 from utils.utils import *
 from scoring import score
-import tqdm
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
+parser.add_argument('-image_folder', type=str, default='data/train_images3', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_no73_classes.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/june24_best_544.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/june23noaugment_best_544.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
@@ -32,7 +31,9 @@ print(opt)
 #@profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
+    os.system('rm -rf data/xview_predictions_img')
     os.makedirs(opt.output_folder, exist_ok=True)
+    os.makedirs('data/xview_predictions_img', exist_ok=True)
     opt.img_size = int(opt.weights_path.rsplit('_')[-1][:-3])
 
     cuda = False # torch.cuda.is_available()
@@ -133,8 +134,8 @@ def detect(opt):
                 # Save generated image with detections
                 cv2.imwrite(results_img_path.replace('.tif','.bmp'), img)
 
-    score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
-                '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+    #score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
+     #           '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
 
 
 if __name__ == '__main__':

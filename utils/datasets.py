@@ -134,7 +134,7 @@ class ListDataset_xview_fast():  # for training
                 labels[:, 1:5] *= ratio
 
             # random affine
-            # img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.05, .05),  scale=(.95, 1.05))
+            img, labels = random_affine(img, targets=labels, degrees=(-89, 89), translate=(.2, .2),  scale=(.8, 1.2))
             nL = len(labels)
 
             # plot
@@ -148,17 +148,17 @@ class ListDataset_xview_fast():  # for training
                 # remap xview classes 11-94 to 0-61
                 labels[:, 0] = xview_classes2indices(labels[:, 0])
 
-            # random lr flip
-            if random.random() > 0.5:
-                img = np.fliplr(img)
-                if nL > 0:
-                    labels[:, 1] = 1 - labels[:, 1]
-
-            # random ud flip
-            if random.random() > 0.5:
-                img = np.flipud(img)
-                if nL > 0:
-                    labels[:, 2] = 1 - labels[:, 2]
+            # # random lr flip
+            # if random.random() > 0.5:
+            #     img = np.fliplr(img)
+            #     if nL > 0:
+            #         labels[:, 1] = 1 - labels[:, 1]
+            #
+            # # random ud flip
+            # if random.random() > 0.5:
+            #     img = np.flipud(img)
+            #     if nL > 0:
+            #         labels[:, 2] = 1 - labels[:, 2]
 
             # random 90deg rotation
             # if random.random() > 0.5:

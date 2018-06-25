@@ -178,9 +178,8 @@ class YOLOLayer(nn.Module):
                 tcls = tcls.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            #nT = FloatTensor([sum([len(x) for x in targets])])
-            #weight = mask.sum().float()/nT  # weigh by fraction of targets found in each of the 3 yolo layers
-            weight = 1
+            nT = FloatTensor([sum([len(x) for x in targets])])
+            weight = mask.sum().float()/nT  # weigh by fraction of targets found in each of the 3 yolo layers
             if nGT > 0:
                 loss_x = 5 * self.mse_loss(x[mask], tx[mask]) * weight
                 loss_y = 5 * self.mse_loss(y[mask], ty[mask]) * weight
