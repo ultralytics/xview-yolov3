@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 import scipy.io
 import torch
-from PIL import Image
 
 # from torch.utils.data import Dataset
 from utils.utils import xyxy2xywh
@@ -50,7 +49,7 @@ class ImageFolder():  # for eval-only
         return [img_path], torch.from_numpy(img).unsqueeze(0)
 
     def __len__(self):
-        return self.nB # number of batches
+        return self.nB  # number of batches
 
 
 class ListDataset_xview_fast():  # for training
@@ -58,7 +57,7 @@ class ListDataset_xview_fast():  # for training
         p = folder_path + 'train_images'
         self.files = sorted(glob.glob('%s/*.*' % p))
         self.nF = len(self.files)  # number of image files
-        self.nB = math.ceil(self.nF / batch_size) # number of batches
+        self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
@@ -75,7 +74,7 @@ class ListDataset_xview_fast():  # for training
 
     def __iter__(self):
         self.count = -1
-        self.shuffled_vector = np.random.permutation(self.nF)         # shuffled vector
+        self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
         return self
 
     # @profile
@@ -91,6 +90,7 @@ class ListDataset_xview_fast():  # for training
         img_all = np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
         for index, files_index in enumerate(indices):
+            files_index = 6
             img_path = self.files[self.shuffled_vector[files_index]]  # B G R
 
             # load labels
@@ -128,36 +128,40 @@ class ListDataset_xview_fast():  # for training
                 labels[:, [2, 4]] += pady
                 labels[:, 1:5] *= ratio
 
-            # random affine
-            img, labels = random_affine(img, targets=labels, degrees=(-89, 89), translate=(.2, .2),  scale=(.8, 1.2))
-            nL = len(labels)
-
             # plot
             #import matplotlib.pyplot as plt
-            #plt.imshow(img)
-            #plt.plot(labels[:,[1, 3]], labels[:,[2, 4]], '.')
+            #plt.subplot(2, 2, 1).imshow(img)
+            #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+
+            # random affine
+            img, labels = random_affine(img, targets=labels, degrees=(-5, 5), translate=(.1, .1), scale=(.95, 1.05))
+            nL = len(labels)
+            #plt.subplot(2, 2, 2).imshow(img)
+            #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+
+            # random lr flip
+            if random.random() > 0:
+                img = np.fliplr(img)
+                if nL > 0:
+                    # labels[:, 1] = 1 - labels[:, 1]
+                    labels[:, [1, 3]] = self.height - labels[:, [1, 3]]
+                    #plt.subplot(2, 2, 3).imshow(img)
+                    #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+
+            # random ud flip
+            if random.random() > 0:
+                img = np.flipud(img)
+                if nL > 0:
+                    # abels[:, 2] = 1 - labels[:, 2]
+                    labels[:, [2, 4]] = self.height - labels[:, [2, 4]]
+                    #plt.subplot(2, 2, 4).imshow(img)
+                    #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
             if nL > 0:
                 # convert labels to xywh
                 labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
                 # remap xview classes 11-94 to 0-61
                 labels[:, 0] = xview_classes2indices(labels[:, 0])
-
-            # random lr flip
-            if random.random() > 0.5:
-                img = np.fliplr(img)
-                if nL > 0:
-                    labels[:, 1] = 1 - labels[:, 1]
-
-            # random ud flip
-            if random.random() > 0.5:
-                img = np.flipud(img)
-                if nL > 0:
-                    labels[:, 2] = 1 - labels[:, 2]
-
-            # random 90deg rotation
-            # if random.random() > 0.5:
-            #    img = np.rot90(img)
 
             # img_all.append(torch.from_numpy(img))
             img_all[index] = img
@@ -176,7 +180,7 @@ class ListDataset_xview_fast():  # for training
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
-        return self.nB # number of batches
+        return self.nB  # number of batches
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
@@ -200,36 +204,41 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
+def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
+    # Rotation and Scale
+    R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    cx = img.shape[0] * (0.5 + (random.random() * 2 - 1) * translate[0])
-    cy = img.shape[1] * (0.5 + (random.random() * 2 - 1) * translate[1])
-    s = random.random() * (scale[1] - scale[0]) + scale[0]
+    a += np.random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
-    M = cv2.getRotationMatrix2D(angle=a, center=(cy, cx), scale=s)
-    imw = cv2.warpAffine(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_CUBIC)
+    s = random.random() * (scale[1] - scale[0]) + scale[0]
+    R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
+
+    # Translation
+    T = np.eye(3)
+    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0]  # x translation (pixels)
+    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1]  # y translation (pixels)
+
+    # Shear
+    S = np.eye(3)
+    S[0, 1] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
+    S[1, 0] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
+
+    M = R @ T @ S
+    # imw = cv2.warpAffine(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_CUBIC)
+    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_CUBIC)
 
     # Return warped points also
     if targets is not None:
-        center = np.array([cy, cx]).reshape(1, 2)  # order reversed for opencv
         points = targets[:, 1:5].copy()
-
-        # rotation matrix
-        M3 = np.eye(3)
-        M3[:2] = M
-
-        # add shear (TODO)
-        # Mshear = np.eye(3)
-        # M3 = M3 @ Mshear
+        n = targets.shape[0]
 
         # warp points
-        n = targets.shape[0]
-        xy = np.zeros((n * 4, 3))
-        xy[:, :2] = points[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2) - center  # x1y1, x2y2, x1y2, x2y1
-        xy = ((xy @ M3.T)[:, :2] + center).reshape(n, 8)
+        xy = np.ones((n * 4, 3))
+        xy[:, :2] = points[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
+        xy = (xy @ M.T)[:, :2].reshape(n, 8)
 
         # create new boxes
         x = xy[:, [0, 2, 4, 6]]
@@ -238,15 +247,9 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
 
         # reject warped points outside of image
         i = np.all((xy > 0) & (xy < img.shape[0]), 1)
-        xy = xy[i]
-
-        # plot
-        # import matplotlib.pyplot as plt
-        # plt.imshow(imw)
-        # plt.plot(xy[:,[0, 2]], xy[:,[1, 3]], '.')
 
         targets = targets[i]
-        targets[:, 1:5] = xy
+        targets[:, 1:5] = xy[i]
         return imw, targets
     else:
         return imw
