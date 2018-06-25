@@ -9,7 +9,7 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=5000, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
