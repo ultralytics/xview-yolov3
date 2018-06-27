@@ -239,7 +239,7 @@ class ListDataset_xview_crop():  # for training
             img0 = cv2.imread(img_path)
             h, w, _ = img0.shape
 
-            for j in range(8):
+            for j in range(16):
                 padx = int(random.random() * (w - self.height))
                 pady = int(random.random() * (h - self.height))
                 img = img0[pady:pady + self.height, padx:padx + self.height]
@@ -323,7 +323,7 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     img = cv2.resize(img, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA)
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
-
+#@profile
 def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
@@ -347,8 +347,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     S[1, 0] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
     M = R @ T @ S
-    # imw = cv2.warpAffine(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_CUBIC)
-    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_CUBIC)
+    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR)
 
     # Return warped points also
     if targets is not None:

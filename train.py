@@ -89,7 +89,7 @@ def main(opt):
             for j in range(int(len(imgs) / n)):
                 ui += 1
                 loss = model(imgs[j * n:j * n + n].to(device), targets[j * n:j * n + n],
-                             requestPrecision=True if i == 0 else False)
+                             requestPrecision=True if i <1000 else False)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -107,8 +107,8 @@ def main(opt):
                 print(s)
                 model.seen += imgs.shape[0]
 
-            #if i == 3:
-            #    return
+            if i == 5:
+                return
 
         with open('printedResults.txt', 'a') as file:
             file.write(s + '\n')
