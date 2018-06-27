@@ -229,7 +229,7 @@ def build_targets_sgrid(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, 
     ap = 0
     return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, ap, good_anchors == 1
 
-
+# @profile
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls

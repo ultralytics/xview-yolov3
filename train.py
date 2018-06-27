@@ -82,30 +82,33 @@ def main(opt):
         'time'))
     for epoch in range(opt.epochs):
         rloss = defaultdict(float)  # running loss
+        ui = 0
         for i, (imgs, targets) in enumerate(dataloader):
 
-            for j in range(int(len(imgs)/8)):
-                loss = model(imgs[j * 8:j * 8 + 8].to(device), targets[j * 8:j * 8 + 8],
-                             requestPrecision=True if j == 7 else False)
+            n = 2  # number of pictures at a time
+            for j in range(int(len(imgs)/n)):
+                ui += 1
+                loss = model(imgs[j * n:j * n + n].to(device), targets[j * n:j * n + n],
+                             requestPrecision=True if j < 10 else False)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-            for key, val in model.losses.items():
-                rloss[key] = (rloss[key] * i + val) / (i + 1)
+                for key, val in model.losses.items():
+                    rloss[key] = (rloss[key] * ui + val) / (ui + 1)
 
-            s = ('%10s%10s' + '%10.3g' * 14) % (
-                '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
-                rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
-                rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
-                model.losses['FP'], model.losses['FN'],
-                time.time() - t1)
-            t1 = time.time()
-            print(s)
-            model.seen += imgs.shape[0]
+                s = ('%10s%10s' + '%10.3g' * 14) % (
+                    '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
+                    rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
+                    rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
+                    model.losses['FP'], model.losses['FN'],
+                    time.time() - t1)
+                t1 = time.time()
+                print(s)
+                model.seen += imgs.shape[0]
 
-            #if i == 3:
-            #    return
+            if i == 3:
+                return
 
         with open('printedResults.txt', 'a') as file:
           file.write(s + '\n')

@@ -82,7 +82,7 @@ class YOLOLayer(nn.Module):
         FloatTensor = torch.FloatTensor
         LongTensor = torch.LongTensor
 
-        anchors = [(a_w * img_dim / .18, a_h * img_dim / .18) for a_w, a_h in anchors]
+        anchors = [(a_w * img_dim / .25, a_h * img_dim / .25) for a_w, a_h in anchors]
         nA = len(anchors)
 
         self.anchors = anchors
@@ -121,7 +121,7 @@ class YOLOLayer(nn.Module):
         self.nGtotal = (self.img_dim / 32) ** 2 + (self.img_dim / 16) ** 2 + (self.img_dim / 8) ** 2
         self.Sigmoid = torch.nn.Sigmoid()
 
-    # @profile
+    #@profile
     def forward(self, x, targets=None, requestPrecision=False):
         FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
         bs = x.shape[0]
@@ -135,6 +135,7 @@ class YOLOLayer(nn.Module):
             self.anchor_h = self.anchor_h.cuda()
             self.mse_loss = self.mse_loss.cuda()
             self.bce_loss = self.bce_loss.cuda()
+            self.bce_loss_conf = self.bce_loss_conf.cuda()
 
         # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
         prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
