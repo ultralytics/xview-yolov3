@@ -89,7 +89,7 @@ def main(opt):
             for j in range(int(len(imgs) / n)):
                 ui += 1
                 loss = model(imgs[j * n:j * n + n].to(device), targets[j * n:j * n + n],
-                             requestPrecision=True if i < 1000 else False)
+                             requestPrecision=True if i == 0 else False)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
