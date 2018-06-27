@@ -1,5 +1,5 @@
 import pretrainedmodels
-from utils import utils
+from utils.utils import modelinfo
 
 print(pretrainedmodels.model_names)
 
@@ -9,8 +9,24 @@ model_name = 'nasnetalarge' # could be fbresnet152 or inceptionresnetv2
 model = pretrainedmodels.__dict__[model_name](num_classes=1000, pretrained='imagenet')
 model.eval()
 
-utils.modelinfo(model)
+modelinfo(model)
 
+
+import torch
+import pretrainedmodels.utils as utils
+
+load_img = utils.LoadImage()
+
+# transformations depending on the model
+# rescale, center crop, normalize, and others (ex: ToBGR, ToRange255)
+tf_img = utils.TransformImage(model)
+
+path_img = 'data/samples/dog.jpg'
+input_img = load_img(path_img)
+input_tensor = tf_img(input_img).unsqueeze(0)       # 3x400x225 -> 3x331x331 size may differ
+input = torch.autograd.Variable(input_tensor, requires_grad=False)
+
+output_logits = model(input) # 1x1000
 
 
 

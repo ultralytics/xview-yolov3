@@ -13,7 +13,7 @@ git clone https://github.com/ultralytics/yolo
 
 # do training
 cd yolo
-python3 train.py -batch_size 4 -img_size 736
+python3 train.py -epochs 5000 -batch_size 2 -img_size 1056
 
 # move checkpoint to fuse drive
 #mv yolov3/checkpoints/epoch0.pt drive

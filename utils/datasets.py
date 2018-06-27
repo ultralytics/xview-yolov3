@@ -37,14 +37,21 @@ class ImageFolder():  # for eval-only
         self.count += 1
         if self.count == self.nB:
             raise StopIteration
-
         img_path = self.files[self.count]
+
         # Add padding
         img = cv2.imread(img_path)  # BGR
-        img = resize_square(img, height=self.height)[:, :, ::-1].transpose(2, 0, 1).astype(np.float32)
+        img = resize_square(img, height=self.height)
+
+        #import matplotlib.pyplot as plt
+        #plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
+        #img = random_affine(img, degrees=(-89, 89), translate=(.2, .2), scale=(1, 1), shear=(0, 0))
+        #plt.subplot(2, 2, 3).imshow(img[:, :, ::-1])
+
         # Normalize RGB
-        img -= self.img_mean
-        img /= self.img_std
+        img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+        #img -= self.img_mean
+        #img /= self.img_std
 
         return [img_path], torch.from_numpy(img).unsqueeze(0)
 
@@ -133,7 +140,7 @@ class ListDataset_xview_fast():  # for training
             # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # random affine
-            img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.10))
+            img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1))
             nL = len(labels)
             # plt.subplot(2, 2, 2).imshow(img)
             # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
@@ -166,17 +173,13 @@ class ListDataset_xview_fast():  # for training
 
             # img_all.append(torch.from_numpy(img))
             img_all[index] = img
-            labels_all.append(labels)
+            labels_all.append(torch.from_numpy(labels))
 
         # Normalize
         img_all = np.ascontiguousarray(img_all)
-        img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32)  # BGR to RGB
-
-        # r, c = np.nonzero(img.sum(0))  # normalizes image in RGB order
-        # img[:, r, c] -= img[:, r, c].mean()
-        # img[:, r, c] /= img[:, r, c].std()
-        img_all -= self.img_mean
-        img_all /= self.img_std
+        img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32) / 255.0  # BGR to RGB
+        # img_all -= self.img_mean
+        # img_all /= self.img_std
 
         return torch.from_numpy(img_all), labels_all
 

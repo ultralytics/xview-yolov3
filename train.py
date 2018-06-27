@@ -7,26 +7,25 @@ from models import *
 from utils.datasets import *
 from utils.utils import *
 
-
 # batch_size 8: 32*17 = 544
-# batch_size 4: 32*25 = 800 (1.47 vs 544)
+# batch_size 4: 32*25 = 800 (1.47 vs 544) or 32*23 = 736
 # batch_size 2: 32*35 = 1120 (1.40 vs 800, 2.06 cumulative)
 # batch_size 1: 32*49 = 1568 (1.40 vs 1120, 2.88 cumulative)
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=2, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('-batch_size', type=int, default=1, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_73_classes.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 49, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=200, help='interval between saving model weights')
+parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
+parser.add_argument('-checkpoint_interval', type=int, default=100, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -46,9 +45,11 @@ def main(opt):
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
 
+    #torch.backends.cudnn.benchmark = True
+
     # Get data configuration
     if platform == 'darwin':  # macos
-        run_name = 'june25_fullaugment_'
+        run_name = 'june26_nopunish_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
@@ -61,51 +62,56 @@ def main(opt):
     # Get dataloader
     dataloader = ListDataset_xview_fast(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
-    # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.9, weight_decay=0.0005, nesterov=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=.001, weight_decay=0.0005, amsgrad=True)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.001)
 
     # reload saved optimizer state
-    # resume_training = True
-    # if (platform == 'darwin') and resume_training:
-    #     model.load_state_dict(torch.load('weights/init.pt', map_location=device.type))
-    #     # optimizer.load_state_dict(torch.load('optim.pth'))
-    #     # optimizer.state = defaultdict(dict, optimizer.state)
+    resume_training = True
+    if (platform == 'darwin') and resume_training:
+       model.load_state_dict(torch.load('checkpoints/june26_nopunish__best_544.pt', map_location=device.type))
+    # optimizer.load_state_dict(torch.load('optim.pth'))
+    # optimizer.state = defaultdict(dict, optimizer.state)
     # else:
-    #     model.apply(weights_init_normal)  # initialize with random weights
-    #     #torch.save(model.state_dict(), 'weights/init.pt')
+    # model.apply(weights_init_normal)  # initialize with random weights
+    # torch.save(model.state_dict(), 'weights/init.pt')
 
     # modelinfo(model)
     t0 = time.time()
     t1 = time.time()
     best_loss = float('inf')
-    print('%10s' * 12 % ('Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'time'))
+    print('%10s' * 16 % (
+    'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'nGT', 'TP', 'FP', 'FN',
+    'time'))
     for epoch in range(opt.epochs):
         rloss = defaultdict(float)  # running loss
         for i, (imgs, targets) in enumerate(dataloader):
-            imgs = imgs.to(device)
 
-            loss = model(imgs, targets)
+            if i < 1000:
+                loss = model(imgs.to(device), targets, requestPrecision=True)
+            else:
+                loss = model(imgs.to(device), targets)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            for name, loss in model.losses.items():
-                rloss[name] = (rloss[name] * i + loss) / (i + 1)
+            for key, val in model.losses.items():
+                rloss[key] = (rloss[key] * i + val) / (i + 1)
 
-            s = ('%10s%10s' + '%10.3g' * 10) % (
+            s = ('%10s%10s' + '%10.3g' * 14) % (
                 '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
                 rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
-                rloss['loss'], rloss['precision'], rloss['recall'], time.time() - t1)
+                rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'], model.losses['FP'], model.losses['FN'],
+                time.time() - t1)
             t1 = time.time()
             print(s)
             model.seen += imgs.shape[0]
 
-            #if i == 10:
-            #    print(time.time() - t0)
-            #    return
+            #if i == 20:
+            #  print(time.time() - t0)
+            #  return
 
-        with open('printedResults.txt', 'a') as file:
-           file.write(s + '\n')
+        #with open('printedResults.txt', 'a') as file:
+         #   file.write(s + '\n')
 
         if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))
@@ -118,9 +124,10 @@ def main(opt):
     torch.save(model.state_dict(), s)
 
     opt.weights_path = s
-    #detect(opt)
+    # detect(opt)
 
 
 if __name__ == '__main__':
+    torch.cuda.empty_cache()
     main(opt)
     torch.cuda.empty_cache()
