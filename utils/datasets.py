@@ -94,7 +94,7 @@ class ListDataset_xview_fast():  # for training
         ib = min((self.count + 1) * self.batch_size, self.nF)
         indices = list(range(ia, ib))
 
-        img_all = np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
+        img_all = [] #np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
         for index, files_index in enumerate(indices):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
@@ -149,16 +149,14 @@ class ListDataset_xview_fast():  # for training
                     labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
 
             # plot
-            import matplotlib.pyplot as plt
-            plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
-            plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+            #import matplotlib.pyplot as plt
+            #plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
+            #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # random affine
             # img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1))
-            nL = len(labels)
-            # plt.subplot(2, 2, 2).imshow(img)
-            # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
+            nL = len(labels)
             if nL > 0:
                 # convert labels to xywh
                 labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
@@ -168,37 +166,34 @@ class ListDataset_xview_fast():  # for training
                 img = np.fliplr(img)
                 if nL > 0:
                     labels[:, 1] = 1 - labels[:, 1]
-                    # labels[:, [1, 3]] = self.height - labels[:, [1, 3]]
-                    # plt.subplot(2, 2, 3).imshow(img)
-                    # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # random ud flip
             if random.random() > 0:
                 img = np.flipud(img)
                 if nL > 0:
                     labels[:, 2] = 1 - labels[:, 2]
-                    # labels[:, [2, 4]] = self.height - labels[:, [2, 4]]
-                    # plt.subplot(2, 2, 4).imshow(img)
-                    # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
             if nL > 0:
                 # remap xview classes 11-94 to 0-61
                 labels[:, 0] = xview_classes2indices(labels[:, 0])
 
             # img_all.append(torch.from_numpy(img))
-            img_all[index] = img
+            img_all.append(img)
             labels_all.append(torch.from_numpy(labels))
 
         # Normalize
+        img_all = np.stack(img_all)
         img_all = np.ascontiguousarray(img_all)
         img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32) / 255.0  # BGR to RGB
         # img_all -= self.img_mean
         # img_all /= self.img_std
-
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
         return self.nB  # number of batches
+
+
+
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
