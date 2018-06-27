@@ -107,8 +107,8 @@ def main(opt):
                 print(s)
                 model.seen += imgs.shape[0]
 
-            if i == 3:
-                return
+            #if i == 3:
+            #    return
 
         with open('printedResults.txt', 'a') as file:
             file.write(s + '\n')
