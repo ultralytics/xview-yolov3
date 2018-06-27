@@ -25,7 +25,7 @@ parser.add_argument('-conf_thres', type=float, default=0.99, help='object confid
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=100, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=30, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -104,8 +104,7 @@ def main(opt):
             print(s)
             model.seen += imgs.shape[0]
 
-            #if i == 30:
-            #    print(time.time() - t0)
+            #if i == 3:
             #    return
 
         with open('printedResults.txt', 'a') as file:
