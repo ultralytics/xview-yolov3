@@ -134,11 +134,10 @@ class ListDataset_xview_fast():  # for training
             crop_flag = True
             if crop_flag:
                 img = cv2.imread(img_path)
-
                 h, w, _ = img.shape
+
                 padx = int(random.random() * (w - self.height))
                 pady = int(random.random() * (h - self.height))
-
                 img = img[pady:pady + self.height, padx:padx + self.height]
 
                 if nL > 0:
@@ -160,6 +159,8 @@ class ListDataset_xview_fast():  # for training
             if nL > 0:
                 # convert labels to xywh
                 labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
+                # remap xview classes 11-94 to 0-61
+                labels[:, 0] = xview_classes2indices(labels[:, 0])
 
             # random lr flip
             if random.random() > 0:
@@ -172,10 +173,6 @@ class ListDataset_xview_fast():  # for training
                 img = np.flipud(img)
                 if nL > 0:
                     labels[:, 2] = 1 - labels[:, 2]
-
-            if nL > 0:
-                # remap xview classes 11-94 to 0-61
-                labels[:, 0] = xview_classes2indices(labels[:, 0])
 
             # img_all.append(torch.from_numpy(img))
             img_all.append(img)
@@ -193,7 +190,115 @@ class ListDataset_xview_fast():  # for training
         return self.nB  # number of batches
 
 
+class ListDataset_xview_crop():  # for training
+    def __init__(self, folder_path, batch_size=1, img_size=416):
+        p = folder_path + 'train_images'
+        self.files = sorted(glob.glob('%s/*.bmp' % p))
+        self.nF = len(self.files)  # number of image files
+        self.nB = math.ceil(self.nF / batch_size)  # number of batches
+        self.batch_size = batch_size
+        assert self.nB > 0, 'No images found in path %s' % p
+        self.height = img_size
+        # load targets
+        self.mat = scipy.io.loadmat('utils/targets30_no18_73_classes.mat')
+        self.mat['id'] = self.mat['id'].squeeze()
+        # make folder for reduced size images
+        self.small_folder = p + '_' + str(img_size) + '/'
+        os.makedirs(self.small_folder, exist_ok=True)
 
+        # RGB normalization values
+        self.img_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+
+    def __iter__(self):
+        self.count = -1
+        self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
+        return self
+
+    # @profile
+    def __next__(self):
+        self.count += 1
+        if self.count == self.nB:
+            raise StopIteration
+
+        ia = self.count * self.batch_size
+        ib = min((self.count + 1) * self.batch_size, self.nF)
+        indices = list(range(ia, ib))
+
+        img_all = []  # np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
+        labels_all = []
+        for index, files_index in enumerate(indices):
+            img_path = self.files[self.shuffled_vector[files_index]]  # BGR
+
+            # load labels
+            chip = img_path.rsplit('/')[-1]
+            i = np.nonzero(self.mat['id'] == float(chip.replace('.bmp', '')))[0]
+            labels0 = self.mat['targets'][i]
+            nL0 = len(labels0)
+
+            img0 = cv2.imread(img_path)
+            h, w, _ = img0.shape
+
+            for j in range(8):
+                padx = int(random.random() * (w - self.height))
+                pady = int(random.random() * (h - self.height))
+                img = img0[pady:pady + self.height, padx:padx + self.height]
+                labels = labels0.copy()
+
+                if len(labels) > 0:
+                    labels = labels0.copy()
+                    labels[:, [1, 3]] -= padx
+                    labels[:, [2, 4]] -= pady
+                    labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
+                    # objects must have width and height > 3 pixels
+                    labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
+
+                # plot
+                # import matplotlib.pyplot as plt
+                # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+
+                # random affine
+                # img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1))
+
+                nL = len(labels)
+                if nL > 0:
+                    # convert labels to xywh
+                    labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
+                    # remap xview classes 11-94 to 0-61
+                    labels[:, 0] = xview_classes2indices(labels[:, 0])
+
+                # random lr flip
+                if random.random() > 0:
+                    img = np.fliplr(img)
+                    if nL > 0:
+                        labels[:, 1] = 1 - labels[:, 1]
+
+                # random ud flip
+                if random.random() > 0:
+                    img = np.flipud(img)
+                    if nL > 0:
+                        labels[:, 2] = 1 - labels[:, 2]
+
+                # img_all.append(torch.from_numpy(img))
+                img_all.append(img)
+                labels_all.append(torch.from_numpy(labels))
+
+        # Randomize
+        i = np.random.permutation(len(labels_all))
+        img_all = [img_all[j] for j in i]
+        labels_all = [labels_all[j] for j in i]
+
+        # Normalize
+        img_all = np.stack(img_all)
+        img_all = np.ascontiguousarray(img_all)
+        img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32) / 255.0  # BGR to RGB
+        # img_all -= self.img_mean
+        # img_all /= self.img_std
+        return torch.from_numpy(img_all), labels_all
+
+    def __len__(self):
+        return self.nB  # number of batches
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61

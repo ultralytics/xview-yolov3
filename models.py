@@ -186,9 +186,8 @@ class YOLOLayer(nn.Module):
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nGT = FloatTensor([sum([len(x) for x in targets])])
-
             if nGT > 0:
-                wA = 3  # mask.sum().float() / nGT * 3  # weight anchor-grid
+                wA = mask.sum().float() / nGT  # weight anchor-grid
                 wC = FloatTensor([1])  # (1 / xview_class_weights(torch.argmax(tcls, 1))).cuda()
                 loss_x = 5 * (self.mse_loss(x[mask], tx[mask]) * wC).mean() * wA
                 loss_y = 5 * (self.mse_loss(y[mask], ty[mask]) * wC).mean() * wA

@@ -17,14 +17,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=2, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
-parser.add_argument('-batch_size', type=int, default=4, help='size of each image batch')
+parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_30_no18_73_classes.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 23, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=100, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
@@ -58,7 +58,7 @@ def main(opt):
     model = Darknet(opt.config_path, opt.img_size).to(device).train()
 
     # Get dataloader
-    dataloader = ListDataset_xview_fast(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
+    dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
@@ -66,7 +66,7 @@ def main(opt):
     # reload saved optimizer state
     resume_training = False
     if (platform == 'darwin') and resume_training:
-       model.load_state_dict(torch.load('checkpoints/june27_baseline_best_544.pt', map_location=device.type))
+        model.load_state_dict(torch.load('checkpoints/june27_baseline_best_544.pt', map_location=device.type))
     # optimizer.load_state_dict(torch.load('optim.pth'))
     # optimizer.state = defaultdict(dict, optimizer.state)
     # else:
@@ -78,19 +78,18 @@ def main(opt):
     t1 = time.time()
     best_loss = float('inf')
     print('%10s' * 16 % (
-    'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'nGT', 'TP', 'FP', 'FN',
-    'time'))
+        'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'nGT', 'TP', 'FP', 'FN',
+        'time'))
     for epoch in range(opt.epochs):
         rloss = defaultdict(float)  # running loss
         for i, (imgs, targets) in enumerate(dataloader):
 
-            if i < 1000:
-                loss = model(imgs.to(device), targets, requestPrecision=True)
-            else:
-                loss = model(imgs.to(device), targets)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            for j in range(8):
+                loss = model(imgs[j * 8:j * 8 + 8].to(device), targets[j * 8:j * 8 + 8],
+                             requestPrecision=True if j == 7 else False)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
             for key, val in model.losses.items():
                 rloss[key] = (rloss[key] * i + val) / (i + 1)
@@ -98,18 +97,19 @@ def main(opt):
             s = ('%10s%10s' + '%10.3g' * 14) % (
                 '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
                 rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
-                rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'], model.losses['FP'], model.losses['FN'],
+                rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
+                model.losses['FP'], model.losses['FN'],
                 time.time() - t1)
             t1 = time.time()
             print(s)
             model.seen += imgs.shape[0]
 
-            if i == 50:
-              print(time.time() - t0)
-              return
+            if i == 30:
+                print(time.time() - t0)
+                return
 
-        #with open('printedResults.txt', 'a') as file:
-         #   file.write(s + '\n')
+        # with open('printedResults.txt', 'a') as file:
+        #   file.write(s + '\n')
 
         if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))
