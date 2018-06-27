@@ -182,7 +182,7 @@ class YOLOLayer(nn.Module):
                 tw = tw.cuda()
                 th = th.cuda()
                 tcls = tcls.cuda()
-                good_anchors = good_anchors.cuda()
+                #good_anchors = good_anchors.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nGT = FloatTensor([sum([len(x) for x in targets])])
@@ -200,7 +200,7 @@ class YOLOLayer(nn.Module):
                 loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
                 wA = FloatTensor([1])
 
-            loss_conf += 0.5 * self.bce_loss_conf(pred_conf[~good_anchors], good_anchors[~good_anchors].float()) * wA
+            loss_conf += 0.5 * self.bce_loss_conf(pred_conf[~mask], mask[~mask].float()) * wA
             loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
                    ap, nGT, TP, FP, FN, 0, 0
