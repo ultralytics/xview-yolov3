@@ -373,11 +373,10 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         return imw
 
 
-def convert_tif2bmp():
+def convert_tif2bmp(p = '/Users/glennjocher/Downloads/DATA/xview/train_images'):
     import glob
     import cv2
     import os
-    p = '/Users/glennjocher/Downloads/DATA/xview/train_images'
     files = sorted(glob.glob('%s/*.tif' % p))
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
