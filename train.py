@@ -14,7 +14,7 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=2, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=3, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
@@ -84,29 +84,29 @@ def main(opt):
         rloss = defaultdict(float)  # running loss
         for i, (imgs, targets) in enumerate(dataloader):
 
-            for j in range(8):
+            for j in range(int(len(imgs)/8)):
                 loss = model(imgs[j * 8:j * 8 + 8].to(device), targets[j * 8:j * 8 + 8],
-                             requestPrecision=True if j == 7 else False)
+                             requestPrecision=True)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-            for key, val in model.losses.items():
-                rloss[key] = (rloss[key] * i + val) / (i + 1)
+                for key, val in model.losses.items():
+                    rloss[key] = (rloss[key] * i + val) / (i + 1)
 
-            s = ('%10s%10s' + '%10.3g' * 14) % (
-                '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
-                rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
-                rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
-                model.losses['FP'], model.losses['FN'],
-                time.time() - t1)
-            t1 = time.time()
-            print(s)
-            model.seen += imgs.shape[0]
+                s = ('%10s%10s' + '%10.3g' * 14) % (
+                    '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
+                    rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
+                    rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
+                    model.losses['FP'], model.losses['FN'],
+                    time.time() - t1)
+                t1 = time.time()
+                print(s)
+                model.seen += imgs.shape[0]
 
-            if i == 30:
-                print(time.time() - t0)
-                return
+            #if i == 30:
+            #    print(time.time() - t0)
+            #    return
 
         # with open('printedResults.txt', 'a') as file:
         #   file.write(s + '\n')
