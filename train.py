@@ -14,7 +14,7 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=3, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=10, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
@@ -24,7 +24,7 @@ parser.add_argument('-class_path', type=str, default='data/xview.names', help='p
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
-parser.add_argument('-img_size', type=int, default=32 * 17, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=30, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
@@ -86,7 +86,7 @@ def main(opt):
         for i, (imgs, targets) in enumerate(dataloader):
 
             n = 2  # number of pictures at a time
-            for j in range(int(len(imgs)/n)):
+            for j in range(int(len(imgs) / n)):
                 ui += 1
                 loss = model(imgs[j * n:j * n + n].to(device), targets[j * n:j * n + n],
                              requestPrecision=True if i == 1 else False)
@@ -111,7 +111,7 @@ def main(opt):
                 return
 
         with open('printedResults.txt', 'a') as file:
-          file.write(s + '\n')
+            file.write(s + '\n')
 
         if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))
