@@ -51,7 +51,7 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'june25_fullaugment_'
+        run_name = 'june27_crop8_'
         train_path = '../'
 
     # Initiate model
@@ -86,30 +86,30 @@ def main(opt):
 
             for j in range(int(len(imgs)/8)):
                 loss = model(imgs[j * 8:j * 8 + 8].to(device), targets[j * 8:j * 8 + 8],
-                             requestPrecision=True)
+                             requestPrecision=True if j == 7 else False)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-                for key, val in model.losses.items():
-                    rloss[key] = (rloss[key] * i + val) / (i + 1)
+            for key, val in model.losses.items():
+                rloss[key] = (rloss[key] * i + val) / (i + 1)
 
-                s = ('%10s%10s' + '%10.3g' * 14) % (
-                    '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
-                    rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
-                    rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
-                    model.losses['FP'], model.losses['FN'],
-                    time.time() - t1)
-                t1 = time.time()
-                print(s)
-                model.seen += imgs.shape[0]
+            s = ('%10s%10s' + '%10.3g' * 14) % (
+                '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
+                rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
+                rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
+                model.losses['FP'], model.losses['FN'],
+                time.time() - t1)
+            t1 = time.time()
+            print(s)
+            model.seen += imgs.shape[0]
 
             #if i == 30:
             #    print(time.time() - t0)
             #    return
 
-        # with open('printedResults.txt', 'a') as file:
-        #   file.write(s + '\n')
+        with open('printedResults.txt', 'a') as file:
+          file.write(s + '\n')
 
         if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))
