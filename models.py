@@ -82,7 +82,7 @@ class YOLOLayer(nn.Module):
         FloatTensor = torch.FloatTensor
         LongTensor = torch.LongTensor
 
-        anchors = [(a_w * img_dim, a_h * img_dim) for a_w, a_h in anchors]
+        anchors = [(a_w * img_dim / .18, a_h * img_dim / .18) for a_w, a_h in anchors]
         nA = len(anchors)
 
         self.anchors = anchors
@@ -264,10 +264,10 @@ class Darknet(nn.Module):
         if is_training:
             TP = (self.losses['TP'] > 0).float().sum()
             FP = (self.losses['FP'] > 0).float().sum()
-            FN = (self.losses['FN'] == 1).float().sum()
+            FN = (self.losses['FN'] == 3).float().sum()
             self.losses['precision'] = TP / (TP + FP + 1e-16)
             self.losses['recall'] = TP / (TP + FN + 1e-16)
             self.losses['TP'], self.losses['FP'], self.losses['FN'] = TP, FP, FN
-            self.losses['nGT'] /= 1
+            self.losses['nGT'] /= 3
 
         return sum(output) if is_training else torch.cat(output, 1)
