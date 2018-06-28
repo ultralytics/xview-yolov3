@@ -66,7 +66,7 @@ def main(opt):
     # reload saved optimizer state
     resume_training = True
     if (platform != 'darwin') and resume_training:
-        model.load_state_dict(torch.load('june27_crop16_2minibatch__best_608.pt', map_location=device.type))
+        model.load_state_dict(torch.load('../june27_crop16_2minibatch__best_608.pt', map_location='cuda:0'))
     # optimizer.load_state_dict(torch.load('optim.pth'))
     # optimizer.state = defaultdict(dict, optimizer.state)
     # else:
