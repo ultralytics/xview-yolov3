@@ -79,10 +79,8 @@ class YOLOLayer(nn.Module):
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
         super(YOLOLayer, self).__init__()
-        FloatTensor = torch.FloatTensor
-        LongTensor = torch.LongTensor
 
-        anchors = [(a_w * img_dim / .25, a_h * img_dim / .25) for a_w, a_h in anchors]
+        anchors = [(a_w , a_h) for a_w, a_h in anchors]  # (pixels)
         nA = len(anchors)
 
         self.anchors = anchors
@@ -112,9 +110,9 @@ class YOLOLayer(nn.Module):
         shape = [nB, self.nA, nG, nG]
         self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
-        self.scaled_anchors = FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
-        anchor_w = self.scaled_anchors.index_select(1, LongTensor([0]))
-        anchor_h = self.scaled_anchors.index_select(1, LongTensor([1]))
+        self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
+        anchor_w = self.scaled_anchors.index_select(1, torch.LongTensor([0]))
+        anchor_h = self.scaled_anchors.index_select(1, torch.LongTensor([1]))
         self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze()

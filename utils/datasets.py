@@ -255,7 +255,7 @@ class ListDataset_xview_crop():  # for training
                     # objects must have width and height > 3 pixels
                     labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
                 else:
-                    labels = []
+                    labels = np.array([], dtype=np.float32)
 
                 # plot
                 #import matplotlib.pyplot as plt

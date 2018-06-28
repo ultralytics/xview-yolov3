@@ -49,7 +49,7 @@ mean(x1<0 | y1<0 | x2>1 | y2>1)
 mean(x2<0 | y2<0 | x1>1 | y1>1)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([wn hn], 9);
+C = fcn_kmeans([w h], 30);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -67,7 +67,7 @@ rgb_mu = stat_means([3 2 1])   % dataset RGB mean
 rgb_std = stat_means([6 5 4])  % dataset RGB std mean
 hsv_mu = stat_means(7:9)   % dataset RGB mean
 hsv_std = stat_means(10:12)  % dataset RGB std mean
-anchor_boxes = vpa(C(:)',3)  % anchor boxes
+anchor_boxes = vpa(C(:)',4)  % anchor boxes
 
 
 wh = single([image_w, image_h]);
