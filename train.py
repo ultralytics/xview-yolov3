@@ -25,7 +25,7 @@ parser.add_argument('-conf_thres', type=float, default=0.99, help='object confid
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=30, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=20, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -45,15 +45,15 @@ def main(opt):
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
 
-    #torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.benchmark = True
 
     # Get data configuration
     if platform == 'darwin':  # macos
-        run_name = 'june27_crop16_RGBnorm_'
+        run_name = 'june27_crop16_4minibatch_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'june27_crop8_'
+        run_name = 'june27_crop16_2minibatch_'
         train_path = '../'
 
     # Initiate model
