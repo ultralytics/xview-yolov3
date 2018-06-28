@@ -45,15 +45,13 @@ def main(opt):
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
 
-    # torch.backends.cudnn.benchmark = True
-
     # Get data configuration
     if platform == 'darwin':  # macos
         run_name = 'june27_crop16_4mini_noemptymini_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'june27_crop16_2minibatch_'
+        run_name = 'june29_pixelAnchors_'
         train_path = '../'
 
     # Initiate model
@@ -66,9 +64,9 @@ def main(opt):
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
 
     # reload saved optimizer state
-    resume_training = False
-    if (platform == 'darwin') and resume_training:
-        model.load_state_dict(torch.load('checkpoints/june27_baseline_best_544.pt', map_location=device.type))
+    resume_training = True
+    if (platform != 'darwin') and resume_training:
+        model.load_state_dict(torch.load('../june27_crop16_2minibatch__best_608.pt', map_location=device.type))
     # optimizer.load_state_dict(torch.load('optim.pth'))
     # optimizer.state = defaultdict(dict, optimizer.state)
     # else:
