@@ -14,7 +14,7 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=10, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=9999, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
@@ -45,9 +45,11 @@ def main(opt):
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
 
+    #torch.backends.cudnn.benchmark = True
+
     # Get data configuration
     if platform == 'darwin':  # macos
-        run_name = 'june26_nopunish_'
+        run_name = 'june27_crop16_RGBnorm_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
@@ -82,20 +84,21 @@ def main(opt):
         'time'))
     for epoch in range(opt.epochs):
         rloss = defaultdict(float)  # running loss
-        ui = 0
+        ui = -1
         for i, (imgs, targets) in enumerate(dataloader):
 
             n = 2  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
-                ui += 1
                 loss = model(imgs[j * n:j * n + n].to(device), targets[j * n:j * n + n],
                              requestPrecision=True if i <1000 else False)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-                for key, val in model.losses.items():
-                    rloss[key] = (rloss[key] * ui + val) / (ui + 1)
+                if (model.losses['nGT'] > 0) | (i == 0):
+                    ui += 1
+                    for key, val in model.losses.items():
+                        rloss[key] = (rloss[key] * ui + val) / (ui + 1)
 
                 s = ('%10s%10s' + '%10.3g' * 14) % (
                     '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
@@ -107,8 +110,8 @@ def main(opt):
                 print(s)
                 model.seen += imgs.shape[0]
 
-            #if i == 5:
-            #    return
+            if i == 5:
+                return
 
         with open('printedResults.txt', 'a') as file:
             file.write(s + '\n')

@@ -294,9 +294,9 @@ class ListDataset_xview_crop():  # for training
         # Normalize
         img_all = np.stack(img_all)
         img_all = np.ascontiguousarray(img_all)
-        img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32) / 255.0  # BGR to RGB
-        # img_all -= self.img_mean
-        # img_all /= self.img_std
+        img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32)  # BGR to RGB
+        img_all -= self.img_mean
+        img_all /= self.img_std
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
