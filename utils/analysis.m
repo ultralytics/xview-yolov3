@@ -57,21 +57,23 @@ C = C(i,:)';
 i = ~all(stats==0,2);
 shapes=shapes(i,:);
 stats=stats(i,:);  % rgb_mean, rgb_std
-stat_means = zeros(1,6);
-for i=1:6
+stat_means = zeros(1,12);
+for i=1:12
     stat_means(i) = mean(fcnsigmarejection(stats(:,i),6,3));
 end
 
 % output RGB stats (comes in BGR from cv2.imread)
-mu = stat_means([3 2 1])   % dataset RGB mean
-std = stat_means([6 5 4])  % dataset RGB std mean
+rgb_mu = stat_means([3 2 1])   % dataset RGB mean
+rgb_std = stat_means([6 5 4])  % dataset RGB std mean
+hsv_mu = stat_means(7:9)   % dataset RGB mean
+hsv_std = stat_means(10:12)  % dataset RGB std mean
 anchor_boxes = vpa(C(:)',3)  % anchor boxes
 
 
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets9_no18_73_classes.mat','wh','targets','id')
+save('targets_no18_73_classes.mat','wh','targets','id')
 
 
 function [coords, valid] = clean_coords(coords, classes, image_h, image_w)

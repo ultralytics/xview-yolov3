@@ -26,8 +26,8 @@ class ImageFolder():  # for eval-only
         assert self.nF > 0, 'No images found in path %s' % path
 
         # RGB normalization values
-        self.img_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
-        self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
+        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
         self.count = -1
@@ -50,8 +50,8 @@ class ImageFolder():  # for eval-only
 
         # Normalize RGB
         img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
-        # img -= self.img_mean
-        # img /= self.img_std
+        img -= self.rgb_mean
+        img /= self.rgb_std
 
         return [img_path], torch.from_numpy(img).unsqueeze(0)
 
@@ -69,15 +69,15 @@ class ListDataset_xview_fast():  # for training
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets30_no18_73_classes.mat')
+        self.mat = scipy.io.loadmat('utils/targets_no18_73_classes.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
         os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
-        self.img_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
         self.count = -1
@@ -94,7 +94,7 @@ class ListDataset_xview_fast():  # for training
         ib = min((self.count + 1) * self.batch_size, self.nF)
         indices = list(range(ia, ib))
 
-        img_all = [] #np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
+        img_all = []  # np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
         for index, files_index in enumerate(indices):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
@@ -148,9 +148,9 @@ class ListDataset_xview_fast():  # for training
                     labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
 
             # plot
-            #import matplotlib.pyplot as plt
-            #plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
-            #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+            # import matplotlib.pyplot as plt
+            # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
+            # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # random affine
             # img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1))
@@ -182,8 +182,8 @@ class ListDataset_xview_fast():  # for training
         img_all = np.stack(img_all)
         img_all = np.ascontiguousarray(img_all)
         img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32) / 255.0  # BGR to RGB
-        # img_all -= self.img_mean
-        # img_all /= self.img_std
+        # img_all -= self.rgb_mean
+        # img_all /= self.rgb_std
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
@@ -200,22 +200,24 @@ class ListDataset_xview_crop():  # for training
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets30_no18_73_classes.mat')
+        self.mat = scipy.io.loadmat('utils/targets_no18_73_classes.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
         os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
-        self.img_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.img_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.hsv_mean = np.array([24.956, 91.347, 61.362], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.hsv_std = np.array([15.825, 26.98, 29.618], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
         self.count = -1
         self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
         return self
 
-    #@profile
+    # @profile
     def __next__(self):
         self.count += 1
         if self.count == self.nB:
@@ -237,21 +239,23 @@ class ListDataset_xview_crop():  # for training
             nL0 = len(labels0)
 
             img0 = cv2.imread(img_path)
+            #img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
             h, w, _ = img0.shape
 
             for j in range(16):
                 padx = int(random.random() * (w - self.height))
                 pady = int(random.random() * (h - self.height))
                 img = img0[pady:pady + self.height, padx:padx + self.height]
-                labels = labels0.copy()
 
-                if len(labels) > 0:
+                if nL0 > 0:
                     labels = labels0.copy()
                     labels[:, [1, 3]] -= padx
                     labels[:, [2, 4]] -= pady
                     labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
                     # objects must have width and height > 3 pixels
                     labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
+                else:
+                    labels = []
 
                 # plot
                 #import matplotlib.pyplot as plt
@@ -295,8 +299,8 @@ class ListDataset_xview_crop():  # for training
         img_all = np.stack(img_all)
         img_all = np.ascontiguousarray(img_all)
         img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32)  # BGR to RGB
-        img_all -= self.img_mean
-        img_all /= self.img_std
+        img_all -= self.rgb_mean
+        img_all /= self.rgb_std
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
@@ -323,7 +327,8 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     img = cv2.resize(img, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_AREA)
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
-#@profile
+
+# @profile
 def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
@@ -351,30 +356,31 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
 
     # Return warped points also
     if targets is not None:
-        points = targets[:, 1:5].copy()
-        n = targets.shape[0]
+        if len(targets) > 0:
+            n = targets.shape[0]
+            points = targets[:, 1:5].copy()
 
-        # warp points
-        xy = np.ones((n * 4, 3))
-        xy[:, :2] = points[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
-        xy = (xy @ M.T)[:, :2].reshape(n, 8)
+            # warp points
+            xy = np.ones((n * 4, 3))
+            xy[:, :2] = points[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
+            xy = (xy @ M.T)[:, :2].reshape(n, 8)
 
-        # create new boxes
-        x = xy[:, [0, 2, 4, 6]]
-        y = xy[:, [1, 3, 5, 7]]
-        xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
+            # create new boxes
+            x = xy[:, [0, 2, 4, 6]]
+            y = xy[:, [1, 3, 5, 7]]
+            xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
-        # reject warped points outside of image
-        i = np.all((xy > 0) & (xy < img.shape[0]), 1)
+            # reject warped points outside of image
+            i = np.all((xy > 0) & (xy < img.shape[0]), 1)
+            targets = targets[i]
+            targets[:, 1:5] = xy[i]
 
-        targets = targets[i]
-        targets[:, 1:5] = xy[i]
         return imw, targets
     else:
         return imw
 
 
-def convert_tif2bmp(p = '/Users/glennjocher/Downloads/DATA/xview/train_images'):
+def convert_tif2bmp(p='/Users/glennjocher/Downloads/DATA/xview/train_images'):
     import glob
     import cv2
     import os
