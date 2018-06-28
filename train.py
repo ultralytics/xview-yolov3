@@ -87,7 +87,7 @@ def main(opt):
         ui = -1
         for i, (imgs, targets) in enumerate(dataloader):
 
-            n = 2  # number of pictures at a time
+            n = 4  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
                 loss = model(imgs[j * n:j * n + n].to(device), targets[j * n:j * n + n],
                              requestPrecision=True if i <1000 else False)
