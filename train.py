@@ -110,8 +110,8 @@ def main(opt):
                 print(s)
                 model.seen += imgs.shape[0]
 
-            if i == 5:
-                return
+            #if i == 5:
+            #    return
 
         with open('printedResults.txt', 'a') as file:
             file.write(s + '\n')
