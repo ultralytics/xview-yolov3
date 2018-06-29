@@ -206,7 +206,7 @@ def build_targets_sgrid(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, 
         # One-hot encoding of label
         tcls[b, a, sj, si, gj, gi, tc] = 1
         tconf[b, a, sj, si, gj, gi] = 1
-        #good_anchors[b, :, sj, si, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.50
+        good_anchors[b, :, sj, si, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.50
 
 
         if requestPrecision:

@@ -135,10 +135,13 @@ class YOLOLayer(nn.Module):
             self.bce_loss = self.bce_loss.cuda()
             self.bce_loss_conf = self.bce_loss_conf.cuda()
 
+        nS = 2  # subgrid count
         # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
-        prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
-        # nS = 2
-        # prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nS, nS, nG, nG).permute(0, 1, 3, 4, 5, 6, 2).contiguous()
+        if nS:
+            prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nS, nS, nG, nG).permute(0, 1, 3, 4, 5, 6, 2).contiguous()
+        else:
+            prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
+
 
         # Get outputs
         x = prediction[..., 0]  # Center x
@@ -151,18 +154,20 @@ class YOLOLayer(nn.Module):
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FloatTensor(prediction[..., :4].shape)
         if requestPrecision:
-            pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 5 / 2
-            pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 5 / 2
-            pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 5 / 2
-            pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 5 / 2
-            # pred_boxes[..., 0] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(2)) - w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
-            # pred_boxes[..., 1] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(2)) - h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
-            # pred_boxes[..., 2] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(2)) + w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
-            # pred_boxes[..., 3] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(2)) + h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
+            if nS:
+                pred_boxes[..., 0] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(2)) - w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
+                pred_boxes[..., 1] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(2)) - h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
+                pred_boxes[..., 2] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(2)) + w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
+                pred_boxes[..., 3] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(2)) + h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
+            else:
+                pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 5 / 2
+                pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 5 / 2
+                pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 5 / 2
+                pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 5 / 2
 
         # Training
         if targets is not None:
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = build_targets(pred_boxes,
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = build_targets_sgrid(pred_boxes,
                                                                                      pred_conf,
                                                                                      pred_cls,
                                                                                      targets,

@@ -40,11 +40,6 @@ def plotResults():
     #     plt.plot(results[i, 506:506 + 510] * 1.59)
     #     plt.plot(results[i, 506 + 510:])
     #     plt.title(s[i])
-    #
-    # results = np.loadtxt('/Users/glennjocher/Downloads/printedResults_1056.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
-    # for i in range(9):
-    #     plt.subplot(2, 5, i + 1)
-    #     plt.plot(results[i, :])
 
     results = np.loadtxt('/Users/glennjocher/Downloads/printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
     for i in range(9):
