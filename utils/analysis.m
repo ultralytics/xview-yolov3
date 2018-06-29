@@ -49,7 +49,7 @@ mean(x1<0 | y1<0 | x2>1 | y2>1)
 mean(x2<0 | y2<0 | x1>1 | y1>1)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 30);
+C = fcn_kmeans([w h], 18);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
