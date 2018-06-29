@@ -21,12 +21,14 @@ checkpoints
 results.txt
 metrics.txt
 printedResults.txt
-
-*.mat
-!targets*.mat
 temp-plot.html
 
 
+# MATLAB GitIgnore -----------------------------------------------------------------------------------------------------
+*.mat
+!targets*.mat
+
+*.m~
 
 # GitHub Python GitIgnore ----------------------------------------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
