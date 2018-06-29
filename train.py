@@ -25,7 +25,7 @@ parser.add_argument('-conf_thres', type=float, default=0.99, help='object confid
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=20, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=2, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -47,7 +47,8 @@ def main(opt):
 
     # Get data configuration
     if platform == 'darwin':  # macos
-        run_name = 'june27_crop16_4mini_noemptymini_'
+        torch.backends.cudnn.benchmark = True
+        run_name = 'june29_tests_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
@@ -65,8 +66,13 @@ def main(opt):
 
     # reload saved optimizer state
     resume_training = True
-    if (platform != 'darwin') and resume_training:
-        model.load_state_dict(torch.load('../june27_crop16_2minibatch__best_608.pt', map_location='cuda:0' if cuda else 'cpu'))
+    if resume_training:
+        resume_checkpoint = 'checkpoints/june29_pixelAnchors__best_608.pt'
+        # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
+        state = model.state_dict()
+        state.update(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
+        model.load_state_dict(state)
+
     # optimizer.load_state_dict(torch.load('optim.pth'))
     # optimizer.state = defaultdict(dict, optimizer.state)
     # else:
@@ -113,6 +119,7 @@ def main(opt):
                 model.seen += imgs.shape[0]
 
             # if i == 5:
+            #    print(time.time() - t0)
             #    return
 
         with open('printedResults.txt', 'a') as file:

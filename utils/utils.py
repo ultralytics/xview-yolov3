@@ -306,6 +306,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FN[b, :nTb] = 1.0
             FN[b, i] = (pconf < 0.99).float()  # confidence score is too low (set to zero)
 
+            #if TP[b,i].sum()>0:
+            #    print(tc[TP[b,i] > 0])
     #print((pred_conf>0.99).sum().float() / torch.numel(pred_conf))
     ap = 0
     return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, ap, good_anchors == 1
@@ -375,7 +377,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.5
+        thresh = 0.2
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 5])]  # sort best to worst

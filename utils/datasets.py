@@ -26,8 +26,8 @@ class ImageFolder():  # for eval-only
         assert self.nF > 0, 'No images found in path %s' % path
 
         # RGB normalization values
-        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
+        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
 
     def __iter__(self):
         self.count = -1
@@ -41,7 +41,7 @@ class ImageFolder():  # for eval-only
 
         # Add padding
         img = cv2.imread(img_path)  # BGR
-        img = resize_square(img, height=self.height)
+        #img = resize_square(img, height=self.height)
 
         # import matplotlib.pyplot as plt
         # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
@@ -49,11 +49,11 @@ class ImageFolder():  # for eval-only
         # plt.subplot(2, 2, 3).imshow(img[:, :, ::-1])
 
         # Normalize RGB
-        img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
+        img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32)
         img -= self.rgb_mean
         img /= self.rgb_std
 
-        return [img_path], torch.from_numpy(img).unsqueeze(0)
+        return [img_path], img
 
     def __len__(self):
         return self.nB  # number of batches

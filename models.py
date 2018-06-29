@@ -135,7 +135,7 @@ class YOLOLayer(nn.Module):
             self.bce_loss = self.bce_loss.cuda()
             self.bce_loss_conf = self.bce_loss_conf.cuda()
 
-        nS = 2  # subgrid count
+        nS = 0  # subgrid count
         # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
         if nS:
             prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nS, nS, nG, nG).permute(0, 1, 3, 4, 5, 6, 2).contiguous()
@@ -167,7 +167,7 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = build_targets_sgrid(pred_boxes,
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = build_targets(pred_boxes,
                                                                                      pred_conf,
                                                                                      pred_cls,
                                                                                      targets,
@@ -192,13 +192,13 @@ class YOLOLayer(nn.Module):
             nGT = FloatTensor([sum([len(x) for x in targets])])
             if nGT > 0:
                 wA = mask.sum().float() / nGT  # weight anchor-grid
-                wC = FloatTensor([1])  # (1 / xview_class_weights(torch.argmax(tcls, 1))).cuda()
+                wC = 1 / xview_class_weights(torch.argmax(tcls, 1)).cuda()
                 loss_x = 5 * (self.mse_loss(x[mask], tx[mask]) * wC).mean() * wA
                 loss_y = 5 * (self.mse_loss(y[mask], ty[mask]) * wC).mean() * wA
                 loss_w = 5 * (self.mse_loss(w[mask], tw[mask]) * wC).mean() * wA
                 loss_h = 5 * (self.mse_loss(h[mask], th[mask]) * wC).mean() * wA
                 loss_conf = (self.bce_loss(pred_conf[mask], mask[mask].float()) * wC).mean() * wA
-                loss_cls = (self.bce_loss(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).mean() * wA
+                loss_cls = 5 * (self.bce_loss(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).mean() * wA
             else:
                 loss_x, loss_y, loss_w, loss_h = FloatTensor([0]), FloatTensor([0]), FloatTensor([0]), FloatTensor([0])
                 loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
