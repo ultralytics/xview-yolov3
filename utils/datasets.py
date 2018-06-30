@@ -372,7 +372,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
 
             # reject warped points outside of image
             # i = np.all((xy > 0) & (xy < img.shape[0]), 1)
-            xy = np.clip(xy, a_min=0, a_max=img.shape[0])
+            xy = np.clip(xy, 0, img.shape[0])
             i = ((xy[:, 2] - xy[:, 0]) > 5) & ((xy[:, 3] - xy[:, 1]) > 5)  # width and height > 5 pixels
 
             targets = targets[i]
