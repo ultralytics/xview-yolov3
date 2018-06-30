@@ -258,15 +258,15 @@ class ListDataset_xview_crop():  # for training
                     labels = np.array([], dtype=np.float32)
 
                 # plot
-                import matplotlib.pyplot as plt
-                plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
-                plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                # import matplotlib.pyplot as plt
+                # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                img2, labels2 = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.05, .05),
+                img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.05, .05),
                                               scale=(.9, 1.1))
-                plt.subplot(2, 2, 2).imshow(img2[:, :, ::-1])
-                plt.plot(labels2[:, [1, 3, 3, 1, 1]].T, labels2[:, [2, 2, 4, 4, 2]].T, '.-')
+                # plt.subplot(2, 2, 2).imshow(img[:, :, ::-1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
