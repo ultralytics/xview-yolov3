@@ -41,7 +41,7 @@ class ImageFolder():  # for eval-only
 
         # Add padding
         img = cv2.imread(img_path)  # BGR
-        #img = resize_square(img, height=self.height)
+        # img = resize_square(img, height=self.height)
 
         # import matplotlib.pyplot as plt
         # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
@@ -69,7 +69,7 @@ class ListDataset_xview_fast():  # for training
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets_no18_73_classes.mat')
+        self.mat = scipy.io.loadmat('utils/targets_60c.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
@@ -200,7 +200,7 @@ class ListDataset_xview_crop():  # for training
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets_no18_73_classes.mat')
+        self.mat = scipy.io.loadmat('utils/targets_62c.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
@@ -239,7 +239,7 @@ class ListDataset_xview_crop():  # for training
             nL0 = len(labels0)
 
             img0 = cv2.imread(img_path)
-            #img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
+            # img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
             h, w, _ = img0.shape
 
             for j in range(16):
@@ -258,14 +258,15 @@ class ListDataset_xview_crop():  # for training
                     labels = np.array([], dtype=np.float32)
 
                 # plot
-                #import matplotlib.pyplot as plt
-                #plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
-                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                import matplotlib.pyplot as plt
+                plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
+                plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1))
-                #plt.subplot(2, 2, 2).imshow(img[:, :, ::-1])
-                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                img2, labels2 = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.05, .05),
+                                              scale=(.9, 1.1))
+                plt.subplot(2, 2, 2).imshow(img2[:, :, ::-1])
+                plt.plot(labels2[:, [1, 3, 3, 1, 1]].T, labels2[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
@@ -286,7 +287,6 @@ class ListDataset_xview_crop():  # for training
                     if nL > 0:
                         labels[:, 2] = 1 - labels[:, 2]
 
-                # img_all.append(torch.from_numpy(img))
                 img_all.append(img)
                 labels_all.append(torch.from_numpy(labels))
 
@@ -371,7 +371,10 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
             # reject warped points outside of image
-            i = np.all((xy > 0) & (xy < img.shape[0]), 1)
+            # i = np.all((xy > 0) & (xy < img.shape[0]), 1)
+            xy = np.clip(xy, a_min=0, a_max=img.shape[0])
+            i = ((xy[:, 2] - xy[:, 0]) > 5) & ((xy[:, 3] - xy[:, 1]) > 5)  # width and height > 5 pixels
+
             targets = targets[i]
             targets[:, 1:5] = xy[i]
 

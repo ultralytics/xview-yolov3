@@ -18,7 +18,7 @@ parser.add_argument('-epochs', type=int, default=9999, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_30.cfg', help='cfg file path')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_62c_30a.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
@@ -47,7 +47,7 @@ def main(opt):
 
     # Get data configuration
     if platform == 'darwin':  # macos
-        torch.backends.cudnn.benchmark = True
+        #torch.backends.cudnn.benchmark = True
         run_name = 'june29_tests_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
@@ -65,9 +65,9 @@ def main(opt):
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
-        resume_checkpoint = 'checkpoints/june29_pixelAnchors__best_608.pt'
+        resume_checkpoint = 'checkpoints/e136_best_608.pt'
         # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
         state = model.state_dict()
         state.update(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))

@@ -92,7 +92,6 @@ class YOLOLayer(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-        class_weights = xview_class_weights(torch.arange(nC))
         self.mse_loss = nn.MSELoss(size_average=False, reduce=False)
         self.bce_loss = nn.BCELoss(size_average=False, reduce=False)
         self.bce_loss_conf = nn.BCELoss(size_average=True)
@@ -198,7 +197,7 @@ class YOLOLayer(nn.Module):
                 loss_w = 5 * (self.mse_loss(w[mask], tw[mask]) * wC).mean() * wA
                 loss_h = 5 * (self.mse_loss(h[mask], th[mask]) * wC).mean() * wA
                 loss_conf = (self.bce_loss(pred_conf[mask], mask[mask].float()) * wC).mean() * wA
-                loss_cls = 5 * (self.bce_loss(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).mean() * wA
+                loss_cls = 2 * (self.bce_loss(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).mean() * wA
             else:
                 loss_x, loss_y, loss_w, loss_h = FloatTensor([0]), FloatTensor([0]), FloatTensor([0]), FloatTensor([0])
                 loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])

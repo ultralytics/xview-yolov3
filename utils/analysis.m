@@ -49,7 +49,7 @@ mean(x1<0 | y1<0 | x2>1 | y2>1)
 mean(x2<0 | y2<0 | x1>1 | y1>1)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 18);
+C = fcn_kmeans([w h], 30);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -73,7 +73,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_no18_73_classes.mat','wh','targets','id')
+save('targets_62c.mat','wh','targets','id')
 
 
 function [coords, valid] = clean_coords(coords, classes, image_h, image_w)
@@ -119,9 +119,9 @@ i7 = ~any(isnan(hw) | isinf(hw) | hw < 32, 2);
 i8 = ~any(classes(:) == [75, 82],2);
 
 % remove 18 and 73 (small cars and buildings) as an experiment
-i9 = ~any(classes(:) == [18, 73],2);
+% i9 = ~any(classes(:) == [18, 73],2);
 
-valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8 & i9;
+valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
 end
 

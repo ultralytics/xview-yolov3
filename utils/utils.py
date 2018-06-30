@@ -38,11 +38,11 @@ def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
 
 def xview_class_weights(indices):  # weights of each class in the training set, normalized to mu = 1
     weights = torch.FloatTensor(
-        [0.0074, 0.0367, 0.0716, 0.0071, 0.295, 21.1*0, 0.695, 0.11, 0.363, 1.22, 0.588, 0.364, 0.0859, 0.409, 0.0894,
+        [0.0074, 0.0367, 0.0716, 0.0071, 0.295, 21.1, 0.695, 0.11, 0.363, 1.22, 0.588, 0.364, 0.0859, 0.409, 0.0894,
          0.0149, 0.0173, 0.0017, 0.163, 0.184, 0.0125, 0.0122, 0.0124, 0.0687, 0.146, 0.0701, 0.0226, 0.0191, 0.0797,
          0.0202, 0.0449, 0.0331, 0.0083, 0.0204, 0.0156, 0.0193, 0.007, 0.0064, 0.0337, 0.135, 0.0337, 0.0078, 0.0628,
-         0.0843, 0.0286, 0.0083, 0.071, 0.119, 31.6*0, 0.0208, 0.109, 0.0949, 0.122, 0.425, 0.0125, 0.171, 0.237, 0.158,
-         0.0373, 0.0085])
+         0.0843, 0.0286, 0.0083, 0.071, 0.119, 31.6, 0.0208, 0.109, 0.0949, 0.122, 0.425, 0.0125, 0.171, 0.237,
+         0.158, 0.0373, 0.0085])
 
     weights = weights / weights.mean()
     return weights[indices.long()]
@@ -140,7 +140,8 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     return inter_area / (b1_area + b2_area - inter_area + 1e-16)
 
 
-def build_targets_sgrid(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
+def build_targets_sgrid(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh,
+                        requestPrecision):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
@@ -208,7 +209,6 @@ def build_targets_sgrid(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, 
         tconf[b, a, sj, si, gj, gi] = 1
         good_anchors[b, :, sj, si, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.50
 
-
         if requestPrecision:
             pred_boxes[b, a, 1, si, gj, gi, 1] += 0.5
             pred_boxes[b, a, 1, si, gj, gi, 3] += 0.5
@@ -228,6 +228,7 @@ def build_targets_sgrid(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, 
 
     ap = 0
     return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, ap, good_anchors == 1
+
 
 # @profile
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
@@ -306,9 +307,9 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FN[b, :nTb] = 1.0
             FN[b, i] = (pconf < 0.99).float()  # confidence score is too low (set to zero)
 
-            #if TP[b,i].sum()>0:
+            # if TP[b,i].sum()>0:
             #    print(tc[TP[b,i] > 0])
-    #print((pred_conf>0.99).sum().float() / torch.numel(pred_conf))
+    # print((pred_conf>0.99).sum().float() / torch.numel(pred_conf))
     ap = 0
     return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, ap, good_anchors == 1
 
