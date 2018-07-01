@@ -80,7 +80,7 @@ class YOLOLayer(nn.Module):
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
         super(YOLOLayer, self).__init__()
 
-        anchors = [(a_w , a_h) for a_w, a_h in anchors]  # (pixels)
+        anchors = [(a_w, a_h) for a_w, a_h in anchors]  # (pixels)
         nA = len(anchors)
 
         self.anchors = anchors
@@ -92,10 +92,12 @@ class YOLOLayer(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-        weight = 1 / xview_class_weights(range(nC)).cuda()
+        weight = xview_class_weights(range(nC))
         self.BCELoss = nn.BCELoss()
         self.MSELoss = nn.MSELoss()
-        self.CrossEntropyLoss = nn.CrossEntropyLoss(weight = weight / weight.mean())
+        self.CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+        self.CrossEntropyLossConf = nn.CrossEntropyLoss()
+        self.weight = weight
 
         if anchor_idxs[0] == (nA * 2):  # 6
             stride = 32
@@ -119,7 +121,7 @@ class YOLOLayer(nn.Module):
         self.nGtotal = (self.img_dim / 32) ** 2 + (self.img_dim / 16) ** 2 + (self.img_dim / 8) ** 2
         self.Sigmoid = torch.nn.Sigmoid()
 
-    #@profile
+    # @profile
     def forward(self, x, targets=None, requestPrecision=False):
         FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
         bs = x.shape[0]
@@ -134,31 +136,37 @@ class YOLOLayer(nn.Module):
             self.BCELoss = self.BCELoss.cuda()
             self.MSELoss = self.MSELoss.cuda()
             self.CrossEntropyLoss = self.CrossEntropyLoss.cuda()
+            self.CrossEntropyLossConf = self.CrossEntropyLossConf.cuda()
+            self.weight = self.weight.cuda()
+            self.CrossEntropyLoss.weight = self.weight
 
         nS = 0  # subgrid count
         # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
         if nS:
-            prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nS, nS, nG, nG).permute(0, 1, 3, 4, 5, 6, 2).contiguous()
+            prediction = x.view(bs, self.nA, self.bbox_attrs, nS, nS, nG, nG).permute(0, 1, 3, 4, 5, 6, 2).contiguous()
         else:
-            prediction = self.Sigmoid(x).view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
-
+            prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
-        x = prediction[..., 0]  # Center x
-        y = prediction[..., 1]  # Center y
-        w = prediction[..., 2]  # Width
-        h = prediction[..., 3]  # Height
-        pred_conf = prediction[..., 4]  # Conf
+        x = self.Sigmoid(prediction[..., 0])  # Center x
+        y = self.Sigmoid(prediction[..., 1])  # Center y
+        w = self.Sigmoid(prediction[..., 2])  # Width
+        h = self.Sigmoid(prediction[..., 3])  # Height
+        pred_conf = self.Sigmoid(prediction[..., 4])  # Conf
         pred_cls = prediction[..., 5:]  # Class
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FloatTensor(prediction[..., :4].shape)
         if requestPrecision:
             if nS:
-                pred_boxes[..., 0] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(2)) - w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(2)) - h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(2)) + w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(2)) + h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
+                pred_boxes[..., 0] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(
+                    2)) - w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
+                pred_boxes[..., 1] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(
+                    2)) - h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
+                pred_boxes[..., 2] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(
+                    2)) + w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
+                pred_boxes[..., 3] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(
+                    2)) + h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
             else:
                 pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 5 / 2
                 pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 5 / 2
@@ -192,18 +200,18 @@ class YOLOLayer(nn.Module):
             nGT = FloatTensor([sum([len(x) for x in targets])])
             if nGT > 0:
                 wA = mask.sum().float() / nGT  # weight anchor-grid
-                loss_x = 5 * self.MSELoss(x[mask], tx[mask]) * wA
-                loss_y = 5 * self.MSELoss(y[mask], ty[mask]) * wA
-                loss_w = 5 * self.MSELoss(w[mask], tw[mask]) * wA
-                loss_h = 5 * self.MSELoss(h[mask], th[mask]) * wA
+                loss_x = 2 * self.MSELoss(x[mask], tx[mask]) * wA
+                loss_y = 2 * self.MSELoss(y[mask], ty[mask]) * wA
+                loss_w = 2 * self.MSELoss(w[mask], tw[mask]) * wA
+                loss_h = 2 * self.MSELoss(h[mask], th[mask]) * wA
                 loss_conf = self.BCELoss(pred_conf[mask], mask[mask].float()) * wA
-                loss_cls = self.CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls,1)) * wA
+                loss_cls = self.CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
             else:
                 loss_x, loss_y, loss_w, loss_h = FloatTensor([0]), FloatTensor([0]), FloatTensor([0]), FloatTensor([0])
                 loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
                 wA = FloatTensor([1])
 
-            loss_conf += 0.5 * self.BCELoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()) * wA
+            loss_conf += self.BCELoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()) * wA
             loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
                    ap, nGT, TP, FP, FN, 0, 0

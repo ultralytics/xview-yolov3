@@ -69,6 +69,8 @@ hsv_mu = stat_means(7:9)   % dataset RGB mean
 hsv_std = stat_means(10:12)  % dataset RGB std mean
 anchor_boxes = vpa(C(:)',4)  % anchor boxes
 
+% weights (for class inequalities)
+[uc,~,~,nuc]=fcnunique(classes(:));
 
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);

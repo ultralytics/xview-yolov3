@@ -19,13 +19,13 @@ parser.add_argument('-image_folder', type=str, default='data/train_images8', hel
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/june22_e400_608.pt', help='weights')
+parser.add_argument('-weights_path', type=str, default='checkpoints/e22_60c_best_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=2, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -47,12 +47,12 @@ def main(opt):
 
     # Get data configuration
     if platform == 'darwin':  # macos
-        #torch.backends.cudnn.benchmark = True
-        run_name = '60c_'
+        # torch.backends.cudnn.benchmark = True
+        run_name = '60c_gainAdjusted_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = '58c_'
+        run_name = '60c_gcp_'
         train_path = '../'
 
     # Initiate model
@@ -67,7 +67,7 @@ def main(opt):
     # reload saved optimizer state
     resume_training = True
     if resume_training:
-        resume_checkpoint = 'checkpoints/e136_best_608.pt'
+        resume_checkpoint = 'checkpoints/e185_60c_bestgcp_608.pt'
         # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
         state = model.state_dict()
         state.update(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))

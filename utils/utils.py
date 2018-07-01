@@ -37,14 +37,11 @@ def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
 
 
 def xview_class_weights(indices):  # weights of each class in the training set, normalized to mu = 1
-    weights = torch.FloatTensor(
-        [0.0074, 0.0367, 0.0716, 0.0071, 0.295, 21.1, 0.695, 0.11, 0.363, 1.22, 0.588, 0.364, 0.0859, 0.409, 0.0894,
-         0.0149, 0.0173, 0.0017, 0.163, 0.184, 0.0125, 0.0122, 0.0124, 0.0687, 0.146, 0.0701, 0.0226, 0.0191, 0.0797,
-         0.0202, 0.0449, 0.0331, 0.0083, 0.0204, 0.0156, 0.0193, 0.007, 0.0064, 0.0337, 0.135, 0.0337, 0.0078, 0.0628,
-         0.0843, 0.0286, 0.0083, 0.071, 0.119, 31.6, 0.0208, 0.109, 0.0949, 0.122, 0.425, 0.0125, 0.171, 0.237,
-         0.158, 0.0373, 0.0085])
-
-    weights = weights / weights.mean()
+    weights = 1 / torch.FloatTensor(
+        [74, 365, 713, 71, 2948, 210873, 6930, 1102, 3618, 12153, 5880, 3643, 862, 4090, 895, 149, 174, 17, 1624, 1846,
+         125, 122, 124, 668, 1460, 701, 222, 190, 789, 199, 450, 283, 74, 205, 156, 181, 70, 64, 337, 1355, 336, 78,
+         628, 841, 287, 83, 710, 1184, 315151, 190, 1086, 854, 1016, 4135, 124, 1701, 2294, 1582, 370, 85])
+    weights /= weights.sum()
     return weights[indices]
 
 
@@ -331,6 +328,10 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     output = [None for _ in range(len(prediction))]
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
+
+        obj_conf = image_pred[:, 4]
+        class_conf, class_pred = torch.max(torch.softmax(image_pred[:, 5:],1), 1, keepdim=True)
+
         image_pred = image_pred[image_pred[:, 4] > conf_thres]
         # If none are remaining => process next image
         nP = image_pred.shape[0]

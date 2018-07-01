@@ -7,7 +7,6 @@
 # ctrl + a + d
 
 # clone repo
-#cd ..
 sudo rm -rf yolo
 git clone https://github.com/ultralytics/yolo
 
@@ -16,7 +15,8 @@ cd yolo
 python3 train.py -epochs 9999
 
 # move checkpoint to fuse drive
-#mv yolov3/checkpoints/epoch0.pt drive
+# google-drive-ocamlfuse drive
+# mv yolov3/checkpoints/epoch0.pt drive
 
 
 # get xview training data
