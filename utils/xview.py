@@ -40,10 +40,10 @@ def plotResults():
         plt.plot(results[i, :], marker='.')
         plt.title(s[i])
 
-    # results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
-    # for i in range(9):
-    #     plt.subplot(2, 5, i + 1)
-    #     plt.plot(results[i], marker='.')
+    results = np.loadtxt('printedResults.txt', usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
+    for i in range(9):
+        plt.subplot(2, 5, i + 1)
+        plt.plot(results[i], marker='.')
 
 
 def create_mat_file():

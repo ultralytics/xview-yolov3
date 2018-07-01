@@ -45,7 +45,7 @@ def xview_class_weights(indices):  # weights of each class in the training set, 
          0.158, 0.0373, 0.0085])
 
     weights = weights / weights.mean()
-    return weights[indices.long()]
+    return weights[indices]
 
 
 def plot_one_box(x, im, color=None, label=None, line_thickness=None):

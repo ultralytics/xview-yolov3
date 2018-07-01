@@ -69,7 +69,7 @@ class ListDataset_xview_fast():  # for training
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets_60c.mat')
+        self.mat = scipy.io.loadmat('utils/targets_58c.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
@@ -200,7 +200,7 @@ class ListDataset_xview_crop():  # for training
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets_62c.mat')
+        self.mat = scipy.io.loadmat('utils/targets_60c.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
