@@ -65,7 +65,7 @@ def main(opt):
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         resume_checkpoint = 'checkpoints/e136_best_608.pt'
         # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
