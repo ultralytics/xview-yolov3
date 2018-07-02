@@ -242,9 +242,9 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
     good_anchors = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
     tcls = torch.ByteTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
-    TP = torch.zeros(nB, max(nT))
-    FP = torch.zeros(nB, max(nT))
-    FN = torch.zeros(nB, max(nT))
+    TP = torch.ByteTensor(nB, max(nT)).fill_(0)
+    FP = torch.ByteTensor(nB, max(nT)).fill_(0)
+    FN = torch.ByteTensor(nB, max(nT)).fill_(0)
 
     for b in range(nB):
         nTb = nT[b]  # number of targets (measures index of first zero-height target box)
@@ -296,14 +296,14 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         if requestPrecision:
             # predicted classes and confidence
             tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
-            pcls = torch.argmax(pred_cls[b, a, gj, gi].cpu(), 1)
+            pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
             pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
-            TP[b, i] = ((pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)).float()
-            FP[b, i] = ((pconf > 0.99) & ((iou_pred < 0.5) | (pcls != tc))).float()  # coordinates or class are wrong
-            FN[b, :nTb] = 1.0
-            FN[b, i] = (pconf < 0.99).float()  # confidence score is too low (set to zero)
+            TP[b, i] = ((pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc))
+            FP[b, i] = ((pconf > 0.99) & ((iou_pred < 0.5) | (pcls != tc)))  # coordinates or class are wrong
+            FN[b, :nTb] = 1
+            FN[b, i] = (pconf < 0.99)  # confidence score is too low (set to zero)
 
             # if TP[b,i].sum()>0:
             #    print(tc[TP[b,i] > 0])

@@ -47,12 +47,12 @@ def main(opt):
 
     # Get data configuration
     if platform == 'darwin':  # macos
-        #torch.backends.cudnn.benchmark = True
-        run_name = '60c_linearCE_'
+        torch.backends.cudnn.benchmark = True
+        run_name = '60c_linearCE'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = '60c_gcp_'
+        run_name = '60c_gcp'
         train_path = '../'
 
     # Initiate model
@@ -95,15 +95,15 @@ def main(opt):
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
-                #if nGT == 0:
-                #    continue
+                if (nGT == 0) & (random.random() > 0.5):
+                    continue
 
                 loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-                if (model.losses['nGT'] > 0) | (i == 0):
+                if nGT > 0:
                     ui += 1
                     for key, val in model.losses.items():
                         rloss[key] = (rloss[key] * ui + val) / (ui + 1)
@@ -112,13 +112,11 @@ def main(opt):
                     '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
                     rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
                     rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
-                    model.losses['FP'], model.losses['FN'],
-                    time.time() - t1)
+                    model.losses['FP'], model.losses['FN'], time.time() - t1)
                 t1 = time.time()
                 print(s)
-                model.seen += imgs.shape[0]
 
-            # if i == 5:
+            #if i == 5:
             #    print(time.time() - t0)
             #    return
 
@@ -126,16 +124,13 @@ def main(opt):
             file.write(s + '\n')
 
         if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
-            torch.save(model.state_dict(), '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size))
             best_loss = rloss['loss']
+            opt.weights_path = '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size)  # best weight path
+            torch.save(model.state_dict(), opt.weights_path)
 
     # save final model
     dt = time.time() - t0
-    print('Finished %g epochs in %.2fs (%.2fs/epoch, %.2fs/image)' % (epoch, dt, dt / (epoch + 1), dt / model.seen))
-    s = '%s/%s_final_e%d_%g.pt' % (opt.checkpoint_dir, run_name, epoch, opt.img_size)
-    torch.save(model.state_dict(), s)
-
-    opt.weights_path = s
+    print('Finished %g epochs in %.2fs (%.2fs/epoch)' % (epoch, dt, dt / (epoch + 1)))
     # detect(opt)
 
 

@@ -234,8 +234,6 @@ class Darknet(nn.Module):
         self.module_defs[0]['height'] = img_size
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
-        self.seen = 0
-        self.header_info = np.array([0, 0, 0, self.seen, 0])
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN', 'precision',
                            'recall']
 
@@ -269,9 +267,9 @@ class Darknet(nn.Module):
             layer_outputs.append(x)
 
         if is_training:
-            TP = (self.losses['TP'] > 0).float().sum()
-            FP = (self.losses['FP'] > 0).float().sum()
-            FN = (self.losses['FN'] == 3).float().sum()
+            TP = (self.losses['TP'] > 0).sum().float()
+            FP = (self.losses['FP'] > 0).sum().float()
+            FN = (self.losses['FN'] == 3).sum().float()
             self.losses['precision'] = TP / (TP + FP + 1e-16)
             self.losses['recall'] = TP / (TP + FN + 1e-16)
             self.losses['TP'], self.losses['FP'], self.losses['FN'] = TP, FP, FN
