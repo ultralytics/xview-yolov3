@@ -41,15 +41,10 @@ class ImageFolder():  # for eval-only
 
         # Add padding
         img = cv2.imread(img_path)  # BGR
-        # img = resize_square(img, height=self.height)
-
-        # import matplotlib.pyplot as plt
-        # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
-        # img = random_affine(img, degrees=(-89, 89), translate=(.2, .2), scale=(1, 1), shear=(0, 0))
-        # plt.subplot(2, 2, 3).imshow(img[:, :, ::-1])
 
         # Normalize RGB
-        img = img[:, :, ::-1].transpose(2, 0, 1).astype(np.float32)
+        img = img[:, :, ::-1].transpose(2, 0, 1)
+        img = np.ascontiguousarray(img, dtype=np.float32)
         img -= self.rgb_mean
         img /= self.rgb_std
 

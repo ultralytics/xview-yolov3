@@ -137,41 +137,28 @@ class YOLOLayer(nn.Module):
             self.CrossEntropyLoss = self.CrossEntropyLoss.cuda()
             self.CrossEntropyLoss.weight = self.weight
 
-        nS = 0  # subgrid count
         # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
-        if nS:
-            prediction = x.view(bs, self.nA, self.bbox_attrs, nS, nS, nG, nG).permute(0, 1, 3, 4, 5, 6, 2).contiguous()
-        else:
-            prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
+        prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
 
         # Get outputs
         x = self.Sigmoid(prediction[..., 0])  # Center x
         y = self.Sigmoid(prediction[..., 1])  # Center y
         w = self.Sigmoid(prediction[..., 2])  # Width
         h = self.Sigmoid(prediction[..., 3])  # Height
-        pred_conf = prediction[..., 4]  # Conf
-        pred_cls = prediction[..., 5:]  # Class
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FloatTensor(prediction[..., :4].shape)
-        if requestPrecision:
-            if nS:
-                pred_boxes[..., 0] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(
-                    2)) - w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(
-                    2)) - h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x.unsqueeze(2).unsqueeze(
-                    2)) + w.data * self.anchor_w.unsqueeze(2).unsqueeze(2) * 5 / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y.unsqueeze(2).unsqueeze(
-                    2)) + h.data * self.anchor_h.unsqueeze(2).unsqueeze(2) * 5 / 2
-            else:
+        pred_conf = prediction[..., 4]  # Conf
+        pred_cls = prediction[..., 5:]  # Class
+
+        # Training
+        if targets is not None:
+            if requestPrecision:
                 pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 5 / 2
                 pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 5 / 2
                 pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 5 / 2
                 pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 5 / 2
 
-        # Training
-        if targets is not None:
             tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = build_targets(pred_boxes,
                                                                                      pred_conf,
                                                                                      pred_cls,
@@ -196,7 +183,7 @@ class YOLOLayer(nn.Module):
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nGT = FloatTensor([sum([len(x) for x in targets])])
             if nGT > 0:
-                wA = mask.sum().float() / nGT  # weight anchor-grid
+                wA = mask.sum().float() / nGT * nGT  # weight anchor-grid
                 loss_x = 5 * self.MSELoss(x[mask], tx[mask]) * wA
                 loss_y = 5 * self.MSELoss(y[mask], ty[mask]) * wA
                 loss_w = 5 * self.MSELoss(w[mask], tw[mask]) * wA
@@ -208,7 +195,8 @@ class YOLOLayer(nn.Module):
                 loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
                 wA = FloatTensor([1])
 
-            loss_conf += 0.5 * self.BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()) * wA
+            loss_conf += 0.5 * self.BCEWithLogitsLoss(pred_conf[~good_anchors],
+                                                      good_anchors[~good_anchors].float()) * wA
             loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
                    ap, nGT, TP, FP, FN, 0, 0

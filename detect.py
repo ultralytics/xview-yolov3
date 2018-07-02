@@ -13,10 +13,10 @@ from utils.datasets import *
 from utils.utils import *
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/train_images3/', help='path to images')
+parser.add_argument('-image_folder', type=str, default='data/train_images3/5.tif', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/60c_linearCE__best_608.pt',
+parser.add_argument('-weights_path', type=str, default='checkpoints/60c_linearCE_best_608.pt',
                     help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
@@ -29,7 +29,7 @@ opt = parser.parse_args()
 print(opt)
 
 
-# @profile
+@profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.system('rm -rf data/xview_predictions_img')
@@ -37,7 +37,7 @@ def detect(opt):
     os.makedirs('data/xview_predictions_img', exist_ok=True)
     opt.img_size = int(opt.weights_path.rsplit('_')[-1][:-3])
 
-    cuda = torch.cuda.is_available()
+    cuda = False # torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # Set up model
@@ -78,7 +78,8 @@ def detect(opt):
                 chip = torch.from_numpy(chip).unsqueeze(0).to(device)
                 # Get detections
                 with torch.no_grad():
-                    d = non_max_suppression(model(chip), opt.conf_thres, opt.nms_thres)
+                    pred = model(chip)
+                    d = non_max_suppression(pred, opt.conf_thres, opt.nms_thres)
 
                 if d[0] is not None:
                     d[0][:, [0, 2]] += x1

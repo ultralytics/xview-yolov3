@@ -65,9 +65,9 @@ def main(opt):
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
-        resume_checkpoint = 'checkpoints/e202_60c_bestgcp_608.pt'
+        resume_checkpoint = 'checkpoints/e231_60c_bestgcp_608.pt'
         # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
         state = model.state_dict()
         state.update(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
@@ -95,7 +95,7 @@ def main(opt):
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
-                if (nGT == 0) & (random.random() > 0.5):
+                if nGT == 0:
                     continue
 
                 loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True)
