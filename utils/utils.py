@@ -3,6 +3,7 @@ import random
 import cv2
 import numpy as np
 import torch
+import scipy.io
 
 # set printoptions
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
@@ -296,7 +297,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             # predicted classes and confidence
             tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
             pcls = torch.argmax(pred_cls[b, a, gj, gi].cpu(), 1)
-            pconf = pred_conf[b, a, gj, gi].cpu()
+            pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
             TP[b, i] = ((pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)).float()
@@ -318,6 +319,9 @@ def to_categorical(y, num_classes):
 
 # @profile
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
+    prediction = prediction.cpu()
+    mat = scipy.io.loadmat('utils/targets_60c.mat')
+
     """
     Removes detections with lower object confidence score than 'conf_thres' and performs
     Non-Maximum Suppression to further filter detections.
@@ -328,11 +332,23 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     output = [None for _ in range(len(prediction))]
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
+        image_pred[:, 4] = torch.sigmoid(image_pred[:, 4])
+        image_pred[:, 5:] = torch.softmax(image_pred[:,5:], 1)
+        # Get score and class with highest confidence
+        class_conf, class_pred = torch.max(image_pred[:, 5:], 1)
+        w = (image_pred[:, 2] / 2).numpy()
+        h = (image_pred[:, 3] / 2).numpy()
+        a = w * h  # area
 
-        obj_conf = image_pred[:, 4]
-        class_conf, class_pred = torch.max(torch.softmax(image_pred[:, 5:],1), 1, keepdim=True)
+        v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0.5)).numpy()
+        v *= (w >= mat['class_limits'][class_pred, 0]) & (w <= mat['class_limits'][class_pred, 1])
+        v *= (h >= mat['class_limits'][class_pred, 2]) & (h <= mat['class_limits'][class_pred, 3])
+        v *= (a >= mat['class_limits'][class_pred, 4]) & (a <= mat['class_limits'][class_pred, 5])
+        v = np.nonzero(v)
 
-        image_pred = image_pred[image_pred[:, 4] > conf_thres]
+        image_pred = image_pred[v]
+        class_conf = class_conf[v]
+        class_pred = class_pred[v]
         # If none are remaining => process next image
         nP = image_pred.shape[0]
         if not nP:
@@ -346,10 +362,8 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         box_corner[:, 2:4] = xy + wh
         image_pred[:, :4] = box_corner
 
-        # Get score and class with highest confidence
-        class_conf, class_pred = torch.max(image_pred[:, 5:], 1, keepdim=True)
         # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
-        detections = torch.cat((image_pred[:, :5], class_conf.float(), class_pred.float()), 1)
+        detections = torch.cat((image_pred[:, :5], class_conf.float().unsqueeze(1), class_pred.float().unsqueeze(1)), 1)
         # Iterate through all predicted classes
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:

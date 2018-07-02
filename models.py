@@ -92,12 +92,10 @@ class YOLOLayer(nn.Module):
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
 
-        weight = xview_class_weights(range(nC))
-        self.BCELoss = nn.BCELoss()
+        self.weight = xview_class_weights(range(nC))
+        self.BCEWithLogitsLoss = nn.BCEWithLogitsLoss()
         self.MSELoss = nn.MSELoss()
-        self.CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
-        self.CrossEntropyLossConf = nn.CrossEntropyLoss()
-        self.weight = weight
+        self.CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.weight)
 
         if anchor_idxs[0] == (nA * 2):  # 6
             stride = 32
@@ -133,11 +131,10 @@ class YOLOLayer(nn.Module):
             self.grid_y = self.grid_y.cuda()
             self.anchor_w = self.anchor_w.cuda()
             self.anchor_h = self.anchor_h.cuda()
-            self.BCELoss = self.BCELoss.cuda()
+            self.BCEWithLogitsLoss = self.BCEWithLogitsLoss.cuda()
             self.MSELoss = self.MSELoss.cuda()
-            self.CrossEntropyLoss = self.CrossEntropyLoss.cuda()
-            self.CrossEntropyLossConf = self.CrossEntropyLossConf.cuda()
             self.weight = self.weight.cuda()
+            self.CrossEntropyLoss = self.CrossEntropyLoss.cuda()
             self.CrossEntropyLoss.weight = self.weight
 
         nS = 0  # subgrid count
@@ -152,7 +149,7 @@ class YOLOLayer(nn.Module):
         y = self.Sigmoid(prediction[..., 1])  # Center y
         w = self.Sigmoid(prediction[..., 2])  # Width
         h = self.Sigmoid(prediction[..., 3])  # Height
-        pred_conf = self.Sigmoid(prediction[..., 4])  # Conf
+        pred_conf = prediction[..., 4]  # Conf
         pred_cls = prediction[..., 5:]  # Class
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
@@ -200,18 +197,18 @@ class YOLOLayer(nn.Module):
             nGT = FloatTensor([sum([len(x) for x in targets])])
             if nGT > 0:
                 wA = mask.sum().float() / nGT  # weight anchor-grid
-                loss_x = 2 * self.MSELoss(x[mask], tx[mask]) * wA
-                loss_y = 2 * self.MSELoss(y[mask], ty[mask]) * wA
-                loss_w = 2 * self.MSELoss(w[mask], tw[mask]) * wA
-                loss_h = 2 * self.MSELoss(h[mask], th[mask]) * wA
-                loss_conf = self.BCELoss(pred_conf[mask], mask[mask].float()) * wA
+                loss_x = 5 * self.MSELoss(x[mask], tx[mask]) * wA
+                loss_y = 5 * self.MSELoss(y[mask], ty[mask]) * wA
+                loss_w = 5 * self.MSELoss(w[mask], tw[mask]) * wA
+                loss_h = 5 * self.MSELoss(h[mask], th[mask]) * wA
+                loss_conf = self.BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wA
                 loss_cls = self.CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
             else:
                 loss_x, loss_y, loss_w, loss_h = FloatTensor([0]), FloatTensor([0]), FloatTensor([0]), FloatTensor([0])
                 loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
                 wA = FloatTensor([1])
 
-            loss_conf += self.BCELoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()) * wA
+            loss_conf += 0.5 * self.BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()) * wA
             loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
             return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
                    ap, nGT, TP, FP, FN, 0, 0

@@ -19,7 +19,7 @@ parser.add_argument('-image_folder', type=str, default='data/train_images8', hel
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/e22_60c_best_608.pt', help='weights')
+# parser.add_argument('-weights_path', type=str, default='checkpoints/e202_60c_bestgcp_608.pt', help='weights')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
@@ -47,8 +47,8 @@ def main(opt):
 
     # Get data configuration
     if platform == 'darwin':  # macos
-        # torch.backends.cudnn.benchmark = True
-        run_name = '60c_gainAdjusted_'
+        #torch.backends.cudnn.benchmark = True
+        run_name = '60c_linearCE_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
@@ -65,9 +65,9 @@ def main(opt):
     optimizer = torch.optim.Adam(model.parameters(), lr=.001)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
-        resume_checkpoint = 'checkpoints/e185_60c_bestgcp_608.pt'
+        resume_checkpoint = 'checkpoints/e202_60c_bestgcp_608.pt'
         # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
         state = model.state_dict()
         state.update(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
@@ -98,7 +98,7 @@ def main(opt):
                 if nGT == 0:
                     continue
 
-                loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True)
+                loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=False)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()

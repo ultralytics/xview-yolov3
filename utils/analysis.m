@@ -34,19 +34,8 @@ fprintf('Images target count range: %g-%g\n',min(n),max(n))
 w = coords(:,3) - coords(:,1);
 h = coords(:,4) - coords(:,2);
 
-% Normalized with and height
-wn = w./image_w;
-hn = h./image_h;
-
-% normalized coordinates (are they off the image??)
-x1 = coords(:,1)./ image_w;
-y1 = coords(:,2)./ image_h;
-x2 = coords(:,3)./ image_w;
-y2 = coords(:,4)./ image_h;
-
-fig; histogram(y1)
-mean(x1<0 | y1<0 | x2>1 | y2>1)
-mean(x2<0 | y2<0 | x1>1 | y1>1)
+% to reject bad box predictions
+class_limits = class_bbox_limits(classes,w,h);
 
 % K-means normalized with and height for 9 points
 C = fcn_kmeans([w h], 30);
@@ -69,13 +58,23 @@ hsv_mu = stat_means(7:9)   % dataset RGB mean
 hsv_std = stat_means(10:12)  % dataset RGB std mean
 anchor_boxes = vpa(C(:)',4)  % anchor boxes
 
-% weights (for class inequalities)
-[uc,~,~,nuc]=fcnunique(classes(:));
-
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_62c.mat','wh','targets','id')
+save('targets_60c.mat','wh','targets','id','class_limits')
+
+
+function limits=class_bbox_limits(classes,w,h)
+% measure the min and max bbox sizes for rejecting bad predictions
+area = h.*w;
+uc=unique(classes(:)); 
+n = numel(uc);
+limits = zeros(n,6); % minmax: [width, height, area]
+for i = 1:n
+    j = find(classes==uc(i));
+    limits(i,:) = [minmax3(w(j)), minmax3(h(j)), minmax3(area(j))];
+end
+end
 
 
 function [coords, valid] = clean_coords(coords, classes, image_h, image_w)
@@ -99,10 +98,19 @@ new_area = w.*h;
 % no nans or infs in bounding boxes
 i0 = ~any(isnan(coords) | isinf(coords), 2);
 
-% sigma rejections on dimensions
+% sigma rejections on dimensions (entire dataset)
 [~, i1] = fcnsigmarejection(area,15, 3);
 [~, i2] = fcnsigmarejection(w,15, 3);
 [~, i3] = fcnsigmarejection(h,15, 3);
+
+% sigma rejections on dimensions (per class)
+uc=unique(classes(:));
+for i = 1:numel(uc)
+    j = find(classes==uc(i));
+    [~,v] = fcnsigmarejection(area(j),6,3);  i1(j) = i1(j) & v;
+    [~,v] = fcnsigmarejection(w(j),6,3);  i2(j) = i2(j) & v;
+    [~,v] = fcnsigmarejection(h(j),6,3);  i3(j) = i3(j) & v;
+end
 
 % manual dimension requirements
 i4 = area >= 20 & w > 3 & h > 3;  

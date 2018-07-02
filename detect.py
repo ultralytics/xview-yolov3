@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-image_folder', type=str, default='data/train_images3/', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/e185_60c_bestgcp_608.pt',
+parser.add_argument('-weights_path', type=str, default='checkpoints/60c_linearCE__best_608.pt',
                     help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
