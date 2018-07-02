@@ -98,7 +98,7 @@ def main(opt):
                 if nGT == 0:
                     continue
 
-                loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=False)
+                loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
