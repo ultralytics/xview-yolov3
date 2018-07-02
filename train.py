@@ -62,12 +62,12 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.001, weight_decay=0.0005)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
-        resume_checkpoint = 'checkpoints/e231_60c_bestgcp_608.pt'
+        resume_checkpoint = 'checkpoints/60c_linearCE_best_608.pt'
         # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
         state = model.state_dict()
         state.update(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))

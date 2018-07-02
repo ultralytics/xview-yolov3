@@ -227,7 +227,7 @@ def to_categorical(y, num_classes):
     return torch.from_numpy(np.eye(num_classes, dtype='uint8')[y])
 
 
-@profile
+#@profile
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     prediction = prediction.cpu()
     mat = scipy.io.loadmat('utils/targets_60c.mat')

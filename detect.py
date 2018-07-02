@@ -29,7 +29,7 @@ opt = parser.parse_args()
 print(opt)
 
 
-@profile
+# @profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.system('rm -rf data/xview_predictions_img')

@@ -183,13 +183,14 @@ class YOLOLayer(nn.Module):
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nGT = FloatTensor([sum([len(x) for x in targets])])
             if nGT > 0:
-                wA = mask.sum().float() / nGT * nGT  # weight anchor-grid
+                wA = mask.sum().float() / nGT  # weight anchor-grid
                 loss_x = 5 * self.MSELoss(x[mask], tx[mask]) * wA
                 loss_y = 5 * self.MSELoss(y[mask], ty[mask]) * wA
                 loss_w = 5 * self.MSELoss(w[mask], tw[mask]) * wA
                 loss_h = 5 * self.MSELoss(h[mask], th[mask]) * wA
                 loss_conf = self.BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wA
-                loss_cls = self.CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
+                loss_cls = self.CrossEntropyLoss(torch.tanh(pred_cls[mask]/30)*30, torch.argmax(tcls, 1)) * wA
+                #print(round(pred_cls[mask].min().item()), round(pred_cls[mask].max().item()))
             else:
                 loss_x, loss_y, loss_w, loss_h = FloatTensor([0]), FloatTensor([0]), FloatTensor([0]), FloatTensor([0])
                 loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
