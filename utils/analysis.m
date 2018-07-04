@@ -41,7 +41,7 @@ a=class_stats(:,[7 9]);
 vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 60);
+C = fcn_kmeans([w h], 30);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
