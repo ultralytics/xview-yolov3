@@ -129,8 +129,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     inter_rect_x2 = torch.min(b1_x2, b2_x2)
     inter_rect_y2 = torch.min(b1_y2, b2_y2)
     # Intersection area
-    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1, 0) * \
-                 torch.clamp(inter_rect_y2 - inter_rect_y1, 0)
+    inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1, 0) * torch.clamp(inter_rect_y2 - inter_rect_y1, 0)
     # Union Area
     b1_area = (b1_x2 - b1_x1) * (b1_y2 - b1_y1)
     b2_area = (b2_x2 - b2_x1) * (b2_y2 - b2_y1)
@@ -151,7 +150,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     th = torch.zeros(nB, nA, nG, nG)
     tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
     good_anchors = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    tcls = torch.ByteTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
+    tcls = torch.ByteTensor(nB, nA, nG, nG, nC * 0 + 60).fill_(0)  # nC = number of classes
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FN = torch.ByteTensor(nB, max(nT)).fill_(0)
@@ -161,6 +160,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         if nTb == 0:
             continue
         t = target[b]  # target[b, :nTb]
+        FN[b, :nTb] = 1
 
         # Convert to position relative to box
         gx, gy, gw, gh = t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
@@ -186,8 +186,16 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             _, first_unique = np.unique(u[iou_order], return_index=True)  # first unique indices
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
+            # best anchor must share significant commonality (iou) with target
+            i = i[iou_anch_best[i] > 0.1]
+
+            if len(i) == 0:
+                continue
+
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
+            if iou_anch_best < 0.1:
+                continue
             i = 0
 
         tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
@@ -196,8 +204,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 5
-        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 5
+        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
+        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
@@ -206,18 +214,15 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         if requestPrecision:
             # predicted classes and confidence
             tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
-            pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
+            # pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
+            pcls = tc
             pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
-            TP[b, i] = ((pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc))
-            FP[b, i] = ((pconf > 0.99) & ((iou_pred < 0.5) | (pcls != tc)))  # coordinates or class are wrong
-            FN[b, :nTb] = 1
-            FN[b, i] = (pconf < 0.99)  # confidence score is too low (set to zero)
+            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
+            FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
+            FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
-            # if TP[b,i].sum()>0:
-            #    print(tc[TP[b,i] > 0])
-    # print((pred_conf>0.99).sum().float() / torch.numel(pred_conf))
     ap = 0
     return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, ap, good_anchors == 1
 
@@ -227,7 +232,7 @@ def to_categorical(y, num_classes):
     return torch.from_numpy(np.eye(num_classes, dtype='uint8')[y])
 
 
-#@profile
+# @profile
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     prediction = prediction.cpu()
     mat = scipy.io.loadmat('utils/targets_60c.mat')
@@ -251,9 +256,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         a = w * h  # area
 
         v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0.5)).numpy()
-        v *= (w >= mat['class_limits'][class_pred, 0]) & (w <= mat['class_limits'][class_pred, 1])
-        v *= (h >= mat['class_limits'][class_pred, 2]) & (h <= mat['class_limits'][class_pred, 3])
-        v *= (a >= mat['class_limits'][class_pred, 4]) & (a <= mat['class_limits'][class_pred, 5])
+        v *= (w >= mat['class_stats'][class_pred, 0]) & (w <= mat['class_stats'][class_pred, 1])
+        v *= (h >= mat['class_stats'][class_pred, 2]) & (h <= mat['class_stats'][class_pred, 3])
+        v *= (a >= mat['class_stats'][class_pred, 4]) & (a <= mat['class_stats'][class_pred, 5])
         v = np.nonzero(v)
 
         image_pred = image_pred[v]
@@ -303,7 +308,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.2
+        thresh = 0.3
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 5])]  # sort best to worst

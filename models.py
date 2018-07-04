@@ -2,11 +2,9 @@ from collections import defaultdict
 
 import torch.nn as nn
 
-from utils.parse_config import *
 from utils.utils import *
 
 
-# @profile
 def create_modules(module_defs):
     """
     Constructs module list of layer blocks from module configuration in module_defs
@@ -88,14 +86,6 @@ class YOLOLayer(nn.Module):
         self.nC = nC  # number of classes (60)
         self.bbox_attrs = 5 + nC
         self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
-        self.ignore_thres = 0.5
-        self.lambda_coord = 5
-        self.lambda_noobj = 0.5
-
-        self.weight = xview_class_weights(range(nC))
-        self.BCEWithLogitsLoss = nn.BCEWithLogitsLoss()
-        self.MSELoss = nn.MSELoss()
-        self.CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.weight)
 
         if anchor_idxs[0] == (nA * 2):  # 6
             stride = 32
@@ -115,100 +105,89 @@ class YOLOLayer(nn.Module):
         anchor_h = self.scaled_anchors.index_select(1, torch.LongTensor([1]))
         self.anchor_w = anchor_w.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_h = anchor_h.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze()
-        self.nGtotal = (self.img_dim / 32) ** 2 + (self.img_dim / 16) ** 2 + (self.img_dim / 8) ** 2
+        self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
         self.Sigmoid = torch.nn.Sigmoid()
+        self.Tanh = torch.nn.Tanh()
 
     # @profile
-    def forward(self, x, targets=None, requestPrecision=False):
-        FloatTensor = torch.cuda.FloatTensor if x.is_cuda else torch.FloatTensor
-        bs = x.shape[0]
-        nG = x.shape[2]
+    def forward(self, p, targets=None, requestPrecision=False):
+        FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
+        bs = p.shape[0]
+        nG = p.shape[2]
         stride = self.img_dim / nG
 
-        if x.is_cuda and not self.grid_x.is_cuda:
+        weight = xview_class_weights(range(60)).cuda()
+        BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
+        MSELoss = nn.MSELoss(reduce=False)
+        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+
+        if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x = self.grid_x.cuda()
             self.grid_y = self.grid_y.cuda()
             self.anchor_w = self.anchor_w.cuda()
             self.anchor_h = self.anchor_h.cuda()
-            self.BCEWithLogitsLoss = self.BCEWithLogitsLoss.cuda()
-            self.MSELoss = self.MSELoss.cuda()
-            self.weight = self.weight.cuda()
-            self.CrossEntropyLoss = self.CrossEntropyLoss.cuda()
-            self.CrossEntropyLoss.weight = self.weight
 
         # x.view(8, 650, 17, 17) -- > (8, 10, 17, 17, 64)  # (bs, anchors, grid, grid, classes + xywh)
-        prediction = x.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()
+        p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
 
         # Get outputs
-        x = self.Sigmoid(prediction[..., 0])  # Center x
-        y = self.Sigmoid(prediction[..., 1])  # Center y
-        w = self.Sigmoid(prediction[..., 2])  # Width
-        h = self.Sigmoid(prediction[..., 3])  # Height
+        x = self.Sigmoid(p[..., 0])  # Center x
+        y = self.Sigmoid(p[..., 1])  # Center y
+        w = self.Tanh(p[..., 2] / 2) / 2 + 0.5  # Width
+        h = self.Tanh(p[..., 3] / 2) / 2 + 0.5  # Height
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
-        pred_boxes = FloatTensor(prediction[..., :4].shape)
-        pred_conf = prediction[..., 4]  # Conf
-        pred_cls = prediction[..., 5:]  # Class
+        pred_boxes = FT(p[..., :4].shape)
+        pred_conf = p[..., 4]  # Conf
+        pred_cls = p[..., 5:]  # Class
 
         # Training
         if targets is not None:
             if requestPrecision:
-                pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 5 / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 5 / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 5 / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 5 / 2
+                pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 2 / 2
+                pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 2 / 2
+                pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 2 / 2
+                pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 2 / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = build_targets(pred_boxes,
-                                                                                     pred_conf,
-                                                                                     pred_cls,
-                                                                                     targets,
-                                                                                     self.scaled_anchors,
-                                                                                     self.nA,
-                                                                                     self.nC,
-                                                                                     nG,
-                                                                                     self.anchor_wh,
-                                                                                     requestPrecision)
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = \
+                build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
+                              self.anchor_wh, requestPrecision)
 
             tcls = tcls[mask]
             if x.is_cuda:
-                mask = mask.cuda()
-                tx = tx.cuda()
-                ty = ty.cuda()
-                tw = tw.cuda()
-                th = th.cuda()
-                tcls = tcls.cuda()
+                tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
                 good_anchors = good_anchors.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nGT = FloatTensor([sum([len(x) for x in targets])])
-            if nGT > 0:
-                wA = mask.sum().float() / nGT  # weight anchor-grid
-                loss_x = 5 * self.MSELoss(x[mask], tx[mask]) * wA
-                loss_y = 5 * self.MSELoss(y[mask], ty[mask]) * wA
-                loss_w = 5 * self.MSELoss(w[mask], tw[mask]) * wA
-                loss_h = 5 * self.MSELoss(h[mask], th[mask]) * wA
-                loss_conf = self.BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wA
-                loss_cls = self.CrossEntropyLoss(torch.tanh(pred_cls[mask]/30)*30, torch.argmax(tcls, 1)) * wA
-                #print(round(pred_cls[mask].min().item()), round(pred_cls[mask].max().item()))
+            nM = mask.sum().float()
+            nGT = FT([sum([len(x) for x in targets])])
+            if nM > 0:
+                wA = nM / nGT  # weight anchor-grid
+                wC = weight[torch.argmax(tcls, 1)]  # weight class
+                wC /= sum(wC)
+                lx = 5 * wA * (MSELoss(x[mask], tx[mask]) * wC).mean()
+                ly = 5 * wA * (MSELoss(y[mask], ty[mask]) * wC).mean()
+                lw = 5 * wA * (MSELoss(w[mask], tw[mask]) * wC).mean()
+                lh = 5 * wA * (MSELoss(h[mask], th[mask]) * wC).mean()
+                lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).mean()
+                # lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
+                lcls = FT([0])
             else:
-                loss_x, loss_y, loss_w, loss_h = FloatTensor([0]), FloatTensor([0]), FloatTensor([0]), FloatTensor([0])
-                loss_cls, loss_conf = FloatTensor([0]), FloatTensor([0])
-                wA = FloatTensor([1])
+                lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
+                wA = FT([1])
 
-            loss_conf += 0.5 * self.BCEWithLogitsLoss(pred_conf[~good_anchors],
-                                                      good_anchors[~good_anchors].float()) * wA
-            loss = (loss_x + loss_y + loss_w + loss_h + loss_conf + loss_cls)
-            return loss, loss.item(), loss_x.item(), loss_y.item(), loss_w.item(), loss_h.item(), loss_conf.item(), loss_cls.item(), \
+            lconf += 0.5 * wA * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
+            loss = lx + ly + lw + lh + lconf + lcls
+            return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    ap, nGT, TP, FP, FN, 0, 0
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
             pred_boxes[..., 1] = y.data + self.grid_y
-            pred_boxes[..., 2] = w.data * self.anchor_w * 5
-            pred_boxes[..., 3] = h.data * self.anchor_h * 5
-            # If not in training phase return predictions
+            pred_boxes[..., 2] = w.data * self.anchor_w * 2
+            pred_boxes[..., 3] = h.data * self.anchor_h * 2
 
+            # If not in training phase return predictions
             output = torch.cat(
                 (pred_boxes.view(bs, -1, 4) * stride, pred_conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.nC)), -1)
             return output.data
@@ -226,7 +205,6 @@ class Darknet(nn.Module):
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN', 'precision',
                            'recall']
 
-    # @profile
     def forward(self, x, targets=None, requestPrecision=False):
         is_training = targets is not None
         output = []
@@ -265,3 +243,24 @@ class Darknet(nn.Module):
             self.losses['nGT'] /= 3
 
         return sum(output) if is_training else torch.cat(output, 1)
+
+
+def parse_model_config(path):
+    """Parses the yolo-v3 layer configuration file and returns module definitions"""
+    file = open(path, 'r')
+    lines = file.read().split('\n')
+    lines = [x for x in lines if x and not x.startswith('#')]
+    lines = [x.rstrip().lstrip() for x in lines]  # get rid of fringe whitespaces
+    module_defs = []
+    for line in lines:
+        if line.startswith('['):  # This marks the start of a new block
+            module_defs.append({})
+            module_defs[-1]['type'] = line[1:-1].rstrip()
+            if module_defs[-1]['type'] == 'convolutional':
+                module_defs[-1]['batch_normalize'] = 0
+        else:
+            key, value = line.split("=")
+            value = value.strip()
+            module_defs[-1][key.rstrip()] = value.strip()
+
+    return module_defs

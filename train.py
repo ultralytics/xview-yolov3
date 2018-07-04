@@ -18,12 +18,10 @@ parser.add_argument('-epochs', type=int, default=9999, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a.cfg', help='cfg file path')
-# parser.add_argument('-weights_path', type=str, default='checkpoints/e202_60c_bestgcp_608.pt', help='weights')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_58c_30a.cfg', help='cfg file path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
-parser.add_argument('-n_cpu', type=int, default=0, help='number of cpu threads to use during batch generation')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
@@ -45,39 +43,44 @@ def main(opt):
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
 
-    # Get data configuration
+        # Get data configuration
     if platform == 'darwin':  # macos
-        torch.backends.cudnn.benchmark = True
-        run_name = '60c_linearCE'
+        # torch.backends.cudnn.benchmark = True
+        run_name = '58c_rpn30a'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
         run_name = '60c_gcp'
         train_path = '../'
 
-    # Initiate model
+        # Initiate model
     model = Darknet(opt.config_path, opt.img_size).to(device).train()
 
     # Get dataloader
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
-    # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=.001, weight_decay=0.0005)
-
     # reload saved optimizer state
     resume_training = True
     if resume_training:
-        resume_checkpoint = 'checkpoints/60c_linearCE_best_608.pt'
-        # model.load_state_dict(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
         state = model.state_dict()
-        state.update(torch.load(resume_checkpoint, map_location='cuda:0' if cuda else 'cpu'))
+        pretrained_dict = torch.load('checkpoints/e136_58c_bestgcp_608.pt', map_location='cuda:0' if cuda else 'cpu')
+        # 1. filter out unnecessary keys
+        pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
+        # 2. overwrite entries in the existing state dict
+        state.update(pretrained_dict)
+        # 3. load the new state dict
         model.load_state_dict(state)
 
-    # optimizer.load_state_dict(torch.load('optim.pth'))
-    # optimizer.state = defaultdict(dict, optimizer.state)
-    # else:
-    # model.apply(weights_init_normal)  # initialize with random weights
-    # torch.save(model.state_dict(), 'weights/init.pt')
+        # # Transfer learning!
+        # for i, (name, p) in enumerate(model.named_parameters()):
+        #     #name = name.replace('module_list.', '')
+        #     #print('%4g %70s %9s %12g %20s %12g %12g' % (
+        #     #    i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
+        #     if p.shape[0] != 50:  # not YOLO layer
+        #         p.requires_grad = False
+
+    # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.001)
 
     # modelinfo(model)
     t0 = time.time()
@@ -123,7 +126,7 @@ def main(opt):
         with open('printedResults.txt', 'a') as file:
             file.write(s + '\n')
 
-        if (epoch > opt.checkpoint_interval) & (rloss['loss'] < best_loss):
+        if (epoch >= opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             best_loss = rloss['loss']
             opt.weights_path = '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size)  # best weight path
             torch.save(model.state_dict(), opt.weights_path)

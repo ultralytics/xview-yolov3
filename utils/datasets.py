@@ -195,7 +195,7 @@ class ListDataset_xview_crop():  # for training
         assert self.nB > 0, 'No images found in path %s' % p
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets_60c.mat')
+        self.mat = scipy.io.loadmat('utils/targets_58c.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
         self.small_folder = p + '_' + str(img_size) + '/'
@@ -235,8 +235,6 @@ class ListDataset_xview_crop():  # for training
 
             img0 = cv2.imread(img_path)
             h, w, _ = img0.shape
-            # scipy.io.savemat('testImage.mat',{'img': img0.astype(np.float32)})
-            # %timeit scipy.io.loadmat('testImage.mat')
             for j in range(16):
                 padx = int(random.random() * (w - self.height))
                 pady = int(random.random() * (h - self.height))
@@ -258,7 +256,7 @@ class ListDataset_xview_crop():  # for training
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.05, .05),
+                img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.02, .02),
                                             scale=(.9, 1.1))
                 # plt.subplot(2, 2, 2).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')

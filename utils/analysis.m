@@ -35,7 +35,7 @@ w = coords(:,3) - coords(:,1);
 h = coords(:,4) - coords(:,2);
 
 % to reject bad box predictions
-class_limits = class_bbox_limits(classes,w,h);
+class_stats = per_class_stats(classes,w,h);
 
 % K-means normalized with and height for 9 points
 C = fcn_kmeans([w h], 30);
@@ -61,19 +61,23 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_60c.mat','wh','targets','id','class_limits')
+save('targets_60c.mat','wh','targets','id','class_stats')
 
 
-function limits=class_bbox_limits(classes,w,h)
+function stats = per_class_stats(classes,w,h)
 % measure the min and max bbox sizes for rejecting bad predictions
 area = h.*w;
 uc=unique(classes(:)); 
 n = numel(uc);
 limits = zeros(n,6); % minmax: [width, height, area]
+wh = zeros(n,4); % [w_mu w_std, h_mu h_std]
 for i = 1:n
     j = find(classes==uc(i));
-    limits(i,:) = [minmax3(w(j)), minmax3(h(j)), minmax3(area(j))];
+    wj = w(j);  hj = h(j);
+    limits(i,:) = [minmax3(wj), minmax3(hj), minmax3(area(j))];
+    wh(i,:) = [mean(wj), std(wj), mean(hj), std(hj)];
 end
+stats = [limits, wh];
 end
 
 
@@ -107,13 +111,16 @@ i0 = ~any(isnan(coords) | isinf(coords), 2);
 uc=unique(classes(:));
 for i = 1:numel(uc)
     j = find(classes==uc(i));
+    
+    %close all
+    %fig; hist211(w(j),h(j),30); title(corr(w(j),h(j)))
     [~,v] = fcnsigmarejection(area(j),6,3);  i1(j) = i1(j) & v;
-    [~,v] = fcnsigmarejection(w(j),6,3);  i2(j) = i2(j) & v;
-    [~,v] = fcnsigmarejection(h(j),6,3);  i3(j) = i3(j) & v;
+    [~,v] = fcnsigmarejection(w(j),6,3);     i2(j) = i2(j) & v;
+    [~,v] = fcnsigmarejection(h(j),6,3);     i3(j) = i3(j) & v;
 end
 
 % manual dimension requirements
-i4 = area >= 20 & w > 3 & h > 3;  
+i4 = area >= 20 & w > 4 & h > 4;  
 
 % extreme edges (i.e. don't start an x1 10 pixels from the right side)
 i5 = x1 < (image_w-10) & y1 < (image_h-10) & x2 > 10 & y2 > 10;  % border = 5
@@ -129,7 +136,7 @@ i7 = ~any(isnan(hw) | isinf(hw) | hw < 32, 2);
 i8 = ~any(classes(:) == [75, 82],2);
 
 % remove 18 and 73 (small cars and buildings) as an experiment
-% i9 = ~any(classes(:) == [18, 73],2);
+i9 = ~any(classes(:) == [18, 73],2);
 
 valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
