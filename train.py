@@ -51,7 +51,7 @@ def main(opt):
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = '58c_rpn30a'
+        run_name = 'e71cont_60c'
         train_path = '../'
 
         # Initiate model

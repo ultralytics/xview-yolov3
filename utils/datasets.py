@@ -124,7 +124,9 @@ class ListDataset_xview_crop():  # for training
                 #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                #img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0, 0),scale = (.9, 1.1))
+                if random.random() > 0.9:
+                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0, 0),
+                                                scale = (.9, 1.1))
                 # plt.subplot(2, 2, 2).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
@@ -136,13 +138,13 @@ class ListDataset_xview_crop():  # for training
                     labels[:, 0] = xview_classes2indices(labels[:, 0])
 
                 # random lr flip
-                if random.random() > 0:
+                if random.random() > 0.5:
                     img = np.fliplr(img)
                     if nL > 0:
                         labels[:, 1] = 1 - labels[:, 1]
 
                 # random ud flip
-                if random.random() > 0:
+                if random.random() > 0.5:
                     img = np.flipud(img)
                     if nL > 0:
                         labels[:, 2] = 1 - labels[:, 2]
