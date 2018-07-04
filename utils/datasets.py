@@ -97,7 +97,7 @@ class ListDataset_xview_crop():  # for training
 
             # load labels
             chip = img_path.rsplit('/')[-1]
-            i = np.nonzero(self.mat['id'] == float(chip.replace('.bmp', '')))[0]
+            i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels0 = self.mat['targets'][i]
             nL0 = len(labels0)
 

@@ -36,6 +36,8 @@ h = coords(:,4) - coords(:,2);
 
 % to reject bad box predictions
 class_stats = per_class_stats(classes,w,h);
+[~,~,~,n] = fcnunique(classes(:));
+
 a=class_stats(:,[7 9]); 
 [~,i]=sort(prod(a,2));  a=a(i,:);
 vpa(a(:)',4)
