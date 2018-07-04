@@ -24,3 +24,6 @@ wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz
 tar -xvzf train_images.tgz
 sudo rm -rf train_images/._*
 # lastly convert each .tif to a .bmp for faster loading in cv2
+
+from utils import datasets
+datasets.convert_tif2bmp('../train_images')
