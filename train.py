@@ -50,7 +50,7 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = '60c_gcp'
+        run_name = '58c_rpn30a'
         train_path = '../'
 
         # Initiate model
