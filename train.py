@@ -23,7 +23,7 @@ parser.add_argument('-class_path', type=str, default='data/xview.names', help='p
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=100, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
