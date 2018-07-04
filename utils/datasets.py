@@ -54,151 +54,19 @@ class ImageFolder():  # for eval-only
         return self.nB  # number of batches
 
 
-class ListDataset_xview_fast():  # for training
-    def __init__(self, folder_path, batch_size=1, img_size=416):
-        p = folder_path + 'train_images'
-        self.files = sorted(glob.glob('%s/*.bmp' % p))
-        self.nF = len(self.files)  # number of image files
-        self.nB = math.ceil(self.nF / batch_size)  # number of batches
-        self.batch_size = batch_size
-        assert self.nB > 0, 'No images found in path %s' % p
-        self.height = img_size
-        # load targets
-        self.mat = scipy.io.loadmat('utils/targets_58c.mat')
-        self.mat['id'] = self.mat['id'].squeeze()
-        # make folder for reduced size images
-        self.small_folder = p + '_' + str(img_size) + '/'
-        os.makedirs(self.small_folder, exist_ok=True)
-
-        # RGB normalization values
-        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
-
-    def __iter__(self):
-        self.count = -1
-        self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
-        return self
-
-    # @profile
-    def __next__(self):
-        self.count += 1
-        if self.count == self.nB:
-            raise StopIteration
-
-        ia = self.count * self.batch_size
-        ib = min((self.count + 1) * self.batch_size, self.nF)
-        indices = list(range(ia, ib))
-
-        img_all = []  # np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
-        labels_all = []
-        for index, files_index in enumerate(indices):
-            img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-
-            # load labels
-            chip = img_path.rsplit('/')[-1]
-            i = np.nonzero(self.mat['id'] == float(chip.replace('.bmp', '')))[0]
-            labels = self.mat['targets'][i]
-            nL = len(labels)
-
-            # img = cv2.imread(img_path)
-            # h, w, _ = img.shape
-
-            # small_path = self.small_folder + str(chip)
-            # if not os.path.isfile(small_path):
-            #     img = cv2.imread(img_path)
-            #     h, w, _ = img.shape
-            #     img = resize_square(img, height=self.height)
-            #     cv2.imwrite(small_path, img)
-            # else:
-            #     img = cv2.imread(small_path)
-            #
-            # if nL > 0:
-            #     # Add padding
-            #     w, h = self.mat['wh'][i[0]]
-            #     ratio = float(self.height) / max(h, w)
-            #     pad, padx, pady = (max(h, w) - min(h, w)) / 2, 0, 0
-            #     if h > w:
-            #         padx = pad
-            #     elif h < w:
-            #         pady = pad
-            #
-            #     labels[:, [1, 3]] += padx
-            #     labels[:, [2, 4]] += pady
-            #     labels[:, 1:5] *= ratio
-
-            crop_flag = True
-            if crop_flag:
-                img = cv2.imread(img_path)
-                h, w, _ = img.shape
-
-                padx = int(random.random() * (w - self.height))
-                pady = int(random.random() * (h - self.height))
-                img = img[pady:pady + self.height, padx:padx + self.height]
-
-                if nL > 0:
-                    labels[:, [1, 3]] -= padx
-                    labels[:, [2, 4]] -= pady
-                    labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
-                    # objects must have width and height > 3 pixels
-                    labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
-
-            # plot
-            # import matplotlib.pyplot as plt
-            # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
-            # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
-
-            # random affine
-            # img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1))
-
-            nL = len(labels)
-            if nL > 0:
-                # convert labels to xywh
-                labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
-                # remap xview classes 11-94 to 0-61
-                labels[:, 0] = xview_classes2indices(labels[:, 0])
-
-            # random lr flip
-            if random.random() > 0:
-                img = np.fliplr(img)
-                if nL > 0:
-                    labels[:, 1] = 1 - labels[:, 1]
-
-            # random ud flip
-            if random.random() > 0:
-                img = np.flipud(img)
-                if nL > 0:
-                    labels[:, 2] = 1 - labels[:, 2]
-
-            # img_all.append(torch.from_numpy(img))
-            img_all.append(img)
-            labels_all.append(torch.from_numpy(labels))
-
-        # Normalize
-        img_all = np.stack(img_all)
-        img_all = np.ascontiguousarray(img_all)
-        img_all = img_all[:, :, :, ::-1].transpose(0, 3, 1, 2).astype(np.float32) / 255.0  # BGR to RGB
-        # img_all -= self.rgb_mean
-        # img_all /= self.rgb_std
-        return torch.from_numpy(img_all), labels_all
-
-    def __len__(self):
-        return self.nB  # number of batches
-
-
 class ListDataset_xview_crop():  # for training
-    def __init__(self, folder_path, batch_size=1, img_size=416):
-        p = folder_path + 'train_images'
-        self.files = sorted(glob.glob('%s/*.bmp' % p))
+    def __init__(self, path, batch_size=1, img_size=416):
+        self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
-        assert self.nB > 0, 'No images found in path %s' % p
+        assert self.nB > 0, 'No images found in path %s' % path
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets_58c.mat')
+        self.mat = scipy.io.loadmat('utils/targets_60c.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
-        self.small_folder = p + '_' + str(img_size) + '/'
+        self.small_folder = path + '_' + str(img_size) + '/'
         os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
@@ -245,19 +113,18 @@ class ListDataset_xview_crop():  # for training
                     labels[:, [1, 3]] -= padx
                     labels[:, [2, 4]] -= pady
                     labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
-                    # objects must have width and height > 3 pixels
+                    # objects must have width and height > 4 pixels
                     labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
                 else:
                     labels = np.array([], dtype=np.float32)
 
                 # plot
-                # import matplotlib.pyplot as plt
-                # plt.subplot(2, 2, 1).imshow(img[:, :, ::-1])
-                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                #import matplotlib.pyplot as plt
+                #plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
+                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(.02, .02),
-                                            scale=(.9, 1.1))
+                #img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0, 0),scale = (.9, 1.1))
                 # plt.subplot(2, 2, 2).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
@@ -373,7 +240,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         return imw
 
 
-def convert_tif2bmp(p='/Users/glennjocher/Downloads/DATA/xview/train_images'):
+def convert_tif2bmp(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images3'):
     import glob
     import cv2
     import os

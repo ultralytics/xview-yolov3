@@ -36,6 +36,9 @@ h = coords(:,4) - coords(:,2);
 
 % to reject bad box predictions
 class_stats = per_class_stats(classes,w,h);
+a=class_stats(:,[7 9]); 
+[~,i]=sort(prod(a,2));  a=a(i,:);
+vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
 C = fcn_kmeans([w h], 60);
@@ -112,8 +115,9 @@ uc=unique(classes(:));
 for i = 1:numel(uc)
     j = find(classes==uc(i));
     
-    %close all
-    %fig; hist211(w(j),h(j),30); title(corr(w(j),h(j)))
+    %close all; fig; hist211(w(j),h(j),30); title(corr(w(j),h(j)))
+    %[~,C] = kmeans([w(j) h(j)],3,'MaxIter',400,'OnlinePhase','on');
+    %plot(C(:,1),C(:,2),'g.','MarkerSize',50)
     [~,v] = fcnsigmarejection(area(j),6,3);  i1(j) = i1(j) & v;
     [~,v] = fcnsigmarejection(w(j),6,3);     i2(j) = i2(j) & v;
     [~,v] = fcnsigmarejection(h(j),6,3);     i3(j) = i3(j) & v;

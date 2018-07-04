@@ -20,7 +20,7 @@ python3 train.py -epochs 9999
 
 
 # get xview training data
-wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1530124049&Signature=JrQoxipmsETvb7eQHCfDFUO-QEHJGAayUv0i-ParmS-1hn7hl9D~bzGuHWG82imEbZSLUARTtm0wOJ7EmYMGmG5PtLKz9H5qi6DjoSUuFc13NQ-~6yUhE~NfPaTnehUdUMCa3On2wl1h1ZtRG~0Jq1P-AJbpe~oQxbyBrs1KccaMa7FK4F4oMM6sMnNgoXx8-3O77kYw~uOpTMFmTaQdHln6EztW0Lx17i57kK3ogbSUpXgaUTqjHCRA1dWIl7PY1ngQnLslkLhZqmKcaL-BvWf0ZGjHxCDQBpnUjIlvMu5NasegkwD9Jjc0ClgTxsttSkmbapVqaVC8peR0pO619Q__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
+wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1530739498&Signature=ZbsIv1dxUTUceGBI-lGv7EeA~oHrBJnlLxwsds38FA1MBKdkrfMJnpntRYFLDqS04~27ps55NzGczHsLMd1xCMCvx4JYnqM0~xuONbZaqYzabTnqWc0RdJ4SNVxWVDgq8YFF4kq5yfpGA0oxFd8JtAZD9FG12eq-uGqFXYHc1JjVAT8OE9-usj5CkhMbobUsQBfeCCKaLitJoCAuAIuxbsgGr6YWQ~mPyyIk2-uWXOJSXJyKhlrjSKwXRhZL2TYZ2N~WG5IB1DpusIh4gg0IqntkszrcmT8VCmc7RfsNZMxBSFerHWpETsijq4LrWwRfA4kSwvr9D4W7TNljPcZ8wA__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
 tar -xvzf train_images.tgz
 sudo rm -rf train_images/._*
 # lastly convert each .tif to a .bmp for faster loading in cv2

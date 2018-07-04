@@ -154,6 +154,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FN = torch.ByteTensor(nB, max(nT)).fill_(0)
+    TC = torch.ByteTensor(nB, max(nT)).fill_(0)  # target category
 
     for b in range(nB):
         nTb = nT[b]  # number of targets (measures index of first zero-height target box)
@@ -163,7 +164,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         FN[b, :nTb] = 1
 
         # Convert to position relative to box
-        gx, gy, gw, gh = t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
+        TC[b, :nTb], gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
         # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
         gi = torch.clamp(gx.long(), min=0, max=nG - 1)
         gj = torch.clamp(gy.long(), min=0, max=nG - 1)
@@ -187,14 +188,13 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.1]
-
+            i = i[iou_anch_best[i] > 0.2]
             if len(i) == 0:
                 continue
 
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
-            if iou_anch_best < 0.1:
+            if iou_anch_best < 0.2:
                 continue
             i = 0
 
@@ -214,8 +214,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         if requestPrecision:
             # predicted classes and confidence
             tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
-            # pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
-            pcls = tc
+            pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
+            # pcls = tc
             pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
@@ -224,7 +224,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
     ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, ap, good_anchors == 1
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap, good_anchors == 1
 
 
 def to_categorical(y, num_classes):
@@ -254,11 +254,13 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         w = (image_pred[:, 2] / 2).numpy()
         h = (image_pred[:, 3] / 2).numpy()
         a = w * h  # area
+        ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))  # aspect ratio
 
-        v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0.5)).numpy()
-        v *= (w >= mat['class_stats'][class_pred, 0]) & (w <= mat['class_stats'][class_pred, 1])
-        v *= (h >= mat['class_stats'][class_pred, 2]) & (h <= mat['class_stats'][class_pred, 3])
-        v *= (a >= mat['class_stats'][class_pred, 4]) & (a <= mat['class_stats'][class_pred, 5])
+        v = ((image_pred[:, 4] > conf_thres) & (class_conf >= 0)).numpy()
+        v *= (ar < 15) & (a > 10) & (w > 3) & (h > 3)
+        # v *= (w >= mat['class_stats'][class_pred, 0]) & (w <= mat['class_stats'][class_pred, 1])
+        # v *= (h >= mat['class_stats'][class_pred, 2]) & (h <= mat['class_stats'][class_pred, 3])
+        # v *= (a >= mat['class_stats'][class_pred, 4]) & (a <= mat['class_stats'][class_pred, 5])
         v = np.nonzero(v)
 
         image_pred = image_pred[v]
@@ -308,7 +310,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.3
+        thresh = 0.2
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 5])]  # sort best to worst
@@ -331,8 +333,6 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                     a = a[mask]
                     xywh = xywh[mask]
 
-        # if prediction.is_cuda:
-        #    a = a.cuda()
         output[image_i] = a
 
     return output

@@ -14,16 +14,16 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=9999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=30, help='number of epochs')
 parser.add_argument('-image_folder', type=str, default='data/train_images8', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_60a.cfg', help='cfg file path')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a_e231.cfg', help='cfg file path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
+parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=100, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
@@ -45,9 +45,10 @@ def main(opt):
 
         # Get data configuration
     if platform == 'darwin':  # macos
-        # torch.backends.cudnn.benchmark = True
-        run_name = '58c_rpn30a'
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/'
+        #torch.backends.cudnn.benchmark = True
+        run_name = 'test'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
+        #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
         torch.backends.cudnn.benchmark = True
         run_name = '58c_rpn30a'
@@ -63,7 +64,7 @@ def main(opt):
     resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/e136_58c_bestgcp_608.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/e71_60c_gcp_best_608.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -130,6 +131,7 @@ def main(opt):
             best_loss = rloss['loss']
             opt.weights_path = '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size)  # best weight path
             torch.save(model.state_dict(), opt.weights_path)
+            # torch.save(model, 'filename.pt')
 
     # save final model
     dt = time.time() - t0

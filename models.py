@@ -173,11 +173,11 @@ class YOLOLayernew(nn.Module):
                 wA = nM / nGT  # weight anchor-grid
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 5 * wA * (MSELoss(x[mask], tx[mask]) * wC).mean()
-                ly = 5 * wA * (MSELoss(y[mask], ty[mask]) * wC).mean()
-                lw = 5 * wA * (MSELoss(w[mask], tw[mask]) * wC).mean()
-                lh = 5 * wA * (MSELoss(h[mask], th[mask]) * wC).mean()
-                lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).mean()
+                lx = 5 * wA * (MSELoss(x[mask], tx[mask]) * 1).mean()
+                ly = 5 * wA * (MSELoss(y[mask], ty[mask]) * 1).mean()
+                lw = 5 * wA * (MSELoss(w[mask], tw[mask]) * 1).mean()
+                lh = 5 * wA * (MSELoss(h[mask], th[mask]) * 1).mean()
+                lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * 1).mean()
                 # lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
                 lcls = FT([0])
             else:
@@ -243,9 +243,9 @@ class YOLOLayer(nn.Module):
         stride = self.img_dim / nG
 
         weight = xview_class_weights(range(60)).cuda()
-        BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
-        MSELoss = nn.MSELoss(reduce=False)
-        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+        BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=True)
+        MSELoss = nn.MSELoss(reduce=True)
+        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x = self.grid_x.cuda()
@@ -275,7 +275,7 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 2 / 2
                 pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 2 / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, ap, good_anchors = \
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
                               self.anchor_wh, requestPrecision)
 
@@ -289,29 +289,35 @@ class YOLOLayer(nn.Module):
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
                 wA = nM / nGT  # weight anchor-grid
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
-                lx = 5 * wA * (MSELoss(x[mask], tx[mask]) * wC).mean()
-                ly = 5 * wA * (MSELoss(y[mask], ty[mask]) * wC).mean()
-                lw = 5 * wA * (MSELoss(w[mask], tw[mask]) * wC).mean()
-                lh = 5 * wA * (MSELoss(h[mask], th[mask]) * wC).mean()
-                lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).mean()
-                # lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
-                lcls = FT([0])
+                #wC = weight[torch.argmax(tcls, 1)]  # weight class
+                #wC /= sum(wC)
+                lx = 5 * wA * MSELoss(x[mask], tx[mask])
+                ly = 5 * wA * MSELoss(y[mask], ty[mask])
+                lw = 5 * wA * MSELoss(w[mask], tw[mask])
+                lh = 5 * wA * MSELoss(h[mask], th[mask])
+                lconf = wA * BCEWithLogitsLoss(pred_conf[mask], mask[mask].float())
+                lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
+                # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
                 wA = FT([1])
 
-            lconf += 0.5 * wA * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
+            lconf += 1 * wA * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float())
+
+
             loss = lx + ly + lw + lh + lconf + lcls
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   ap, nGT, TP, FP, FN, 0, 0
+                   ap, nGT, TP, FP, FN, TC, 0, 0
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
             pred_boxes[..., 1] = y.data + self.grid_y
             pred_boxes[..., 2] = w.data * self.anchor_w * 2
             pred_boxes[..., 3] = h.data * self.anchor_h * 2
+
+            #self.nC = 60
+            #pred_cls = torch.zeros((bs, self.nA, nG, nG, self.nC)).cuda()
+            #pred_cls[:,:,:,:,0]=1
 
             # If not in training phase return predictions
             output = torch.cat(
@@ -328,7 +334,7 @@ class Darknet(nn.Module):
         self.module_defs[0]['height'] = img_size
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN', 'precision',
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN', 'TC', 'precision',
                            'recall']
 
     def forward(self, x, targets=None, requestPrecision=False):
@@ -360,13 +366,22 @@ class Darknet(nn.Module):
             layer_outputs.append(x)
 
         if is_training:
-            TP = (self.losses['TP'] > 0).sum().float()
-            FP = (self.losses['FP'] > 0).sum().float()
-            FN = (self.losses['FN'] == 3).sum().float()
-            self.losses['precision'] = TP / (TP + FP + 1e-16)
-            self.losses['recall'] = TP / (TP + FN + 1e-16)
-            self.losses['TP'], self.losses['FP'], self.losses['FN'] = TP, FP, FN
             self.losses['nGT'] /= 3
+            self.losses['TC'] /= 3
+
+            ui = np.unique(self.losses['TC'])[1:]
+            for i in ui:
+                j = self.losses['TC'] == float(i)
+                TP = (self.losses['TP'][j] > 0).sum().float()
+                FP = (self.losses['FP'][j] > 0).sum().float()
+                FN = (self.losses['FN'][j] == 3).sum().float()
+                self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
+                self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
+
+            self.losses['TP'] = (self.losses['TP'] > 0).sum().float()
+            self.losses['FP'] = (self.losses['FP'] > 0).sum().float()
+            self.losses['FN'] = (self.losses['FN'] == 3).sum().float()
+            self.losses['TC'] = 0
 
         return sum(output) if is_training else torch.cat(output, 1)
 

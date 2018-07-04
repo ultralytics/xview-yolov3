@@ -14,13 +14,15 @@ from utils.utils import *
 from scoring import score
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/train_images8/5.tif', help='path to images')
+parser.add_argument('-image_folder', type=str, default='data/train_images8/5.bmp', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
+
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a_e231.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/60c_tanh50_best_608.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/e71_60c_gcp_best_608.pt', help='weights path')
+
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.95, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.3, help='iou thresshold for non-maximum suppression')
+parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
+parser.add_argument('-nms_thres', type=float, default=0.1, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
@@ -49,9 +51,14 @@ def detect(opt):
     model = Darknet(opt.config_path, img_size=opt.img_size).to(device).eval()
 
     state = model.state_dict()
-    state.update(torch.load(opt.weights_path, map_location='cuda:0' if cuda else 'cpu'))
+    pretrained_dict = torch.load(opt.weights_path, map_location='cuda:0' if cuda else 'cpu')
+    # 1. filter out unnecessary keys
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
+    # 2. overwrite entries in the existing state dict
+    state.update(pretrained_dict)
+    # 3. load the new state dict
     model.load_state_dict(state)
-    # model.load_state_dict(torch.load(opt.weights_path, map_location=device.type))
+
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
@@ -126,7 +133,7 @@ def detect(opt):
                 os.remove(results_path + '.txt')
 
             results_img_path = os.path.join(opt.output_folder + '_img', path.split('/')[-1])
-            with open(results_path + '.txt', 'a') as file:
+            with open(results_path.replace('.bmp','.tif') + '.txt', 'a') as file:
                 for i in unique_classes:
                     n = (detections[:, -1].cpu() == i).sum()
                     print('%g %ss' % (n, classes[int(i)]))
@@ -148,7 +155,7 @@ def detect(opt):
 
                     if opt.plot_flag:
                         # Add the bbox to the plot
-                        label = classes[int(cls_pred)]
+                        label = classes[int(cls_pred)] if cls_pred > 0 else None
                         color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
                         plot_one_box([x1, y1, x2, y2], img, label=label, color=color, line_thickness=1)
 
