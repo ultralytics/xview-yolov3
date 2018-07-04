@@ -52,7 +52,7 @@ def main(opt):
     else:
         torch.backends.cudnn.benchmark = True
         run_name = 'e71cont_60c'
-        train_path = '../'
+        train_path = '../train_images'
 
         # Initiate model
     model = Darknet(opt.config_path, opt.img_size).to(device).train()
