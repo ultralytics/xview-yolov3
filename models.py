@@ -72,7 +72,7 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
-class YOLOLayer_new(nn.Module):
+class YOLOLayernew(nn.Module):
     """Detection layer"""
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -97,11 +97,10 @@ class YOLOLayer_new(nn.Module):
 
         wh = wh[i]
         anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
-
         self.anchors = anchors
         self.nA = nA  # number of anchors (3)
         self.nC = nC  # number of classes (60)
-        self.bbox_attrs = 5 + nC
+        self.bbox_attrs = 5
         self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
 
         # Build anchor grids

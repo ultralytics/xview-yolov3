@@ -38,7 +38,7 @@ h = coords(:,4) - coords(:,2);
 class_stats = per_class_stats(classes,w,h);
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 30);
+C = fcn_kmeans([w h], 60);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -61,7 +61,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_60c.mat','wh','targets','id','class_stats')
+%save('targets_60c.mat','wh','targets','id','class_stats')
 
 
 function stats = per_class_stats(classes,w,h)
@@ -149,10 +149,10 @@ rng('default'); % For reproducibility
 %X = [randn(100,2)*0.75+ones(100,2);
 %    randn(100,2)*0.55-ones(100,2)];
 
-%opts = statset('Display','iter','MaxIter',300);
+opts = statset('Display','iter');
 %[idx,C, sumd] = kmedoids(X,n,'Distance','cityblock','Options',opts);
-[idx,C, sumd] = kmeans(X,n,'MaxIter',400,'OnlinePhase','on');
-sumd
+[idx,C, sumd] = kmeans(X,n,'MaxIter',400,'OnlinePhase','on','Options',opts);
+%sumd
 
 
 fig;
