@@ -124,8 +124,8 @@ class ListDataset_xview_crop():  # for training
                 #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                if random.random() > 0.9:
-                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0, 0),
+                if random.random() > 0.8:
+                    img, labels = random_affine(img, targets=labels, degrees=(-15, 15), translate=(0.05, 0.05),
                                                 scale = (.9, 1.1))
                 # plt.subplot(2, 2, 2).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')

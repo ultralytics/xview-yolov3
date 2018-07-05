@@ -79,23 +79,23 @@ class YOLOLayerNew(nn.Module):
         super(YOLOLayer, self).__init__()
 
         mat = scipy.io.loadmat('utils/targets_60c.mat')
-        class_stats = mat['class_stats'][:,6:]
-        wh = class_stats[:,[0,2]]
-        area = wh[:,0]*wh[:,1]
-        i=np.argsort(area)  # least to greatest
+        wh = mat['class_stats'][:, 6:].reshape(-1, 3)
+        area = wh[:, 1] * wh[:, 2]
+        i = np.argsort(area)  # least to greatest
 
-        nA = 20  # anchors per yolo layer
+        nA = int(len(i) / 3)  # anchors per yolo layer
         if anchor_idxs[0] == 40:  # 6
             stride = 32
-            i = i[40:60]
+            i = i[nA * 2:nA * 3]
         elif anchor_idxs[0] == 20:  # 3
             stride = 16
-            i = i[20:40]
+            i = i[nA:nA * 2]
         else:
             stride = 8
-            i = i[:20]
+            i = i[:nA]
 
-        wh = wh[i]
+        classes = wh[i, 0]
+        wh = wh[i, 1:]
         anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
         self.anchors = anchors
         self.nA = nA  # number of anchors (3)
@@ -110,14 +110,13 @@ class YOLOLayerNew(nn.Module):
         self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
         self.scaled_anchors = torch.FloatTensor(wh / stride)
-        self.anchor_w = self.scaled_anchors[:,0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_h = self.scaled_anchors[:,1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_w = self.scaled_anchors[:, 0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
-        self.anchor_class = torch.FloatTensor(i).view(-1,1).repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_class = torch.FloatTensor(classes).view(-1, 1).repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
 
         self.Sigmoid = torch.nn.Sigmoid()
         self.Tanh = torch.nn.Tanh()
-
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
@@ -127,7 +126,7 @@ class YOLOLayerNew(nn.Module):
 
         weight = xview_class_weights(range(60)).cuda()
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
-        MSELoss = nn.MSELoss()
+        MSELoss = nn.MSELoss(reduce=True)
         # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
         if p.is_cuda and not self.grid_x.is_cuda:
@@ -143,8 +142,8 @@ class YOLOLayerNew(nn.Module):
         # Get outputs
         x = self.Sigmoid(p[..., 0])  # Center x
         y = self.Sigmoid(p[..., 1])  # Center y
-        w = self.Tanh(p[..., 2] / 2) / 2 + 0.5  # Width
-        h = self.Tanh(p[..., 3] / 2) / 2 + 0.5  # Height
+        w = self.Sigmoid(p[..., 2])  # Width
+        h = self.Sigmoid(p[..., 3])  # Height
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
@@ -154,14 +153,14 @@ class YOLOLayerNew(nn.Module):
         # Training
         if targets is not None:
             if requestPrecision:
-                pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 2 / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 2 / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 2 / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 2 / 2
+                pred_boxes[..., 0] = (x.data + self.grid_x) - ((w.data * 2) ** 1) * self.anchor_w / 2
+                pred_boxes[..., 1] = (y.data + self.grid_y) - ((h.data * 2) ** 1) * self.anchor_h / 2
+                pred_boxes[..., 2] = (x.data + self.grid_x) + ((w.data * 2) ** 1) * self.anchor_w / 2
+                pred_boxes[..., 3] = (y.data + self.grid_y) + ((h.data * 2) ** 1) * self.anchor_h / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
                 build_targets_new(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
-                              self.anchor_wh, requestPrecision)
+                                  self.anchor_wh, requestPrecision)
 
             tcls = tcls[mask]
             if x.is_cuda:
@@ -175,12 +174,11 @@ class YOLOLayerNew(nn.Module):
                 wA = nM / nGT  # weight anchor-grid
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 4 * wA * MSELoss(x[mask], tx[mask])
-                ly = 4 * wA * MSELoss(y[mask], ty[mask])
-                lw = 8 * wA * MSELoss(w[mask], tw[mask])
-                lh = 8 * wA * MSELoss(h[mask], th[mask])
+                lx = 5 * wA * MSELoss(x[mask], tx[mask])
+                ly = 5 * wA * MSELoss(y[mask], ty[mask])
+                lw = 5 * wA * MSELoss(w[mask], tw[mask])
+                lh = 5 * wA * MSELoss(h[mask], th[mask])
                 lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                # lcls = 0.12 * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
                 lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
@@ -188,16 +186,15 @@ class YOLOLayerNew(nn.Module):
 
             lconf += 0.5 * wA * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
 
-
-            loss = lx + ly + lw + lh + lconf + lcls
+            loss = lx + ly + lw + lh + lconf
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    ap, nGT, TP, FP, FN, TC, 0, 0
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
             pred_boxes[..., 1] = y.data + self.grid_y
-            pred_boxes[..., 2] = w.data * self.anchor_w * 2
-            pred_boxes[..., 3] = h.data * self.anchor_h * 2
+            pred_boxes[..., 2] = w.data * self.anchor_w * 3
+            pred_boxes[..., 3] = h.data * self.anchor_h * 3
 
             # If not in training phase return predictions
             output = torch.cat(
@@ -234,8 +231,8 @@ class YOLOLayer(nn.Module):
         self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
         self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
-        self.anchor_w = self.scaled_anchors[:,0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_h = self.scaled_anchors[:,1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_w = self.scaled_anchors[:, 0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
         self.Sigmoid = torch.nn.Sigmoid()
         self.Tanh = torch.nn.Tanh()
@@ -249,7 +246,7 @@ class YOLOLayer(nn.Module):
 
         weight = xview_class_weights(range(60)).cuda()
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
-        MSELoss = nn.MSELoss(reduce=False)
+        MSELoss = nn.MSELoss(reduce=True)
         CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
         if p.is_cuda and not self.grid_x.is_cuda:
@@ -264,8 +261,8 @@ class YOLOLayer(nn.Module):
         # Get outputs
         x = self.Sigmoid(p[..., 0])  # Center x
         y = self.Sigmoid(p[..., 1])  # Center y
-        w = self.Tanh(p[..., 2] / 2) / 2 + 0.5  # Width
-        h = self.Tanh(p[..., 3] / 2) / 2 + 0.5  # Height
+        w = self.Sigmoid(p[..., 2])  # Width
+        h = self.Sigmoid(p[..., 3])  # Height
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
@@ -275,10 +272,10 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             if requestPrecision:
-                pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * self.anchor_w * 2 / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * self.anchor_h * 2 / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * self.anchor_w * 2 / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * self.anchor_h * 2 / 2
+                pred_boxes[..., 0] = (x.data + self.grid_x) - ((w.data * 2) ** 1) * self.anchor_w / 2
+                pred_boxes[..., 1] = (y.data + self.grid_y) - ((h.data * 2) ** 1) * self.anchor_h / 2
+                pred_boxes[..., 2] = (x.data + self.grid_x) + ((w.data * 2) ** 1) * self.anchor_w / 2
+                pred_boxes[..., 3] = (y.data + self.grid_y) + ((h.data * 2) ** 1) * self.anchor_h / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
@@ -296,18 +293,17 @@ class YOLOLayer(nn.Module):
                 wA = nM / nGT  # weight anchor-grid
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 4 * wA * (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = 4 * wA * (MSELoss(y[mask], ty[mask]) * wC).sum()
-                lw = 8 * wA * (MSELoss(w[mask], tw[mask]) * wC).sum()
-                lh = 8 * wA * (MSELoss(h[mask], th[mask]) * wC).sum()
+                lx = 4 * wA * MSELoss(x[mask], tx[mask])
+                ly = 4 * wA * MSELoss(y[mask], ty[mask])
+                lw = 4 * wA * MSELoss(w[mask], tw[mask])
+                lh = 4 * wA * MSELoss(h[mask], th[mask])
                 lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                lcls = 0.12 * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
+                lcls = 0.2 * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
                 wA = FT([1])
 
             lconf += 0.5 * wA * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
-
 
             loss = lx + ly + lw + lh + lconf + lcls
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
@@ -319,9 +315,9 @@ class YOLOLayer(nn.Module):
             pred_boxes[..., 2] = w.data * self.anchor_w * 2
             pred_boxes[..., 3] = h.data * self.anchor_h * 2
 
-            #self.nC = 60
-            #pred_cls = torch.zeros((bs, self.nA, nG, nG, self.nC)).cuda()
-            #pred_cls[:,:,:,:,0]=1
+            # self.nC = 60
+            # pred_cls = torch.zeros((bs, self.nA, nG, nG, self.nC)).cuda()
+            # pred_cls[:,:,:,:,0]=1
 
             # If not in training phase return predictions
             output = torch.cat(

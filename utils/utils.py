@@ -192,13 +192,13 @@ def build_targets_new(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.15]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
+            i = i[iou_anch_best[i] > 0.1]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
             if len(i) == 0:
                 continue
 
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
-            if iou_anch_best < 0.15:
+            if iou_anch_best < 0.1:
                 continue
             i = 0
 
@@ -208,12 +208,16 @@ def build_targets_new(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
-        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
+        #tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
+        #th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
+        tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
+        th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
+
+
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
-        good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.50
+        good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.20
 
         if requestPrecision:
             # predicted classes and confidence
@@ -298,8 +302,11 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
-        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
+        #tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
+        #th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
+        tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
+        th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
+
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
@@ -439,7 +446,7 @@ def plotResults():
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('/Users/glennjocher/Downloads/printedResults_gcp_e71.txt',
               '/Users/glennjocher/Downloads/printedResults_gcp_e231.txt',
-              '/Users/glennjocher/Downloads/printedResults.txt', 'printedResults.txt'):
+              '/Users/glennjocher/Downloads/printedResults.txt', 'printedResults.txt', '/Users/glennjocher/Downloads/printedResults0.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)

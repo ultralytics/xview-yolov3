@@ -38,12 +38,12 @@ h = coords(:,4) - coords(:,2);
 class_stats = per_class_stats(classes,w,h);
 [~,~,~,n] = fcnunique(classes(:));
 
-a=class_stats(:,[7 9]); 
-[~,i]=sort(prod(a,2));  a=a(i,:);
-vpa(a(:)',4)
+%a=class_stats(:,[7 9]); 
+%[~,i]=sort(prod(a,2));  a=a(i,:);
+%vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 30);
+C = fcn_kmeans([w h], 3);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -66,7 +66,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-%save('targets_60c.mat','wh','targets','id','class_stats')
+save('targets_60c.mat','wh','targets','id','class_stats')
 
 
 function stats = per_class_stats(classes,w,h)
@@ -75,12 +75,17 @@ area = h.*w;
 uc=unique(classes(:)); 
 n = numel(uc);
 limits = zeros(n,6); % minmax: [width, height, area]
-wh = zeros(n,4); % [w_mu w_std, h_mu h_std]
+wh = zeros(n,3); % [class, wh1, wh2, wh3]
 for i = 1:n
     j = find(classes==uc(i));
     wj = w(j);  hj = h(j);
     limits(i,:) = [minmax3(wj), minmax3(hj), minmax3(area(j))];
-    wh(i,:) = [mean(wj), std(wj), mean(hj), std(hj)];
+    
+    %close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); 
+    %title(corr(wj,hj))
+    [~,C] = kmeans([wj hj],1,'MaxIter',500,'OnlinePhase','on');
+    %plot(C(:,1),C(:,2),'g.','MarkerSize',50)
+    wh(i,:) = [i-1, C(1,:)];
 end
 stats = [limits, wh];
 end
@@ -116,10 +121,6 @@ i0 = ~any(isnan(coords) | isinf(coords), 2);
 uc=unique(classes(:));
 for i = 1:numel(uc)
     j = find(classes==uc(i));
-    
-    %close all; fig; hist211(w(j),h(j),30); title(corr(w(j),h(j)))
-    %[~,C] = kmeans([w(j) h(j)],3,'MaxIter',400,'OnlinePhase','on');
-    %plot(C(:,1),C(:,2),'g.','MarkerSize',50)
     [~,v] = fcnsigmarejection(area(j),6,3);  i1(j) = i1(j) & v;
     [~,v] = fcnsigmarejection(w(j),6,3);     i2(j) = i2(j) & v;
     [~,v] = fcnsigmarejection(h(j),6,3);     i3(j) = i3(j) & v;
