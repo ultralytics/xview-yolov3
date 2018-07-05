@@ -185,7 +185,7 @@ class YOLOLayer(nn.Module):
                 lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
-                wA = FT([1])
+                # wA = FT([1])
 
             lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
 
