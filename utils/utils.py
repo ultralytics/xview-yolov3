@@ -286,13 +286,13 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.15]
+            i = i[iou_anch_best[i] > 0.10]
             if len(i) == 0:
                 continue
 
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
-            if iou_anch_best < 0.15:
+            if iou_anch_best < 0.10:
                 continue
             i = 0
 
@@ -302,10 +302,10 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        #tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
-        #th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
-        tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
-        th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
+        tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
+        th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
+        #tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
+        #th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
 
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1

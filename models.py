@@ -272,10 +272,10 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             if requestPrecision:
-                pred_boxes[..., 0] = (x.data + self.grid_x) - ((w.data * 2) ** 2) * self.anchor_w / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y) - ((h.data * 2) ** 2) * self.anchor_h / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x) + ((w.data * 2) ** 2) * self.anchor_w / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y) + ((h.data * 2) ** 2) * self.anchor_h / 2
+                pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * 2 * self.anchor_w / 2
+                pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * 2 * self.anchor_h / 2
+                pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * 2 * self.anchor_w / 2
+                pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * 2 * self.anchor_h / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
