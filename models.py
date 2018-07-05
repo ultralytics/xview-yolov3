@@ -127,7 +127,7 @@ class YOLOLayer(nn.Module):
         stride = self.img_dim / nG
 
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
-        MSELoss = nn.MSELoss(reduce=True)
+        MSELoss = nn.MSELoss(reduce=False)
         # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
         if p.is_cuda and not self.grid_x.is_cuda:
@@ -177,10 +177,10 @@ class YOLOLayer(nn.Module):
                 # wA = nM / nGT  # weight anchor-grid
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 5 * MSELoss(x[mask], tx[mask])
-                ly = 5 * MSELoss(y[mask], ty[mask])
-                lw = 5 * MSELoss(w[mask], tw[mask])
-                lh = 5 * MSELoss(h[mask], th[mask])
+                lx = 5 * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = 5 * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
+                lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
                 lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
                 lcls = FT([0])
             else:

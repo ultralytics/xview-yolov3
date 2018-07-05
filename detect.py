@@ -68,7 +68,7 @@ def detect(opt):
     img_detections = []  # Stores detections for each image index
     prev_time = time.time()
     for batch_i, (img_paths, img) in enumerate(dataloader):
-        print(batch_i, img.shape)
+        print('\n',batch_i, img.shape, end=' ')
 
         detections = []
         ni = math.ceil(img.shape[1] / 608)
