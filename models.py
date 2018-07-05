@@ -145,6 +145,8 @@ class YOLOLayer(nn.Module):
         y = self.Sigmoid(p[..., 1])  # Center y
         w = self.Sigmoid(p[..., 2])  # Width
         h = self.Sigmoid(p[..., 3])  # Height
+        width = ((w.data * 2) ** 2) * self.anchor_w
+        height = ((h.data * 2) ** 2) * self.anchor_h
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
@@ -154,10 +156,10 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             if requestPrecision:
-                pred_boxes[..., 0] = (x.data + self.grid_x) - ((w.data * 2) ** 2) * self.anchor_w / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y) - ((h.data * 2) ** 2) * self.anchor_h / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x) + ((w.data * 2) ** 2) * self.anchor_w / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y) + ((h.data * 2) ** 2) * self.anchor_h / 2
+                pred_boxes[..., 0] = x.data + self.grid_x - width / 2
+                pred_boxes[..., 1] = y.data + self.grid_y - height / 2
+                pred_boxes[..., 2] = x.data + self.grid_x + width / 2
+                pred_boxes[..., 3] = y.data + self.grid_y + height / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
                 build_targets_new(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
@@ -194,12 +196,12 @@ class YOLOLayer(nn.Module):
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
             pred_boxes[..., 1] = y.data + self.grid_y
-            pred_boxes[..., 2] = w.data * self.anchor_w * 3
-            pred_boxes[..., 3] = h.data * self.anchor_h * 3
+            pred_boxes[..., 2] = width
+            pred_boxes[..., 3] = height
 
             # If not in training phase return predictions
             output = torch.cat(
-                (pred_boxes.view(bs, -1, 4) * stride, pred_conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.nC)), -1)
+                (pred_boxes.view(bs, -1, 4) * stride, pred_conf.view(bs, -1, 1), pred_cls.view(bs, -1, 1)), -1)
             return output.data
 
 
@@ -266,6 +268,9 @@ class YOLOLayerOld(nn.Module):
         y = self.Sigmoid(p[..., 1])  # Center y
         w = self.Sigmoid(p[..., 2])  # Width
         h = self.Sigmoid(p[..., 3])  # Height
+        width = w.data * 2 * self.anchor_w
+        height = h.data * 2 * self.anchor_h
+
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
@@ -275,10 +280,10 @@ class YOLOLayerOld(nn.Module):
         # Training
         if targets is not None:
             if requestPrecision:
-                pred_boxes[..., 0] = (x.data + self.grid_x) - w.data * 2 * self.anchor_w / 2
-                pred_boxes[..., 1] = (y.data + self.grid_y) - h.data * 2 * self.anchor_h / 2
-                pred_boxes[..., 2] = (x.data + self.grid_x) + w.data * 2 * self.anchor_w / 2
-                pred_boxes[..., 3] = (y.data + self.grid_y) + h.data * 2 * self.anchor_h / 2
+                pred_boxes[..., 0] = x.data + self.grid_x - width / 2
+                pred_boxes[..., 1] = y.data + self.grid_y - height / 2
+                pred_boxes[..., 2] = x.data + self.grid_x + width / 2
+                pred_boxes[..., 3] = y.data + self.grid_y + height / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
@@ -315,8 +320,8 @@ class YOLOLayerOld(nn.Module):
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
             pred_boxes[..., 1] = y.data + self.grid_y
-            pred_boxes[..., 2] = w.data * self.anchor_w * 2
-            pred_boxes[..., 3] = h.data * self.anchor_h * 2
+            pred_boxes[..., 2] = width
+            pred_boxes[..., 3] = height
 
             # self.nC = 60
             # pred_cls = torch.zeros((bs, self.nA, nG, nG, self.nC)).cuda()

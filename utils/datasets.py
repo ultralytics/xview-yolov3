@@ -94,6 +94,7 @@ class ListDataset_xview_crop():  # for training
         labels_all = []
         for index, files_index in enumerate(indices):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
+            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
 
             # load labels
             chip = img_path.rsplit('/')[-1]
@@ -110,23 +111,33 @@ class ListDataset_xview_crop():  # for training
 
                 if nL0 > 0:
                     labels = labels0.copy()
+                    if j == 0:
+                        lw0 = labels[:, 3] - labels[:, 1]
+                        lh0 = labels[:, 4] - labels[:, 2]
+                        area0 = lw0 * lh0
+
                     labels[:, [1, 3]] -= padx
                     labels[:, [2, 4]] -= pady
                     labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
                     # objects must have width and height > 4 pixels
-                    labels = labels[((labels[:, 3] - labels[:, 1]) > 3) & ((labels[:, 4] - labels[:, 2]) > 3)]
+
+                    lw = labels[:, 3] - labels[:, 1]
+                    lh = labels[:, 4] - labels[:, 2]
+                    area = lw * lh
+
+                    labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.25)]
                 else:
                     labels = np.array([], dtype=np.float32)
 
                 # plot
-                #import matplotlib.pyplot as plt
-                #plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
-                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                import matplotlib.pyplot as plt
+                plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
+                plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
                 if random.random() > 0.8:
                     img, labels = random_affine(img, targets=labels, degrees=(-15, 15), translate=(0.05, 0.05),
-                                                scale = (.9, 1.1))
+                                                scale=(.9, 1.1))
                 # plt.subplot(2, 2, 2).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 

@@ -11,18 +11,18 @@ except:  # required packaged not installed
 from models import *
 from utils.datasets import *
 from utils.utils import *
-from scoring import score
+#from scoring import score
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/train_images8/5.bmp', help='path to images')
-parser.add_argument('-output_folder', type=str, default='data/xview_predictions', help='path to outputs')
+parser.add_argument('-image_folder', type=str, default='data/train_images/5.bmp', help='path to images')
+parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
 
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a_e231.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/e71_60c_gcp_best_608.pt', help='weights path')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_60ca.cfg', help='cfg file path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/e71cont_60ca_best_608.pt', help='weights path')
 
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.1, help='iou thresshold for non-maximum suppression')
+parser.add_argument('-conf_thres', type=float, default=0.9999, help='object confidence threshold')
+parser.add_argument('-nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
@@ -33,9 +33,9 @@ print(opt)
 # @profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
-    os.system('rm -rf data/xview_predictions_img')
+    os.system('rm -rf data/predictions_img')
     os.makedirs(opt.output_folder, exist_ok=True)
-    os.makedirs('data/xview_predictions_img', exist_ok=True)
+    os.makedirs('data/predictions_img', exist_ok=True)
     opt.img_size = int(opt.weights_path.rsplit('_')[-1][:-3])
 
     cuda = torch.cuda.is_available()
@@ -67,13 +67,18 @@ def detect(opt):
     imgs = []  # Stores image paths
     img_detections = []  # Stores detections for each image index
     prev_time = time.time()
-    print('\nRunning inference:')
     for batch_i, (img_paths, img) in enumerate(dataloader):
         print(batch_i, img.shape)
 
         detections = []
-        for i in range(math.ceil(img.shape[1] / 608)):
-            for j in range(math.ceil(img.shape[2] / 608)):
+        ni = math.ceil(img.shape[1] / 608)
+        nj = math.ceil(img.shape[2] / 608)
+        for i in range(ni):
+            print('row %g/%g: ' % (i,ni), end='')
+
+            for j in range(nj):
+                print('%g ' % j, end='', flush=True)
+
                 chip = np.zeros((3, 608, 608), dtype=np.float32)
                 y1 = i * 608
                 y2 = min((i + 1) * 608, img.shape[1])
@@ -163,8 +168,8 @@ def detect(opt):
                 # Save generated image with detections
                 cv2.imwrite(results_img_path.replace('.tif', '.bmp'), img)
 
-    score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
-              '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+    #score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
+     #         '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
 
 
 if __name__ == '__main__':

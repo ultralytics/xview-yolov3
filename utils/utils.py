@@ -350,16 +350,21 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
         image_pred[:, 4] = torch.sigmoid(image_pred[:, 4])
-        image_pred[:, 5:] = torch.softmax(image_pred[:, 5:], 1)
         # Get score and class with highest confidence
-        class_conf, class_pred = torch.max(image_pred[:, 5:], 1)
-        w = (image_pred[:, 2] / 2).numpy()
-        h = (image_pred[:, 3] / 2).numpy()
+        if image_pred.shape[1] == 6:
+            class_pred = image_pred[:, 5]
+            class_conf = image_pred[:, 4]
+        else:
+            image_pred[:, 5:] = torch.softmax(image_pred[:, 5:], 1)
+            class_conf, class_pred = torch.max(image_pred[:, 5:], 1)
+
+        w = image_pred[:, 2].numpy()
+        h = image_pred[:, 3].numpy()
         a = w * h  # area
         ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))  # aspect ratio
 
-        v = ((image_pred[:, 4] > conf_thres) & (class_conf >= 0)).numpy()
-        v *= (ar < 15) & (a > 10) & (w > 3) & (h > 3)
+        v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0)).numpy()
+        v *= (ar < 20) & (a > 10) & (w > 3) & (h > 3)
         # v *= (w >= mat['class_stats'][class_pred, 0]) & (w <= mat['class_stats'][class_pred, 1])
         # v *= (h >= mat['class_stats'][class_pred, 2]) & (h <= mat['class_stats'][class_pred, 3])
         # v *= (a >= mat['class_stats'][class_pred, 4]) & (a <= mat['class_stats'][class_pred, 5])
@@ -368,6 +373,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         image_pred = image_pred[v]
         class_conf = class_conf[v]
         class_pred = class_pred[v]
+
         # If none are remaining => process next image
         nP = image_pred.shape[0]
         if not nP:
@@ -412,7 +418,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.2
+        thresh = 0.4
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 5])]  # sort best to worst
@@ -444,9 +450,8 @@ def plotResults():
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
-    for f in ('/Users/glennjocher/Downloads/printedResults_gcp_e71.txt',
-              '/Users/glennjocher/Downloads/printedResults_gcp_e231.txt',
-              '/Users/glennjocher/Downloads/printedResults.txt', 'printedResults.txt', '/Users/glennjocher/Downloads/printedResults0.txt'):
+    for f in ('/Users/glennjocher/Downloads/printedResults.txt',
+              'printedResults.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
