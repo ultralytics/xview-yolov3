@@ -37,6 +37,7 @@ h = coords(:,4) - coords(:,2);
 % to reject bad box predictions
 class_stats = per_class_stats(classes,w,h);
 [~,~,~,n] = fcnunique(classes(:));
+vpa(n(:)')
 
 %a=class_stats(:,[7 9]); 
 %[~,i]=sort(prod(a,2));  a=a(i,:);
@@ -113,17 +114,17 @@ new_area = w.*h;
 i0 = ~any(isnan(coords) | isinf(coords), 2);
 
 % sigma rejections on dimensions (entire dataset)
-[~, i1] = fcnsigmarejection(area,15, 3);
-[~, i2] = fcnsigmarejection(w,15, 3);
-[~, i3] = fcnsigmarejection(h,15, 3);
+[~, i1] = fcnsigmarejection(area,18, 3);
+[~, i2] = fcnsigmarejection(w,18, 3);
+[~, i3] = fcnsigmarejection(h,18, 3);
 
 % sigma rejections on dimensions (per class)
 uc=unique(classes(:));
 for i = 1:numel(uc)
     j = find(classes==uc(i));
-    [~,v] = fcnsigmarejection(area(j),6,3);  i1(j) = i1(j) & v;
-    [~,v] = fcnsigmarejection(w(j),6,3);     i2(j) = i2(j) & v;
-    [~,v] = fcnsigmarejection(h(j),6,3);     i3(j) = i3(j) & v;
+    [~,v] = fcnsigmarejection(area(j),9,3);  i1(j) = i1(j) & v;
+    [~,v] = fcnsigmarejection(w(j),9,3);     i2(j) = i2(j) & v;
+    [~,v] = fcnsigmarejection(h(j),9,3);     i3(j) = i3(j) & v;
 end
 
 % manual dimension requirements

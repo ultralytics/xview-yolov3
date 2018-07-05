@@ -39,9 +39,9 @@ def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
 
 def xview_class_weights(indices):  # weights of each class in the training set, normalized to mu = 1
     weights = 1 / torch.FloatTensor(
-        [74, 363, 713, 71, 2917, 209665, 6914, 1101, 3610, 12113, 5851, 3639, 860, 4043, 895, 149, 172, 17, 1623, 1840,
-         125, 121, 124, 656, 1448, 692, 222, 190, 772, 199, 449, 283, 74, 201, 156, 181, 70, 64, 333, 1350, 336, 78,
-         624, 839, 286, 83, 694, 1163, 311111, 190, 1071, 854, 1016, 4135, 123, 1696, 2292, 1578, 367, 84])
+        [74, 364, 713, 71, 2925, 209767, 6925, 1101, 3612, 12134, 5871, 3640, 860, 4062, 895, 149, 174, 17, 1624, 1846,
+         125, 122, 124, 662, 1452, 697, 222, 190, 786, 200, 450, 295, 79, 205, 156, 181, 70, 64, 337, 1352, 336, 78,
+         628, 841, 287, 83, 702, 1177, 313865, 195, 1081, 882, 1059, 4175, 123, 1700, 2317, 1579, 368, 85])
     weights /= weights.sum()
     return weights[indices]
 
@@ -208,11 +208,10 @@ def build_targets_new(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        #tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
-        #th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
+        # tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
+        # th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
         tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
         th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
-
 
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
@@ -304,8 +303,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         # Width and height
         tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
         th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
-        #tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
-        #th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
+        # tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
+        # th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
 
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
