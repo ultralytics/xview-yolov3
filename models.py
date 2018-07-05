@@ -120,11 +120,12 @@ class YOLOLayer(nn.Module):
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
+        device = torch.device('cuda:0' if p.is_cuda else 'cpu')
+        weight = xview_class_weights(range(60)).to(device)
         bs = p.shape[0]
         nG = p.shape[2]
         stride = self.img_dim / nG
 
-        weight = xview_class_weights(range(60)).cuda()
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
         MSELoss = nn.MSELoss(reduce=True)
         # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
@@ -240,11 +241,13 @@ class YOLOLayerOld(nn.Module):
     # @profile
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
+        device = torch.device('cuda:0' if p.is_cuda else 'cpu')
+        weight = xview_class_weights(range(60)).to(device)
+
         bs = p.shape[0]
         nG = p.shape[2]
         stride = self.img_dim / nG
 
-        weight = xview_class_weights(range(60)).cuda()
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
         MSELoss = nn.MSELoss(reduce=True)
         CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
