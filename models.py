@@ -174,20 +174,20 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                wA = nM / nGT  # weight anchor-grid
+                # wA = nM / nGT  # weight anchor-grid
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 5 * wA * MSELoss(x[mask], tx[mask])
-                ly = 5 * wA * MSELoss(y[mask], ty[mask])
-                lw = 5 * wA * MSELoss(w[mask], tw[mask])
-                lh = 5 * wA * MSELoss(h[mask], th[mask])
-                lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lx = 5 * MSELoss(x[mask], tx[mask])
+                ly = 5 * MSELoss(y[mask], ty[mask])
+                lw = 5 * MSELoss(w[mask], tw[mask])
+                lh = 5 * MSELoss(h[mask], th[mask])
+                lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
                 lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
                 wA = FT([1])
 
-            lconf += 0.5 * wA * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
+            lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
 
             loss = lx + ly + lw + lh + lconf
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
