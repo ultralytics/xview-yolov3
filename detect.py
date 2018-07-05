@@ -14,14 +14,14 @@ from utils.utils import *
 #from scoring import score
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/train_images/5.bmp', help='path to images')
+parser.add_argument('-image_folder', type=str, default='data/train_images/', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_60ca.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/e71cont_60ca_best_608.pt', help='weights path')
 
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.9999, help='object confidence threshold')
+parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
