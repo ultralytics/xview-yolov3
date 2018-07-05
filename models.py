@@ -72,7 +72,7 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
-class YOLOLayerNew(nn.Module):
+class YOLOLayer(nn.Module):
     """Detection layer"""
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -202,7 +202,7 @@ class YOLOLayerNew(nn.Module):
             return output.data
 
 
-class YOLOLayer(nn.Module):
+class YOLOLayerOld(nn.Module):
     """Detection layer"""
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):

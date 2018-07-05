@@ -14,9 +14,9 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=30, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_30a_e231.cfg', help='cfg file path')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_60ca.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
@@ -40,7 +40,7 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         #torch.backends.cudnn.benchmark = True
-        run_name = 'test'
+        run_name = 'e71cont_60ca'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
@@ -55,10 +55,10 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/e71_60c_gcp_best_608.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/fresh_60ca_best_608.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
