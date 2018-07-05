@@ -128,7 +128,7 @@ class YOLOLayer(nn.Module):
 
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
         MSELoss = nn.MSELoss(reduce=False)
-        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.anchor_class[0, :, 0, 0].long()])
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x = self.grid_x.cuda()
@@ -270,7 +270,6 @@ class YOLOLayerOld(nn.Module):
         h = self.Sigmoid(p[..., 3])  # Height
         width = w.data * 2 * self.anchor_w
         height = h.data * 2 * self.anchor_h
-
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)

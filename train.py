@@ -39,13 +39,13 @@ def main(opt):
 
         # Get data configuration
     if platform == 'darwin':  # macos
-        #torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.benchmark = True
         run_name = 'e71cont_60ca'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'fresh_60c'
+        run_name = 'e71contwC_60ca'
         train_path = '../train_images'
 
         # Initiate model
