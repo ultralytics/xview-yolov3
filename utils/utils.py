@@ -145,7 +145,8 @@ def build_targets2(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
     tw = torch.zeros(nB, nA, nG, nG)
     th = torch.zeros(nB, nA, nG, nG)
     tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    tcls = torch.ByteTensor(nB, nA, nG, nG, len(classes)).fill_(0)  # nC = number of classes
+    tcls = torch.ByteTensor(nB, nA, nG, nG, 60).fill_(0)  # nC = number of classes
+    tcls20 = torch.ByteTensor(nB, nA, nG, nG, len(classes)).fill_(0)  # nC = number of classes
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FN = torch.ByteTensor(nB, max(nT)).fill_(0)
@@ -214,7 +215,8 @@ def build_targets2(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
         tw[b, a, gj, gi] = torch.sqrt(gw / wh_table[tc][:,0]) / 2
         th[b, a, gj, gi] = torch.sqrt(gh / wh_table[tc][:,1]) / 2
         # One-hot encoding of label
-        tcls[b, a, gj, gi, classes_20_table[tc.long()].long()] = 1
+        tcls[b, a, gj, gi, tc] = 1
+        tcls20[b, a, gj, gi, classes_20_table[tc].long()] = 1
         tconf[b, a, gj, gi] = 1
 
         if requestPrecision:
@@ -230,7 +232,7 @@ def build_targets2(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
     ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap
+    return tx, ty, tw, th, tconf == 1, tcls, tcls20, TP, FP, FN, TC, ap
 
 
 def build_targets1(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):

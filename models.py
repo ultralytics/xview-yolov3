@@ -158,7 +158,7 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 2] = x.data + self.grid_x + width / 2
                 pred_boxes[..., 3] = y.data + self.grid_y + height / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap = \
+            tx, ty, tw, th, mask, tcls, tcls20, TP, FP, FN, TC, ap = \
                 build_targets2(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
                                self.anchor_wh, self.classes, requestPrecision)
 
@@ -177,7 +177,7 @@ class YOLOLayer(nn.Module):
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
                 lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                lcls = 0.2 * CrossEntropyLoss(p[..., 5:][mask], torch.argmax(tcls, 1))
+                lcls = 0.2 * CrossEntropyLoss(p[..., 5:][mask], torch.argmax(tcls20[mask], 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
