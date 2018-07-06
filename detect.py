@@ -99,12 +99,8 @@ def detect(opt):
 
         detections = [torch.cat(detections, 0)]
 
-        # Get detections
-        #with torch.no_grad():
-        #    detections = non_max_suppression(model(img.to(device)), opt.conf_thres, opt.nms_thres)
-
         # Log progress
-        # print('Batch %d... (Done %.3fs)' % (batch_i, time.time() - prev_time))
+        print('Batch %d... (Done %.3fs)' % (batch_i, time.time() - prev_time))
         prev_time = time.time()
 
         imgs.extend(img_paths)
