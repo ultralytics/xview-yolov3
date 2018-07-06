@@ -184,7 +184,7 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
+            lconf += 0.75 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
             loss = lx + ly + lw + lh + lconf
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
