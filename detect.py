@@ -11,14 +11,15 @@ except:  # required packaged not installed
 from models import *
 from utils.datasets import *
 from utils.utils import *
-#from scoring import score
+
+# from scoring import score
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-image_folder', type=str, default='data/train_images/', help='path to images')
 parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_60ca.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/e71cont_60ca_best_608.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/e71contwC_60ca_best_608.pt', help='weights path')
 
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
@@ -59,7 +60,6 @@ def detect(opt):
     # 3. load the new state dict
     model.load_state_dict(state)
 
-
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
     dataloader = ImageFolder(opt.image_folder, batch_size=opt.batch_size, img_size=opt.img_size)
@@ -67,37 +67,42 @@ def detect(opt):
     imgs = []  # Stores image paths
     img_detections = []  # Stores detections for each image index
     prev_time = time.time()
+    preds = []
     for batch_i, (img_paths, img) in enumerate(dataloader):
-        print('\n',batch_i, img.shape, end=' ')
+        print('\n', batch_i, img.shape, end=' ')
 
         detections = []
         ni = math.ceil(img.shape[1] / 608)
         nj = math.ceil(img.shape[2] / 608)
         for i in range(ni):
-            print('row %g/%g: ' % (i,ni), end='')
+            print('row %g/%g: ' % (i, ni), end='')
 
             for j in range(nj):
                 print('%g ' % j, end='', flush=True)
 
-                chip = np.zeros((3, 608, 608), dtype=np.float32)
-                y1 = i * 608
                 y2 = min((i + 1) * 608, img.shape[1])
-                x1 = j * 608
+                y1 = y2 - 608
                 x2 = min((j + 1) * 608, img.shape[2])
-                chip[:, :(y2-y1), :(x2-x1)] = img[:, y1:y2, x1:x2]
+                x1 = x2 - 608
+                chip = img[:, y1:y2, x1:x2]
+
+                # plot
+                # import matplotlib.pyplot as plt
+                # plt.subplot(ni, nj, i * nj + j + 1).imshow(chip[1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 chip = torch.from_numpy(chip).unsqueeze(0).to(device)
                 # Get detections
                 with torch.no_grad():
                     pred = model(chip)
-                    d = non_max_suppression(pred, opt.conf_thres, opt.nms_thres)
+                    pred = pred[pred[:, :, 4] > opt.conf_thres]
+                    if len(pred) > 0:
+                        pred[:, 0] += x1
+                        pred[:, 1] += y1
+                        preds.append(pred.unsqueeze(0))
 
-                if d[0] is not None:
-                    d[0][:, [0, 2]] += x1
-                    d[0][:, [1, 3]] += y1
-                    detections.append(d[0])
-
-        detections = [torch.cat(detections, 0)]
+        detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres)
+        # detections = [torch.cat(detections, 0)]
 
         # Log progress
         print('Batch %d... (Done %.3fs)' % (batch_i, time.time() - prev_time))
@@ -134,19 +139,19 @@ def detect(opt):
                 os.remove(results_path + '.txt')
 
             results_img_path = os.path.join(opt.output_folder + '_img', path.split('/')[-1])
-            with open(results_path.replace('.bmp','.tif') + '.txt', 'a') as file:
+            with open(results_path.replace('.bmp', '.tif') + '.txt', 'a') as file:
                 for i in unique_classes:
                     n = (detections[:, -1].cpu() == i).sum()
                     print('%g %ss' % (n, classes[int(i)]))
 
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                     # Rescale coordinates to original dimensions
-                    #box_h = ((y2 - y1) / unpad_h) * img.shape[0]
-                    #box_w = ((x2 - x1) / unpad_w) * img.shape[1]
-                    #y1 = (((y1 - pad_y // 2) / unpad_h) * img.shape[0]).round().item()
-                    #x1 = (((x1 - pad_x // 2) / unpad_w) * img.shape[1]).round().item()
-                    #x2 = (x1 + box_w).round().item()
-                    #y2 = (y1 + box_h).round().item()
+                    # box_h = ((y2 - y1) / unpad_h) * img.shape[0]
+                    # box_w = ((x2 - x1) / unpad_w) * img.shape[1]
+                    # y1 = (((y1 - pad_y // 2) / unpad_h) * img.shape[0]).round().item()
+                    # x1 = (((x1 - pad_x // 2) / unpad_w) * img.shape[1]).round().item()
+                    # x2 = (x1 + box_w).round().item()
+                    # y2 = (y1 + box_h).round().item()
                     x1, y1, x2, y2 = max(x1, 0), max(y1, 0), max(x2, 0), max(y2, 0)
 
                     # write to file
@@ -164,8 +169,8 @@ def detect(opt):
                 # Save generated image with detections
                 cv2.imwrite(results_img_path.replace('.tif', '.bmp'), img)
 
-    #score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
-     #         '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+    # score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
+    #         '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
 
 
 if __name__ == '__main__':

@@ -52,7 +52,7 @@ def plot_one_box(x, im, color=None, label=None, line_thickness=None):
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
     cv2.rectangle(im, c1, c2, color, thickness=tl)
     if label:
-        tf = max(tl - 1, 2)  # font thickness
+        tf = max(tl - 1, 1)  # font thickness
         t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]
         c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
         cv2.rectangle(im, c1, c2, color, -1)  # filled
@@ -192,13 +192,13 @@ def build_targets_new(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.1]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
+            i = i[iou_anch_best[i] > 0]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
             if len(i) == 0:
                 continue
 
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
-            if iou_anch_best < 0.1:
+            if iou_anch_best == 0:
                 continue
             i = 0
 
@@ -208,15 +208,12 @@ def build_targets_new(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC
         tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
-        # tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
-        # th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
         tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
         th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
 
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
-        # good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.20
 
         if requestPrecision:
             # predicted classes and confidence
@@ -349,7 +346,6 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     output = [None for _ in range(len(prediction))]
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
-        image_pred[:, 4] = torch.sigmoid(image_pred[:, 4])
         # Get score and class with highest confidence
         if image_pred.shape[1] == 6:
             class_pred = image_pred[:, 5]

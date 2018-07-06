@@ -73,8 +73,8 @@ class ListDataset_xview_crop():  # for training
         # RGB normalization values
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
         self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.hsv_mean = np.array([24.956, 91.347, 61.362], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.hsv_std = np.array([15.825, 26.98, 29.618], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.hsv_mean = np.array([24.956, 91.347, 61.362], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.hsv_std = np.array([15.825, 26.98, 29.618], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
         self.count = -1
@@ -89,11 +89,10 @@ class ListDataset_xview_crop():  # for training
 
         ia = self.count * self.batch_size
         ib = min((self.count + 1) * self.batch_size, self.nF)
-        indices = list(range(ia, ib))
 
-        img_all = []  # np.zeros((len(indices), self.height, self.height, 3), dtype=np.uint8)
+        img_all = []  # np.zeros((len(range(ia, ib)), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
-        for index, files_index in enumerate(indices):
+        for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
 
@@ -120,12 +119,12 @@ class ListDataset_xview_crop():  # for training
                     labels[:, [1, 3]] -= padx
                     labels[:, [2, 4]] -= pady
                     labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
-                    # objects must have width and height > 4 pixels
 
                     lw = labels[:, 3] - labels[:, 1]
                     lh = labels[:, 4] - labels[:, 2]
                     area = lw * lh
 
+                    # objects must have width and height > 4 pixels
                     labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.25)]
                 else:
                     labels = np.array([], dtype=np.float32)

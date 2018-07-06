@@ -116,7 +116,6 @@ class YOLOLayer(nn.Module):
         self.anchor_class = torch.FloatTensor(classes).view(-1, 1).repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
 
         self.Sigmoid = torch.nn.Sigmoid()
-        self.Tanh = torch.nn.Tanh()
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
@@ -175,8 +174,8 @@ class YOLOLayer(nn.Module):
             if nM > 0:
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 2 * (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = 2 * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lx = 4 * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = 4 * (MSELoss(y[mask], ty[mask]) * wC).sum()
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
                 lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
@@ -184,7 +183,7 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += 0.6 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
+            lconf += BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
             loss = lx + ly + lw + lh + lconf
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
@@ -197,8 +196,8 @@ class YOLOLayer(nn.Module):
             pred_boxes[..., 3] = height
 
             # If not in training phase return predictions
-            output = torch.cat(
-                (pred_boxes.view(bs, -1, 4) * stride, pred_conf.view(bs, -1, 1), pred_cls.view(bs, -1, 1)), -1)
+            output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
+                                self.Sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, 1)), -1)
             return output.data
 
 
@@ -324,8 +323,8 @@ class YOLOLayerOld(nn.Module):
             # pred_cls[:,:,:,:,0]=1
 
             # If not in training phase return predictions
-            output = torch.cat(
-                (pred_boxes.view(bs, -1, 4) * stride, pred_conf.view(bs, -1, 1), pred_cls.view(bs, -1, self.nC)), -1)
+            output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
+                                self.Sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, self.nC)), -1)
             return output.data
 
 
