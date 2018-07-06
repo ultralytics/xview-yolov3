@@ -67,7 +67,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_60c.mat','wh','targets','id','class_stats')
+save('targets_60c_3s.mat','wh','targets','id','class_stats')
 
 
 function stats = per_class_stats(classes,w,h)
@@ -76,7 +76,7 @@ area = h.*w;
 uc=unique(classes(:)); 
 n = numel(uc);
 limits = zeros(n,6); % minmax: [width, height, area]
-wh = zeros(n,3); % [class, wh1, wh2, wh3]
+wh = zeros(n,9); % [class, wh1, wh2, wh3]
 for i = 1:n
     j = find(classes==uc(i));
     wj = w(j);  hj = h(j);
@@ -84,9 +84,9 @@ for i = 1:n
     
     %close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); 
     %title(corr(wj,hj))
-    [~,C] = kmeans([wj hj],1,'MaxIter',500,'OnlinePhase','on');
+    [~,C] = kmeans([wj hj],3,'MaxIter',5000,'OnlinePhase','on');
     %plot(C(:,1),C(:,2),'g.','MarkerSize',50)
-    wh(i,:) = [i-1, C(1,:)];
+    wh(i,:) = [i-1, C(1,:), i-1, C(2,:), i-1, C(2,:)];
 end
 stats = [limits, wh];
 end
