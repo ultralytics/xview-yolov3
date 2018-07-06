@@ -174,8 +174,8 @@ class YOLOLayer(nn.Module):
             if nM > 0:
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 4 * (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = 4 * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lx = 2.5 * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = 2.5 * (MSELoss(y[mask], ty[mask]) * wC).sum()
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
                 lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
