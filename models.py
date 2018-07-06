@@ -72,7 +72,7 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
-class YOLOLayer(nn.Module):
+class YOLOLayer1(nn.Module):
     """Detection layer"""
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -80,8 +80,7 @@ class YOLOLayer(nn.Module):
 
         mat = scipy.io.loadmat('utils/targets_60c.mat')
         wh = mat['class_stats'][:, 6:].reshape(-1, 3)
-        area = wh[:, 1] * wh[:, 2]
-        i = np.argsort(area)  # least to greatest
+        i = np.argsort(wh[:, 1] * wh[:, 2])  # smallest to largest area
 
         nA = int(len(i) / 3)  # anchors per yolo layer
         if anchor_idxs[0] == 40:  # 6
@@ -96,8 +95,7 @@ class YOLOLayer(nn.Module):
 
         classes = wh[i, 0]
         wh = wh[i, 1:]
-        anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
-        self.anchors = anchors
+        self.anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
         self.nA = nA  # number of anchors (3)
         self.nC = nC  # number of classes (60)
         self.bbox_attrs = 5
@@ -114,7 +112,6 @@ class YOLOLayer(nn.Module):
         self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
         self.anchor_class = torch.FloatTensor(classes).view(-1, 1).repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-
         self.Sigmoid = torch.nn.Sigmoid()
 
     def forward(self, p, targets=None, requestPrecision=False):
@@ -130,10 +127,8 @@ class YOLOLayer(nn.Module):
         # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.anchor_class[0, :, 0, 0].long()])
 
         if p.is_cuda and not self.grid_x.is_cuda:
-            self.grid_x = self.grid_x.cuda()
-            self.grid_y = self.grid_y.cuda()
-            self.anchor_w = self.anchor_w.cuda()
-            self.anchor_h = self.anchor_h.cuda()
+            self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
+            self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
 
         # x.view(4, 650, 19, 19) -- > (4, 10, 19, 19, 65)  # (bs, anchors, grid, grid, classes + xywh) OLD
         # x.view(4, 100, 19, 19) -- > (4, 20, 19, 19, 5)  # (bs, anchors, grid, grid, classes + xywh)
@@ -161,8 +156,8 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 3] = y.data + self.grid_y + height / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap = \
-                build_targets_new(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
-                                  self.anchor_wh, requestPrecision)
+                build_targets1(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
+                               self.anchor_wh, requestPrecision)
 
             tcls = tcls[mask]
             if x.is_cuda:
@@ -201,7 +196,7 @@ class YOLOLayer(nn.Module):
             return output.data
 
 
-class YOLOLayerOld(nn.Module):
+class YOLOLayer0(nn.Module):
     """Detection layer"""
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -234,9 +229,7 @@ class YOLOLayerOld(nn.Module):
         self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
         self.Sigmoid = torch.nn.Sigmoid()
-        self.Tanh = torch.nn.Tanh()
 
-    # @profile
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
         device = torch.device('cuda:0' if p.is_cuda else 'cpu')
@@ -251,10 +244,8 @@ class YOLOLayerOld(nn.Module):
         CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
         if p.is_cuda and not self.grid_x.is_cuda:
-            self.grid_x = self.grid_x.cuda()
-            self.grid_y = self.grid_y.cuda()
-            self.anchor_w = self.anchor_w.cuda()
-            self.anchor_h = self.anchor_h.cuda()
+            self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
+            self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
 
         # x.view(4, 650, 19, 19) -- > (4, 10, 19, 19, 65)  # (bs, anchors, grid, grid, classes + xywh)
         p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
@@ -317,10 +308,6 @@ class YOLOLayerOld(nn.Module):
             pred_boxes[..., 1] = y.data + self.grid_y
             pred_boxes[..., 2] = width
             pred_boxes[..., 3] = height
-
-            # self.nC = 60
-            # pred_cls = torch.zeros((bs, self.nA, nG, nG, self.nC)).cuda()
-            # pred_cls[:,:,:,:,0]=1
 
             # If not in training phase return predictions
             output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
