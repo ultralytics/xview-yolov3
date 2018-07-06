@@ -10,6 +10,7 @@
 *.HEIC
 *.weights
 *.pt
+*.tif.txt
 xview_predictions
 !zidane.jpg
 !images/*
