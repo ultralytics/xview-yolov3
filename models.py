@@ -379,9 +379,7 @@ class Darknet(nn.Module):
                 TP = (self.losses['TP'][j] > 0).sum().float()
                 FP = (self.losses['FP'][j] > 0).sum().float()
                 FN = (self.losses['FN'][j] == 3).sum().float()
-
-                print(TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16))
-
+                # print(TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16))
                 self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
                 self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
 

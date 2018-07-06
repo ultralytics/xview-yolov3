@@ -105,7 +105,7 @@ class ListDataset_xview_crop():  # for training
 
             img0 = cv2.imread(img_path)
             h, w, _ = img0.shape
-            for j in range(8):
+            for j in range(16):
                 padx = int(random.random() * (w - self.height))
                 pady = int(random.random() * (h - self.height))
                 img = img0[pady:pady + self.height, padx:padx + self.height]
