@@ -93,6 +93,7 @@ class YOLOLayer(nn.Module):
             stride = 8
             i = i[:nA]
 
+        nA = 1
         classes = torch.FloatTensor(wh[i, 0])
         wh = wh[i, 1:]
         self.anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
@@ -102,7 +103,6 @@ class YOLOLayer(nn.Module):
         self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
 
         # Build anchor grids
-        nA = 1
         nG = int(self.img_dim / stride)
         nB = 1  # batch_size set to 1
         shape = [nB, nA, nG, nG]
@@ -125,7 +125,7 @@ class YOLOLayer(nn.Module):
 
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
         MSELoss = nn.MSELoss(reduce=False)
-        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.anchor_class[0, :, 0, 0].long()])
+        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.classes.long()])
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -177,13 +177,13 @@ class YOLOLayer(nn.Module):
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
                 lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                lcls = FT([0])
+                lcls = 0.2 * CrossEntropyLoss(p[..., 5:][mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
             lconf += 0.6 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
-            loss = lx + ly + lw + lh + lconf
+            loss = lx + ly + lw + lh + lconf + lcls
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    ap, nGT, TP, FP, FN, TC, 0, 0
 

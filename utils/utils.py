@@ -145,14 +145,16 @@ def build_targets2(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
     tw = torch.zeros(nB, nA, nG, nG)
     th = torch.zeros(nB, nA, nG, nG)
     tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    tcls = torch.ByteTensor(nB, nA, nG, nG, nC * 0 + 60).fill_(0)  # nC = number of classes
+    tcls = torch.ByteTensor(nB, nA, nG, nG, len(classes)).fill_(0)  # nC = number of classes
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FN = torch.ByteTensor(nB, max(nT)).fill_(0)
     TC = torch.ByteTensor(nB, max(nT)).fill_(0)  # target category
 
     wh_table = torch.zeros((60,2))
+    classes_20_table = torch.zeros(60)
     for i, c in enumerate(classes):
+        classes_20_table[int(c)] = i
         wh_table[int(c)] = anchor_wh[i]
 
     for b in range(nB):
@@ -212,7 +214,7 @@ def build_targets2(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
         tw[b, a, gj, gi] = torch.sqrt(gw / wh_table[tc][:,0]) / 2
         th[b, a, gj, gi] = torch.sqrt(gh / wh_table[tc][:,1]) / 2
         # One-hot encoding of label
-        tcls[b, a, gj, gi, tc] = 1
+        tcls[b, a, gj, gi, classes_20_table[tc.long()].long()] = 1
         tconf[b, a, gj, gi] = 1
 
         if requestPrecision:
