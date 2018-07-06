@@ -165,6 +165,7 @@ class YOLOLayer(nn.Module):
             tcls = tcls[mask]
             if x.is_cuda:
                 tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
+                tcls20 = tcls20.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nM = mask.sum().float()
@@ -177,7 +178,7 @@ class YOLOLayer(nn.Module):
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
                 lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                lcls = 0.2 * CrossEntropyLoss(p[..., 5:][mask], torch.argmax(tcls20[mask], 1))
+                lcls = 0.2 * CrossEntropyLoss(p[..., 5:][mask], torch.argmax(tcls20[mask], 1).float())
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
