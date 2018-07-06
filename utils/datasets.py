@@ -57,6 +57,7 @@ class ImageFolder():  # for eval-only
 class ListDataset_xview_crop():  # for training
     def __init__(self, path, batch_size=1, img_size=416):
         self.files = sorted(glob.glob('%s/*.bmp' % path))
+        self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
@@ -66,8 +67,8 @@ class ListDataset_xview_crop():  # for training
         self.mat = scipy.io.loadmat('utils/targets_60c.mat')
         self.mat['id'] = self.mat['id'].squeeze()
         # make folder for reduced size images
-        self.small_folder = path + '_' + str(img_size) + '/'
-        os.makedirs(self.small_folder, exist_ok=True)
+        # self.small_folder = path + '_' + str(img_size) + '/'
+        # os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))

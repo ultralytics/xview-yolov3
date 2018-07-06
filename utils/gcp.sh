@@ -12,7 +12,7 @@ git clone https://github.com/ultralytics/yolo
 
 # do training
 mkdir yolo/checkpoints
-cp fresh_60c_best_608.pt yolo/checkpoints
+cp drive/e71cont_60ca_best_608.pt yolo/checkpoints
 cd yolo
 python3 train.py -epochs 9999
 
