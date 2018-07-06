@@ -161,20 +161,18 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 2] = x.data + self.grid_x + width / 2
                 pred_boxes[..., 3] = y.data + self.grid_y + height / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap = \
                 build_targets_new(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
                                   self.anchor_wh, requestPrecision)
 
             tcls = tcls[mask]
             if x.is_cuda:
                 tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
-                good_anchors = good_anchors.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                # wA = nM / nGT  # weight anchor-grid
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
                 lx = 5 * MSELoss(x[mask], tx[mask])
@@ -185,9 +183,8 @@ class YOLOLayer(nn.Module):
                 lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
-                # wA = FT([1])
 
-            lconf += BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
+            lconf += BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
             loss = lx + ly + lw + lh + lconf
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
@@ -382,6 +379,9 @@ class Darknet(nn.Module):
                 TP = (self.losses['TP'][j] > 0).sum().float()
                 FP = (self.losses['FP'][j] > 0).sum().float()
                 FN = (self.losses['FN'][j] == 3).sum().float()
+
+                print(TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16))
+
                 self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
                 self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
 

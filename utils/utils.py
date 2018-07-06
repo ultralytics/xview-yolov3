@@ -216,23 +216,24 @@ def build_targets_new(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
-        good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.20
+        # good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.20
 
         if requestPrecision:
             # predicted classes and confidence
             tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
             pcls = pred_cls[b, a, gj, gi].long().cpu()
             # pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
-            # pcls = tc
             pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
             TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
+            # FNall = (torch.sigmoid(pred_conf[b]).cpu() > 0.99).sum()
+            # print(TP[b].sum(),FP[b].sum(),FN[b].sum(), FNall-FP[b].sum())
 
     ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap, good_anchors == 1
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap
 
 
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
