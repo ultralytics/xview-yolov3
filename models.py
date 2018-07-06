@@ -72,8 +72,136 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
+class YOLOLayer(nn.Module):
+    # YOLO Layer 2
+
+    def __init__(self, anchors, nC, img_dim, anchor_idxs):
+        super(YOLOLayer, self).__init__()
+
+        mat = scipy.io.loadmat('utils/targets_60c.mat')
+        wh = mat['class_stats'][:, 6:].reshape(-1, 3)
+        i = np.argsort(wh[:, 1] * wh[:, 2])  # smallest to largest area
+
+        nA = int(len(i) / 3)  # anchors per yolo layer
+        if anchor_idxs[0] == 40:  # 6
+            stride = 32
+            i = i[nA * 2:nA * 3]
+        elif anchor_idxs[0] == 20:  # 3
+            stride = 16
+            i = i[nA:nA * 2]
+        else:
+            stride = 8
+            i = i[:nA]
+
+        classes = torch.FloatTensor(wh[i, 0])
+        wh = wh[i, 1:]
+        self.anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
+        self.nA = nA  # number of anchors (3)
+        self.nC = nC  # number of classes (60)
+        self.bbox_attrs = 25
+        self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
+
+        # Build anchor grids
+        nA = 1
+        nG = int(self.img_dim / stride)
+        nB = 1  # batch_size set to 1
+        shape = [nB, nA, nG, nG]
+        self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
+        self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
+        self.scaled_anchors = torch.FloatTensor(wh / stride)
+        self.anchor_w = self.scaled_anchors[:, 0:1].reshape((1,1,1,1,20))
+        self.anchor_h = self.scaled_anchors[:, 1:2].reshape((1,1,1,1,20))
+        self.anchor_wh = wh / stride
+        self.classes = classes
+        self.Sigmoid = torch.nn.Sigmoid()
+
+    def forward(self, p, targets=None, requestPrecision=False):
+        FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
+        device = torch.device('cuda:0' if p.is_cuda else 'cpu')
+        weight = xview_class_weights(range(60)).to(device)
+        bs = p.shape[0]
+        nG = p.shape[2]
+        stride = self.img_dim / nG
+
+        BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
+        MSELoss = nn.MSELoss(reduce=False)
+        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.anchor_class[0, :, 0, 0].long()])
+
+        if p.is_cuda and not self.grid_x.is_cuda:
+            self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
+            self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
+            self.classes = self.classes.cuda()
+
+        # x.view(4, 650, 19, 19) -- > (4, 10, 19, 19, 65)  # (bs, anchors, grid, grid, classes + xywh) OLD
+        # x.view(4, 25, 19, 19) -- > (4, 1, 19, 19, 25)  # (bs, anchors, grid, grid, classes + xywh)
+        p = p.view(bs, 1, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
+
+        # Get outputs
+        x = self.Sigmoid(p[..., 0])  # Center x
+        y = self.Sigmoid(p[..., 1])  # Center y
+        w = self.Sigmoid(p[..., 2])  # Width
+        h = self.Sigmoid(p[..., 3])  # Height
+        pred_conf = p[..., 4]  # Conf
+        class_index = torch.argmax(p[..., 5:],4)
+        pred_cls = self.classes[class_index]
+        width = ((w.data * 2) ** 2) * self.anchor_w[:,:,:,:,class_index]
+        height = ((h.data * 2) ** 2) * self.anchor_h[:,:,:,:,class_index]
+
+        # Add offset and scale with anchors (in grid space, i.e. 0-13)
+        pred_boxes = FT(p[..., :4].shape)
+
+        # Training
+        if targets is not None:
+            if requestPrecision:
+                pred_boxes[..., 0] = x.data + self.grid_x - width / 2
+                pred_boxes[..., 1] = y.data + self.grid_y - height / 2
+                pred_boxes[..., 2] = x.data + self.grid_x + width / 2
+                pred_boxes[..., 3] = y.data + self.grid_y + height / 2
+
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap = \
+                build_targets2(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
+                               self.anchor_wh, self.classes, requestPrecision)
+
+            tcls = tcls[mask]
+            if x.is_cuda:
+                tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
+
+            # Mask outputs to ignore non-existing objects (but keep confidence predictions)
+            nM = mask.sum().float()
+            nGT = FT([sum([len(x) for x in targets])])
+            if nM > 0:
+                wC = weight[torch.argmax(tcls, 1)]  # weight class
+                wC /= sum(wC)
+                lx = 4 * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = 4 * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
+                lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
+                lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lcls = FT([0])
+            else:
+                lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
+
+            lconf += 0.6 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
+
+            loss = lx + ly + lw + lh + lconf
+            return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
+                   ap, nGT, TP, FP, FN, TC, 0, 0
+
+        else:
+            pred_boxes[..., 0] = x.data + self.grid_x
+            pred_boxes[..., 1] = y.data + self.grid_y
+            pred_boxes[..., 2] = width
+            pred_boxes[..., 3] = height
+
+            # If not in training phase return predictions
+            output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
+                                self.Sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, 1)), -1)
+            return output.data
+
+
+
 class YOLOLayer1(nn.Module):
-    """Detection layer"""
+    # YOLO Layer 1
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
         super(YOLOLayer, self).__init__()
@@ -104,7 +232,7 @@ class YOLOLayer1(nn.Module):
         # Build anchor grids
         nG = int(self.img_dim / stride)
         nB = 1  # batch_size set to 1
-        shape = [nB, self.nA, nG, nG]
+        shape = [nB, nA, nG, nG]
         self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
         self.scaled_anchors = torch.FloatTensor(wh / stride)
@@ -197,7 +325,7 @@ class YOLOLayer1(nn.Module):
 
 
 class YOLOLayer0(nn.Module):
-    """Detection layer"""
+    # YOLO Layer 0
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
         super(YOLOLayer, self).__init__()
@@ -221,7 +349,7 @@ class YOLOLayer0(nn.Module):
         # Build anchor grids
         nG = int(self.img_dim / stride)
         nB = 1  # batch_size set to 1
-        shape = [nB, self.nA, nG, nG]
+        shape = [nB, nA, nG, nG]
         self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
         self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
