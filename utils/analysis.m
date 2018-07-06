@@ -86,7 +86,7 @@ for i = 1:n
     %title(corr(wj,hj))
     [~,C] = kmeans([wj hj],3,'MaxIter',5000,'OnlinePhase','on');
     %plot(C(:,1),C(:,2),'g.','MarkerSize',50)
-    wh(i,:) = [i-1, C(1,:), i-1, C(2,:), i-1, C(2,:)];
+    wh(i,:) = [i-1, C(1,:), i-1, C(2,:), i-1, C(3,:)];
 end
 stats = [limits, wh];
 end

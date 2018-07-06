@@ -16,7 +16,7 @@ from utils.utils import *
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_60c_60ca.cfg', help='cfg file path')
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_180c.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
@@ -40,7 +40,7 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'e71cont_60ca'
+        run_name = 'fresh2wC3s'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:

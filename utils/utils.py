@@ -307,7 +307,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
-        good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.50
+        # good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.50
 
         if requestPrecision:
             # predicted classes and confidence
@@ -323,7 +323,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
     ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap, good_anchors == 1
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap, good_anchors
 
 
 def to_categorical(y, num_classes):
