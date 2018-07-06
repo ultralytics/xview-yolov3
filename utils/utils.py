@@ -192,7 +192,7 @@ def build_targets_new(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > .15]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
+            i = i[iou_anch_best[i] > 1E-4]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
             if len(i) == 0:
                 continue
 
