@@ -261,8 +261,10 @@ class YOLOLayer(nn.Module):
         y = self.Sigmoid(p[..., 1])  # Center y
         w = self.Sigmoid(p[..., 2])  # Width
         h = self.Sigmoid(p[..., 3])  # Height
-        width = w.data * 2 * self.anchor_w
-        height = h.data * 2 * self.anchor_h
+        width = ((w.data * 2) ** 2) * self.anchor_w
+        height = ((h.data * 2) ** 2) * self.anchor_h
+        # width = w.data * 2 * self.anchor_w
+        # height = h.data * 2 * self.anchor_h
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
