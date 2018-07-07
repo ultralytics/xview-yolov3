@@ -311,8 +311,8 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += 4 * (BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float())).mean() * (nG**2)/7581
-            # print((torch.sigmoid(pred_conf[~mask]) > 0.999).sum())
+            lconf += 2 * (BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()) ** 2).mean() * (nG**2)/7581
+            print((torch.sigmoid(pred_conf[~mask]) > 0.999).sum())
 
             loss = lx + ly + lw + lh + lconf + lcls
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
