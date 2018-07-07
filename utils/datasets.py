@@ -94,7 +94,7 @@ class ListDataset_xview_crop():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
+            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
 
             # load labels
             chip = img_path.rsplit('/')[-1]
