@@ -254,7 +254,7 @@ class YOLOLayer(nn.Module):
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
         MSELoss = nn.MSELoss(reduce=False)
         w = weight[self.classes.long()]
-        CrossEntropyLoss = nn.CrossEntropyLoss(weight=w/w.sum())
+        CrossEntropyLoss = nn.CrossEntropyLoss(weight=w / w.sum())
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -299,21 +299,20 @@ class YOLOLayer(nn.Module):
             if nM > 0:
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 4 * (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = 4 * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lx = 2 * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = 2 * (MSELoss(y[mask], ty[mask]) * wC).sum()
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
 
                 mnz = torch.nonzero(mask)
-                lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lconf = 1 * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
                 lcls = 0.2 * CrossEntropyLoss(pred_conf[mnz[:, 0], :, mnz[:, 2], mnz[:, 3]], mnz[:, 1])
-                #lcls = FT([0])
+                # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
             lconf += 1 * (BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float())).mean()
-
-            print((torch.sigmoid(pred_conf[~mask]) > 0.999).sum())
+            # print((torch.sigmoid(pred_conf[~mask]) > 0.999).sum())
 
             loss = lx + ly + lw + lh + lconf + lcls
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
