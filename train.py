@@ -123,7 +123,7 @@ def main(opt):
 
         if (epoch >= opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             best_loss = rloss['loss']
-            opt.weights_path = '%s/%s_best_%g.pt' % (opt.checkpoint_dir, run_name, opt.img_size)  # best weight path
+            opt.weights_path = '%s/%s.pt' % (opt.checkpoint_dir, run_name)  # best weight path
             torch.save(model.state_dict(), opt.weights_path)
             # torch.save(model, 'filename.pt')
 

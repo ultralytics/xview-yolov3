@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+from sys import platform
 
 try:
     from torch.utils.data import DataLoader
@@ -15,12 +16,16 @@ from utils.utils import *
 # from scoring import score
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-image_folder', type=str, default='data/train_images/', help='path to images')
-parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
+# Get data configuration
+if platform == 'darwin':  # macos
+    parser.add_argument('-image_folder', type=str, default='data/train_images/', help='path to images')
+    parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
+else:  # gcp
+    parser.add_argument('-image_folder', type=str, default='../train_images/5.tif', help='path to images')
+    parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
 
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL1.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/e71cont_60ca_best_608.pt', help='weights path')
-
+parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/fresh3.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
@@ -30,16 +35,15 @@ parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted
 opt = parser.parse_args()
 print(opt)
 
-
 # @profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
-    os.system('rm -rf data/predictions_img')
+    os.system('rm -rf ' + opt.output_folder + '_img')
     os.makedirs(opt.output_folder, exist_ok=True)
-    os.makedirs('data/predictions_img', exist_ok=True)
-    opt.img_size = int(opt.weights_path.rsplit('_')[-1][:-3])
+    os.makedirs(opt.output_folder + '_img', exist_ok=True)
 
-    cuda = torch.cuda.is_available()
+
+    cuda = False # torch.cuda.is_available()
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # Set up model
@@ -165,7 +169,7 @@ def detect(opt):
 
             if opt.plot_flag:
                 # Save generated image with detections
-                cv2.imwrite(results_img_path.replace('.tif', '.bmp'), img)
+                cv2.imwrite(results_img_path.replace('.tif', '.jpg'), img)
 
     # score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
     #         '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
