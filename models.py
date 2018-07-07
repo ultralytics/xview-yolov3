@@ -295,7 +295,7 @@ class YOLOLayer(nn.Module):
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nM = mask.sum().float()
-            nGT = FT([sum([len(x) for x in targets])])
+            nGT = FT([sum([len(x) for x in targets])]).squeeze()
             if nM > 0:
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
@@ -305,14 +305,14 @@ class YOLOLayer(nn.Module):
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
 
                 mnz = torch.nonzero(mask)
-                lconf = 1 * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lconf = 2 * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
                 lcls = 0.2 * CrossEntropyLoss(pred_conf[mnz[:, 0], :, mnz[:, 2], mnz[:, 3]], mnz[:, 1])
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += 1 * (BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float())).mean()
-            # print((torch.sigmoid(pred_conf[~mask]) > 0.999).sum())
+            lconf += 4 * (BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float())).mean() * (nG**2)/7581
+            print((torch.sigmoid(pred_conf[~mask]) > 0.999).sum())
 
             loss = lx + ly + lw + lh + lconf + lcls
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
