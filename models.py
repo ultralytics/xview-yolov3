@@ -72,7 +72,7 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
-class YOLOLayer(nn.Module):
+class YOLOLayer1(nn.Module):
     # YOLO Layer 1
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -202,7 +202,7 @@ class YOLOLayer(nn.Module):
             return output.data
 
 
-class YOLOLayer0(nn.Module):
+class YOLOLayer(nn.Module):
     # YOLO Layer 0
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -300,7 +300,7 @@ class YOLOLayer0(nn.Module):
                 lcls = 0.2 * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
-                wA = FT([1])
+                # wA = FT([1])
 
             lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
