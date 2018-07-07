@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import scipy.io
 import torch
+import torch.nn.functional as F
 
 # set printoptions
 torch.set_printoptions(linewidth=320, precision=5, profile='long')
@@ -351,7 +352,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
             class_pred = image_pred[:, 5]
             class_conf = image_pred[:, 4]
         else:
-            class_conf, class_pred = torch.max(torch.softmax(image_pred[:, 5:], 1), 1)
+            class_conf, class_pred = torch.max(F.softmax(image_pred[:, 5:], 1), 1)
 
         w = image_pred[:, 2].numpy()
         h = image_pred[:, 3].numpy()
