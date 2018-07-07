@@ -118,7 +118,7 @@ def main(opt):
             #    print(time.time() - t0)
             #    return
 
-        with open('printedResults.txt', 'a') as file:
+        with open('results.txt', 'a') as file:
             file.write(s + '\n')
 
         if (epoch >= opt.checkpoint_interval) & (rloss['loss'] < best_loss):
