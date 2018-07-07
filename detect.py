@@ -18,10 +18,10 @@ from utils.utils import *
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='data/train_images/', help='path to images')
+    parser.add_argument('-image_folder', type=str, default='data/train_images3/', help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
 else:  # gcp
-    parser.add_argument('-image_folder', type=str, default='../train_images/5.tif', help='path to images')
+    parser.add_argument('-image_folder', type=str, default='../train_images3/', help='path to images')
     parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
