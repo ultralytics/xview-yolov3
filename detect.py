@@ -169,7 +169,7 @@ def detect(opt):
 
             if opt.plot_flag:
                 # Save generated image with detections
-                cv2.imwrite(results_img_path.replace('.tif', '.jpg'), img)
+                cv2.imwrite(results_img_path.replace('.bmp', '.jpg'), img)
 
     # score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/xview_predictions/',
     #         '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')

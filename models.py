@@ -113,7 +113,6 @@ class YOLOLayer1(nn.Module):
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
         self.classes = torch.FloatTensor(classes)
         self.anchor_class = self.classes.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.Sigmoid = torch.nn.Sigmoid()
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
@@ -136,10 +135,10 @@ class YOLOLayer1(nn.Module):
         p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
 
         # Get outputs
-        x = self.Sigmoid(p[..., 0])  # Center x
-        y = self.Sigmoid(p[..., 1])  # Center y
-        w = self.Sigmoid(p[..., 2])  # Width
-        h = self.Sigmoid(p[..., 3])  # Height
+        x = F.sigmoid(p[..., 0])  # Center x
+        y = F.sigmoid(p[..., 1])  # Center y
+        w = F.sigmoid(p[..., 2])  # Width
+        h = F.sigmoid(p[..., 3])  # Height
         width = ((w.data * 2) ** 2) * self.anchor_w
         height = ((h.data * 2) ** 2) * self.anchor_h
 
@@ -186,7 +185,7 @@ class YOLOLayer1(nn.Module):
 
 
             loss = lx + ly + lw + lh + lconf + lcls
-            FPe = (torch.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
+            FPe = (F.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    ap, nGT, TP, FP, FPe, FN, TC, 0, 0
 
@@ -198,7 +197,7 @@ class YOLOLayer1(nn.Module):
 
             # If not in training phase return predictions
             output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
-                                self.Sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, 1)), -1)
+                                F.sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, 1)), -1)
             return output.data
 
 
@@ -234,7 +233,6 @@ class YOLOLayer(nn.Module):
         self.anchor_w = self.scaled_anchors[:, 0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
-        self.Sigmoid = torch.nn.Sigmoid()
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
@@ -257,10 +255,10 @@ class YOLOLayer(nn.Module):
         p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
 
         # Get outputs
-        x = self.Sigmoid(p[..., 0])  # Center x
-        y = self.Sigmoid(p[..., 1])  # Center y
-        w = self.Sigmoid(p[..., 2])  # Width
-        h = self.Sigmoid(p[..., 3])  # Height
+        x = F.sigmoid(p[..., 0])  # Center x
+        y = F.sigmoid(p[..., 1])  # Center y
+        w = F.sigmoid(p[..., 2])  # Width
+        h = F.sigmoid(p[..., 3])  # Height
         width = ((w.data * 2) ** 2) * self.anchor_w
         height = ((h.data * 2) ** 2) * self.anchor_h
         # width = w.data * 2 * self.anchor_w
@@ -305,7 +303,7 @@ class YOLOLayer(nn.Module):
             lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
             loss = lx + ly + lw + lh + lconf + lcls
-            FPe = (torch.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
+            FPe = (F.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    ap, nGT, TP, FP, FPe, FN, TC, 0, 0
 
@@ -317,7 +315,7 @@ class YOLOLayer(nn.Module):
 
             # If not in training phase return predictions
             output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
-                                self.Sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, self.nC)), -1)
+                                F.sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, self.nC)), -1)
             return output.data
 
 
