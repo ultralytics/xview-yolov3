@@ -40,12 +40,12 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'e71cont_60ca'
+        run_name = 'fresh4'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'fresh2wC'
+        run_name = 'fresh3'
         train_path = '../train_images'
 
         # Initiate model
@@ -55,7 +55,7 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/fresh2wC_best_608.pt', map_location='cuda:0' if cuda else 'cpu')

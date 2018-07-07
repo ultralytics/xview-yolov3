@@ -29,10 +29,11 @@ def modelinfo(model):
             i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
     print('\n%g layers, %g parameters, %g gradients' % (i + 1, nparams, ngradients))
 
+
 def xview_class2name(classes):
     with open('data/xview.names', 'r') as f:
         x = f.readlines()
-    return x[classes].replace('\n','')
+    return x[classes].replace('\n', '')
 
 
 def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
@@ -109,7 +110,6 @@ def compute_ap(recall, precision):
     return ap
 
 
-# @profile
 def bbox_iou(box1, box2, x1y1x2y2=True):
     # if len(box1.shape) == 1:
     #    box1 = box1.reshape(1, 4)
@@ -140,104 +140,6 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     b2_area = (b2_x2 - b2_x1) * (b2_y2 - b2_y1)
 
     return inter_area / (b1_area + b2_area - inter_area + 1e-16)
-
-
-def build_targets2(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, classes, requestPrecision):
-    nB = len(target)  # target.shape[0]
-    nT = [len(x) for x in target]  # torch.argmin(target[:, :, 4], 1)  # targets per image
-    tx = torch.zeros(nB, nA, nG, nG)  # batch size (4), number of anchors (3), number of grid points (13)
-    ty = torch.zeros(nB, nA, nG, nG)
-    tw = torch.zeros(nB, nA, nG, nG)
-    th = torch.zeros(nB, nA, nG, nG)
-    tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    tcls = torch.ByteTensor(nB, nA, nG, nG, 60).fill_(0)  # nC = number of classes
-    tcls20 = torch.ByteTensor(nB, nA, nG, nG, len(classes)).fill_(0)  # nC = number of classes
-    TP = torch.ByteTensor(nB, max(nT)).fill_(0)
-    FP = torch.ByteTensor(nB, max(nT)).fill_(0)
-    FN = torch.ByteTensor(nB, max(nT)).fill_(0)
-    TC = torch.ByteTensor(nB, max(nT)).fill_(0)  # target category
-
-    wh_table = torch.zeros((60,2))
-    classes_20_table = torch.zeros(60)
-    for i, c in enumerate(classes):
-        classes_20_table[int(c)] = i
-        wh_table[int(c)] = anchor_wh[i]
-
-    for b in range(nB):
-        nTb = nT[b]  # number of targets (measures index of first zero-height target box)
-        if nTb == 0:
-            continue
-        t = target[b]  # target[b, :nTb]
-        FN[b, :nTb] = 1
-
-        # Convert to position relative to box
-        tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
-        TC[b, :nTb] = tc
-        # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
-        gi = torch.clamp(gx.long(), min=0, max=nG - 1)
-        gj = torch.clamp(gy.long(), min=0, max=nG - 1)
-
-        # iou of targets-anchors (using wh only)
-        box1 = (t[:, 3:5] * nG).unsqueeze(0)
-        box2 = wh_table[tc].unsqueeze(0)
-        # box2 = anchor_grid_wh[:, gj, gi]
-        inter_area = torch.min(box1, box2).prod(2)
-        iou_anch = inter_area / (gw * gh + box2.prod(2) - inter_area + 1e-16)
-
-        # set iou for out-of-class anchors to zero
-        #anchor_classes = pred_cls[b, :, gj, gi].long()
-        #iou_anch[tc != anchor_classes] = 0
-
-        # Select best iou_pred and anchor
-        iou_anch_best, a = iou_anch.max(0)  # best anchor [0-2] for each target
-
-        # Two targets can not claim the same anchor
-        if nTb > 1:
-            iou_order = np.argsort(-iou_anch_best)  # best to worst
-            # u = torch.cat((gi, gj, a), 0).view(3, -1).numpy()
-            # _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
-            u = gi.float() * 0.4361538773074043 + gj.float() * 0.28012496588736746 + a.float() * 0.6627147212460307
-            _, first_unique = np.unique(u[iou_order], return_index=True)  # first unique indices
-            # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
-            i = iou_order[first_unique]
-            # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 1E-4]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
-            if len(i) == 0:
-                continue
-
-            a, gj, gi, t = a[i], gj[i], gi[i], t[i]
-        else:
-            if iou_anch_best == 0:
-                continue
-            i = 0
-
-        tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
-
-        # Coordinates
-        tx[b, a, gj, gi] = gx - gi.float()
-        ty[b, a, gj, gi] = gy - gj.float()
-        # Width and height
-        tw[b, a, gj, gi] = torch.sqrt(gw / wh_table[tc][:,0]) / 2
-        th[b, a, gj, gi] = torch.sqrt(gh / wh_table[tc][:,1]) / 2
-        # One-hot encoding of label
-        tcls[b, a, gj, gi, tc] = 1
-        tcls20[b, a, gj, gi, classes_20_table[tc].long()] = 1
-        tconf[b, a, gj, gi] = 1
-
-        if requestPrecision:
-            # predicted classes and confidence
-            tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
-            pcls = pred_cls[b, a, gj, gi].long().cpu()
-            # pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
-            pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
-            iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
-
-            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
-            FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
-            FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
-
-    ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, tcls20, TP, FP, FN, TC, ap
 
 
 def build_targets1(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
@@ -294,7 +196,7 @@ def build_targets1(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 1E-4]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
+            i = i[iou_anch_best[i] > 0.01]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
             if len(i) == 0:
                 continue
 
@@ -346,7 +248,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     tw = torch.zeros(nB, nA, nG, nG)
     th = torch.zeros(nB, nA, nG, nG)
     tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    good_anchors = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
     tcls = torch.ByteTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
@@ -409,14 +310,11 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
-        # good_anchors[b, :, gj, gi] = iou_anch[:, i].reshape(nA, -1) > 0.50
 
         if requestPrecision:
             # predicted classes and confidence
             tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
-            # pcls = pred_cls[b, a, gj, gi].long().cpu()
             pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
-            # pcls = tc
             pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
@@ -425,7 +323,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
     ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap, good_anchors
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap
 
 
 def to_categorical(y, num_classes):

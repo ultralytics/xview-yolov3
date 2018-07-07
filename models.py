@@ -72,134 +72,6 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
-class YOLOLayer2(nn.Module):
-    # YOLO Layer 2
-
-    def __init__(self, anchors, nC, img_dim, anchor_idxs):
-        super(YOLOLayer, self).__init__()
-
-        mat = scipy.io.loadmat('utils/targets_60c.mat')
-        wh = mat['class_stats'][:, 6:].reshape(-1, 3)
-        i = np.argsort(wh[:, 1] * wh[:, 2])  # smallest to largest area
-
-        nA = int(len(i) / 3)  # anchors per yolo layer
-        if anchor_idxs[0] == 40:  # 6
-            stride = 32
-            i = i[nA * 2:nA * 3]
-        elif anchor_idxs[0] == 20:  # 3
-            stride = 16
-            i = i[nA:nA * 2]
-        else:
-            stride = 8
-            i = i[:nA]
-
-        nA = 1
-        classes = torch.FloatTensor(wh[i, 0])
-        wh = wh[i, 1:]
-        self.anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
-        self.nA = nA  # number of anchors (3)
-        self.nC = nC  # number of classes (60)
-        self.bbox_attrs = 25
-        self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
-
-        # Build anchor grids
-        nG = int(self.img_dim / stride)
-        nB = 1  # batch_size set to 1
-        shape = [nB, nA, nG, nG]
-        self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
-        self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
-        self.scaled_anchors = torch.FloatTensor(wh / stride)
-        self.anchor_w = self.scaled_anchors[:, 0:1].reshape((1, 1, 1, 1, 20))
-        self.anchor_h = self.scaled_anchors[:, 1:2].reshape((1, 1, 1, 1, 20))
-        self.anchor_wh = wh / stride
-        self.classes = classes
-        self.Sigmoid = torch.nn.Sigmoid()
-
-    def forward(self, p, targets=None, requestPrecision=False):
-        FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
-        device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-        weight = xview_class_weights(range(60)).to(device)
-        bs = p.shape[0]
-        nG = p.shape[2]
-        stride = self.img_dim / nG
-
-        BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
-        MSELoss = nn.MSELoss(reduce=False)
-        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.classes.long()])
-
-        if p.is_cuda and not self.grid_x.is_cuda:
-            self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
-            self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
-            self.classes = self.classes.cuda()
-
-        # x.view(4, 650, 19, 19) -- > (4, 10, 19, 19, 65)  # (bs, anchors, grid, grid, classes + xywh) OLD
-        # x.view(4, 25, 19, 19) -- > (4, 1, 19, 19, 25)  # (bs, anchors, grid, grid, classes + xywh)
-        p = p.view(bs, 1, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
-
-        # Get outputs
-        x = self.Sigmoid(p[..., 0])  # Center x
-        y = self.Sigmoid(p[..., 1])  # Center y
-        w = self.Sigmoid(p[..., 2])  # Width
-        h = self.Sigmoid(p[..., 3])  # Height
-        pred_conf = p[..., 4]  # Conf
-        class_index = torch.argmax(p[..., 5:], 4)
-        pred_cls = self.classes[class_index]
-        width = ((w.data * 2) ** 2) * self.anchor_w[:, :, :, :, class_index]
-        height = ((h.data * 2) ** 2) * self.anchor_h[:, :, :, :, class_index]
-
-        # Add offset and scale with anchors (in grid space, i.e. 0-13)
-        pred_boxes = FT(p[..., :4].shape)
-
-        # Training
-        if targets is not None:
-            if requestPrecision:
-                pred_boxes[..., 0] = x.data + self.grid_x - width / 2
-                pred_boxes[..., 1] = y.data + self.grid_y - height / 2
-                pred_boxes[..., 2] = x.data + self.grid_x + width / 2
-                pred_boxes[..., 3] = y.data + self.grid_y + height / 2
-
-            tx, ty, tw, th, mask, tcls, tcls20, TP, FP, FN, TC, ap = \
-                build_targets2(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
-                               self.anchor_wh, self.classes, requestPrecision)
-
-            tcls = tcls[mask]
-            if x.is_cuda:
-                tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
-                tcls20 = tcls20.cuda()
-
-            # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nM = mask.sum().float()
-            nGT = FT([sum([len(x) for x in targets])])
-            if nM > 0:
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
-                lx = 4 * (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = 4 * (MSELoss(y[mask], ty[mask]) * wC).sum()
-                lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
-                lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
-                lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                lcls = 0.2 * CrossEntropyLoss(p[..., 5:][mask], torch.argmax(tcls20[mask], 1))
-            else:
-                lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
-
-            lconf += 0.6 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
-
-            loss = lx + ly + lw + lh + lconf + lcls
-            return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   ap, nGT, TP, FP, FN, TC, 0, 0
-
-        else:
-            pred_boxes[..., 0] = x.data + self.grid_x
-            pred_boxes[..., 1] = y.data + self.grid_y
-            pred_boxes[..., 2] = width
-            pred_boxes[..., 3] = height
-
-            # If not in training phase return predictions
-            output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
-                                self.Sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, 1)), -1)
-            return output.data
-
-
 class YOLOLayer(nn.Module):
     # YOLO Layer 1
 
@@ -253,8 +125,7 @@ class YOLOLayer(nn.Module):
 
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
         MSELoss = nn.MSELoss(reduce=False)
-        w = weight[self.classes.long()]
-        CrossEntropyLoss = nn.CrossEntropyLoss(weight=w / w.sum())
+        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.classes.long()])
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -299,24 +170,25 @@ class YOLOLayer(nn.Module):
             if nM > 0:
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 2 * (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = 2 * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lx = 5 * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = 5 * (MSELoss(y[mask], ty[mask]) * wC).sum()
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
 
                 mnz = torch.nonzero(mask)
-                lconf = 2 * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                lcls = 0.2 * CrossEntropyLoss(pred_conf[mnz[:, 0], :, mnz[:, 2], mnz[:, 3]], mnz[:, 1])
+                lconf = 1 * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lcls = 1 * CrossEntropyLoss(pred_conf[mnz[:, 0], :, mnz[:, 2], mnz[:, 3]], mnz[:, 1])
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += 2 * (BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()) ** 2).mean() * (nG**2)/7581
-            print((torch.sigmoid(pred_conf[~mask]) > 0.999).sum())
+            lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
+
 
             loss = lx + ly + lw + lh + lconf + lcls
+            FPe = (torch.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   ap, nGT, TP, FP, FN, TC, 0, 0
+                   ap, nGT, TP, FP, FPe, FN, TC, 0, 0
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
@@ -405,37 +277,37 @@ class YOLOLayer0(nn.Module):
                 pred_boxes[..., 2] = x.data + self.grid_x + width / 2
                 pred_boxes[..., 3] = y.data + self.grid_y + height / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap, good_anchors = \
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
                               self.anchor_wh, requestPrecision)
 
             tcls = tcls[mask]
             if x.is_cuda:
                 tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
-                good_anchors = good_anchors.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                wA = nM / nGT  # weight anchor-grid
+                # wA = nM / nGT  # weight anchor-grid
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 5 * wA * MSELoss(x[mask], tx[mask])
-                ly = 5 * wA * MSELoss(y[mask], ty[mask])
-                lw = 5 * wA * MSELoss(w[mask], tw[mask])
-                lh = 5 * wA * MSELoss(h[mask], th[mask])
-                lconf = wA * (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
-                lcls = 0.2 * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * wA
+                lx = 2 * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = 2 * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
+                lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
+                lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lcls = 0.2 * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
                 wA = FT([1])
 
-            lconf += 0.5 * wA * BCEWithLogitsLoss(pred_conf[~good_anchors], good_anchors[~good_anchors].float()).mean()
+            lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
             loss = lx + ly + lw + lh + lconf + lcls
+            FPe = (torch.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   ap, nGT, TP, FP, FN, TC, 0, 0
+                   ap, nGT, TP, FP, FPe, FN, TC, 0, 0
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
@@ -458,7 +330,7 @@ class Darknet(nn.Module):
         self.module_defs[0]['height'] = img_size
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FN', 'TC', 'precision',
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC', 'precision',
                            'recall']
 
     def forward(self, x, targets=None, requestPrecision=False):
@@ -507,7 +379,7 @@ class Darknet(nn.Module):
                 self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
 
             self.losses['TP'] = (self.losses['TP'] > 0).sum().float()
-            self.losses['FP'] = (self.losses['FP'] > 0).sum().float()
+            self.losses['FP'] = (self.losses['FP'] > 0).sum().float() + self.losses['FPe']
             self.losses['FN'] = (self.losses['FN'] == 3).sum().float()
             self.losses['TC'] = 0
 

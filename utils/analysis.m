@@ -44,7 +44,7 @@ vpa(n(:)')
 %vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 3);
+C = fcn_kmeans([w h], 30);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -84,8 +84,8 @@ for i = 1:n
     [~,C] = kmeans([wj hj],1,'MaxIter',5000,'OnlinePhase','on');
     wh(i,:) = [i-1, C(1,:)];
 
-    close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); 
-    plot(C(:,1),C(:,2),'g.','MarkerSize',50);     title(corr(wj,hj))
+    % close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); 
+    % plot(C(:,1),C(:,2),'g.','MarkerSize',50);     title(corr(wj,hj))
 end
 stats = [limits, wh];
 end
