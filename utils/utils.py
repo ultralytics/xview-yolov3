@@ -29,6 +29,11 @@ def modelinfo(model):
             i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
     print('\n%g layers, %g parameters, %g gradients' % (i + 1, nparams, ngradients))
 
+def xview_class2name(classes):
+    with open('data/xview.names', 'r') as f:
+        x = f.readlines()
+    return x[classes].replace('\n','')
+
 
 def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
     class_list = [11, 12, 13, 15, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 40, 41,
@@ -246,7 +251,6 @@ def build_targets1(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
     tw = torch.zeros(nB, nA, nG, nG)
     th = torch.zeros(nB, nA, nG, nG)
     tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    good_anchors = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
     tcls = torch.ByteTensor(nB, nA, nG, nG, nC * 0 + 60).fill_(0)  # nC = number of classes
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
@@ -321,9 +325,9 @@ def build_targets1(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
             pconf = torch.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
-            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
-            FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
-            FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
+            TP[b, i] = (pconf > 0.999) & (iou_pred > 0.5) & (pcls == tc)
+            FP[b, i] = (pconf > 0.999) & (TP[b, i] == 0)  # coordinates or class are wrong
+            FN[b, i] = pconf <= 0.999  # confidence score is too low (set to zero)
             # FNall = (torch.sigmoid(pred_conf[b]).cpu() > 0.99).sum()
             # print(TP[b].sum(),FP[b].sum(),FN[b].sum(), FNall-FP[b].sum())
 
@@ -445,12 +449,11 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
         # Get score and class with highest confidence
-        if image_pred.shape[1] == 6:
+        if image_pred.shape[1] == 6:  # tcls is numeric, not binary
             class_pred = image_pred[:, 5]
             class_conf = image_pred[:, 4]
         else:
-            image_pred[:, 5:] = torch.softmax(image_pred[:, 5:], 1)
-            class_conf, class_pred = torch.max(image_pred[:, 5:], 1)
+            class_conf, class_pred = torch.max(torch.softmax(image_pred[:, 5:], 1), 1)
 
         w = image_pred[:, 2].numpy()
         h = image_pred[:, 3].numpy()
@@ -544,8 +547,8 @@ def plotResults():
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
-    for f in ('/Users/glennjocher/Downloads/printedResults.txt',
-              'printedResults.txt'):
+    for f in ('/Users/glennjocher/Downloads/printedResults0.txt',
+              '/Users/glennjocher/Downloads/printedResults.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)

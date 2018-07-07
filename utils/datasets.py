@@ -55,7 +55,7 @@ class ImageFolder():  # for eval-only
 
 
 class ListDataset_xview_crop():  # for training
-    def __init__(self, path, batch_size=1, img_size=416):
+    def __init__(self, path, batch_size=1, img_size=608):
         self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.nF = len(self.files)  # number of image files
@@ -94,7 +94,7 @@ class ListDataset_xview_crop():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
+            img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
 
             # load labels
             chip = img_path.rsplit('/')[-1]

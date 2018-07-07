@@ -72,7 +72,7 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
-class YOLOLayer(nn.Module):
+class YOLOLayer2(nn.Module):
     # YOLO Layer 2
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -200,7 +200,7 @@ class YOLOLayer(nn.Module):
 
 
 
-class YOLOLayer1(nn.Module):
+class YOLOLayer(nn.Module):
     # YOLO Layer 1
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -221,7 +221,7 @@ class YOLOLayer1(nn.Module):
             stride = 8
             i = i[:nA]
 
-        classes = wh[i, 0]
+        classes = wh[i, 0:1]
         wh = wh[i, 1:]
         self.anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
         self.nA = nA  # number of anchors (3)
@@ -239,7 +239,7 @@ class YOLOLayer1(nn.Module):
         self.anchor_w = self.scaled_anchors[:, 0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
-        self.anchor_class = torch.FloatTensor(classes).view(-1, 1).repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
+        self.anchor_class = torch.FloatTensor(classes).repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
         self.Sigmoid = torch.nn.Sigmoid()
 
     def forward(self, p, targets=None, requestPrecision=False):
@@ -296,7 +296,7 @@ class YOLOLayer1(nn.Module):
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # wC /= sum(wC)
                 lx = 4 * (MSELoss(x[mask], tx[mask]) * wC).sum()
                 ly = 4 * (MSELoss(y[mask], ty[mask]) * wC).sum()
                 lw = 5 * (MSELoss(w[mask], tw[mask]) * wC).sum()
@@ -306,7 +306,7 @@ class YOLOLayer1(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += 0.6 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
+            lconf += 0.6 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).sum()
 
             loss = lx + ly + lw + lh + lconf
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
@@ -493,7 +493,10 @@ class Darknet(nn.Module):
                 TP = (self.losses['TP'][j] > 0).sum().float()
                 FP = (self.losses['FP'][j] > 0).sum().float()
                 FN = (self.losses['FN'][j] == 3).sum().float()
-                # print(TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16))
+
+                print('%20s: prec %g, rec %g' %
+                      (xview_class2name(i),TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16)))
+
                 self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
                 self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
 
