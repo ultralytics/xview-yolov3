@@ -183,7 +183,6 @@ class YOLOLayer1(nn.Module):
 
             lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
-
             loss = lx + ly + lw + lh + lconf + lcls
             FPe = (F.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
@@ -297,13 +296,13 @@ class YOLOLayer(nn.Module):
                 lh = 5 * (MSELoss(h[mask], th[mask]) * wC).sum()
                 lconf = (BCEWithLogitsLoss(pred_conf[mask], mask[mask].float()) * wC).sum()
                 lcls = 0.2 * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
-                lcls = FT([0])
+                # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
             lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
-            loss = lx + ly + lw + lh + lconf #+ lcls
+            loss = lx + ly + lw + lh + lconf + lcls
             FPe = (F.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    ap, nGT, TP, FP, FPe, FN, TC, 0, 0
@@ -329,7 +328,8 @@ class Darknet(nn.Module):
         self.module_defs[0]['height'] = img_size
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC', 'precision',
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC',
+                           'precision',
                            'recall']
 
     def forward(self, x, targets=None, requestPrecision=False):
