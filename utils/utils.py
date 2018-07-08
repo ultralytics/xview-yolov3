@@ -304,7 +304,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
         # tw[b, a, gj, gi] = gw / anchor_wh[a, 0] / 2
-         #th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
+        # th[b, a, gj, gi] = gh / anchor_wh[a, 1] / 2
         tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
         th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
 
@@ -319,7 +319,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             pconf = F.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
-            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
+            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) # & (pcls == tc)
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
