@@ -9,8 +9,6 @@
 # clone repo
 sudo rm -rf yolo
 git clone https://github.com/ultralytics/yolo
-
-
 # do training
 mkdir yolo/checkpoints
 cp fresh4wC.pt yolo/checkpoints
