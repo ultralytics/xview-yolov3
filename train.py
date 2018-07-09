@@ -75,7 +75,8 @@ def main(opt):
                 p.requires_grad = False
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=.001)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=.001)
 
     # modelinfo(model)
     t0 = time.time()
