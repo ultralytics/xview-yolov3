@@ -300,7 +300,7 @@ class YOLOLayer(nn.Module):
 
             lconf += 0.5 * BCEWithLogitsLoss(pred_conf[~mask], mask[~mask].float()).mean()
 
-            loss = lx + ly + lw + lh + lconf # + lcls
+            loss = lx + ly + lw + lh + lconf + lcls
             FPe = (F.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    ap, nGT, TP, FP, FPe, FN, TC, 0, 0
