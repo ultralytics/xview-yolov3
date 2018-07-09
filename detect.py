@@ -159,11 +159,11 @@ def detect(opt):
                     # write to file
                     xvc = xview_indices2classes(int(cls_pred))  # xview class
                     # if (xvc != 73) & (xvc != 18):
-                    file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, xvc, conf))
+                    file.write(('%g %g %g %g %g %g %g \n') % (x1, y1, x2, y2, xvc, conf, cls_conf))
 
                     if opt.plot_flag:
                         # Add the bbox to the plot
-                        label = classes[int(cls_pred)] if cls_pred > 0 else None
+                        label = '%s %.2f' % (classes[int(cls_pred)],cls_conf) if cls_conf > 0 else None
                         color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
                         plot_one_box([x1, y1, x2, y2], img, label=label, color=color, line_thickness=1)
 

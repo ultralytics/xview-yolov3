@@ -359,7 +359,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         a = w * h  # area
         ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))  # aspect ratio
 
-        v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0)).numpy()
+        v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0.10)).numpy()
         v *= (ar < 20) & (a > 10) & (w > 3) & (h > 3)
         # v *= (w >= mat['class_stats'][class_pred, 0]) & (w <= mat['class_stats'][class_pred, 1])
         # v *= (h >= mat['class_stats'][class_pred, 2]) & (h <= mat['class_stats'][class_pred, 3])
@@ -417,7 +417,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         thresh = 0.2
 
         a = output[image_i]
-        a = a[np.argsort(-a[:, 5])]  # sort best to worst
+        a = a[np.argsort(-a[:, 4]*a[:, 5])]  # sort best to worst
         xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
 
         radius = 30  # area to search for cross-class ious
@@ -446,8 +446,9 @@ def plotResults():
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
-    for f in ('/Users/glennjocher/Downloads/printedResults0.txt',
-              '/Users/glennjocher/Downloads/printedResults.txt'):
+    for f in ('/Users/glennjocher/Downloads/printedResults.txt',
+              '/Users/glennjocher/Downloads/results3.txt',
+              '/Users/glennjocher/Downloads/results4.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)

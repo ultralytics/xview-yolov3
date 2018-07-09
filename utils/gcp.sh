@@ -18,7 +18,7 @@ mkdir yolo/checkpoints
 cd yolo
 python3 train.py -epochs 9999
 
-python3 detect.py -config_path 'cfg/yolovx_YL0.cfg' -weights_path 'checkpoints/fresh3.pt' -conf_thres 0.99
+python3 detect.py -config_path 'cfg/yolovx_YL0.cfg' -weights_path 'checkpoints/fresh4FPNwC.pt' -conf_thres 0.999
 
 # move checkpoint to fuse drive
 # google-drive-ocamlfuse drive
