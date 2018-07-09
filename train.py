@@ -66,17 +66,17 @@ def main(opt):
         # 3. load the new state dict
         model.load_state_dict(state)
 
-        # Transfer learning!
-        for i, (name, p) in enumerate(model.named_parameters()):
-            #name = name.replace('module_list.', '')
-            #print('%4g %70s %9s %12g %20s %12g %12g' % (
-            #    i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
-            if p.shape[0] != 650:  # not YOLO layer
-                p.requires_grad = False
+        # # Transfer learning!
+        # for i, (name, p) in enumerate(model.named_parameters()):
+        #     #name = name.replace('module_list.', '')
+        #     #print('%4g %70s %9s %12g %20s %12g %12g' % (
+        #     #    i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
+        #     if p.shape[0] != 650:  # not YOLO layer
+        #         p.requires_grad = False
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
     # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=.001)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=.0001)
 
     # modelinfo(model)
     t0 = time.time()
