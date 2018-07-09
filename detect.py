@@ -25,7 +25,7 @@ else:  # gcp
     parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/fresh3.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/fresh4FPNwC.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.2, help='iou thresshold for non-maximum suppression')
@@ -163,7 +163,7 @@ def detect(opt):
 
                     if opt.plot_flag:
                         # Add the bbox to the plot
-                        label = '%s %.2f' % (classes[int(cls_pred)],cls_conf) if cls_conf > 0 else None
+                        label = '%s %.2f' % (classes[int(cls_pred)],cls_conf) if cls_conf > 0.05 else None
                         color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
                         plot_one_box([x1, y1, x2, y2], img, label=label, color=color, line_thickness=1)
 

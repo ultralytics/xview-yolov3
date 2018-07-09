@@ -243,7 +243,7 @@ class YOLOLayer(nn.Module):
         stride = self.img_dim / nG
 
         BCEWithLogitsLoss = nn.BCEWithLogitsLoss(reduce=False)
-        MSELoss = nn.MSELoss(reduce=True)
+        MSELoss = nn.MSELoss(reduce=False)
         CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
         if p.is_cuda and not self.grid_x.is_cuda:
