@@ -359,7 +359,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         a = w * h  # area
         ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))  # aspect ratio
 
-        v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0.10)).numpy()
+        v = ((image_pred[:, 4] > conf_thres) & (class_conf > 0)).numpy()
         v *= (ar < 20) & (a > 10) & (w > 3) & (h > 3)
         # v *= (w >= mat['class_stats'][class_pred, 0]) & (w <= mat['class_stats'][class_pred, 1])
         # v *= (h >= mat['class_stats'][class_pred, 2]) & (h <= mat['class_stats'][class_pred, 3])
