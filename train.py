@@ -45,7 +45,7 @@ def main(opt):
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'fresh4FPNwC'
+        run_name = 'fresh3'
         train_path = '../train_images'
 
         # Initiate model
@@ -55,7 +55,7 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/fresh3.pt', map_location='cuda:0' if cuda else 'cpu')
@@ -75,7 +75,7 @@ def main(opt):
         #         p.requires_grad = False
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=.0001)
 
     # modelinfo(model)
     t0 = time.time()

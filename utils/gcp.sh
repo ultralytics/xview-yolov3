@@ -13,8 +13,8 @@ git clone https://github.com/ultralytics/yolo
 
 # do training
 mkdir yolo/checkpoints
-#cp fresh3.pt yolo/checkpoints
-#cp printedResults.txt yolo
+cp fresh3.pt yolo/checkpoints
+cp results.txt yolo
 cd yolo
 python3 train.py -epochs 9999
 
