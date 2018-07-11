@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
 
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100', help='path to images')
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8', help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
 else:  # gcp
     parser.add_argument('-image_folder', type=str, default='../train_images3/', help='path to images')
@@ -27,7 +27,7 @@ else:  # gcp
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/fresh3.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.995, help='object confidence threshold')
+parser.add_argument('-conf_thres', type=float, default=0.9, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.5, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')

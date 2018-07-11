@@ -359,9 +359,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
 
         v = ((image_pred[:, 4] > conf_thres) & (class_conf > .2)).numpy()
         v *= (ar < 20) & (a > 10) & (w > 3) & (h > 3)
-        # v *= (w >= mat['class_stats'][class_pred, 0]) & (w <= mat['class_stats'][class_pred, 1])
-        # v *= (h >= mat['class_stats'][class_pred, 2]) & (h <= mat['class_stats'][class_pred, 3])
-        # v *= (a >= mat['class_stats'][class_pred, 4]) & (a <= mat['class_stats'][class_pred, 5])
+        v *= (w > mat['class_stats'][class_pred, 0]*1.1) & (w < mat['class_stats'][class_pred, 1]*.9)
+        v *= (h > mat['class_stats'][class_pred, 2]*1.1) & (h < mat['class_stats'][class_pred, 3]*.9)
+        v *= (a > mat['class_stats'][class_pred, 4]*1.1) & (a < mat['class_stats'][class_pred, 5]*.9)
         v = v.nonzero()
 
         image_pred = image_pred[v]
@@ -412,30 +412,30 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.8
-
-        a = output[image_i]
-        a = a[np.argsort(-a[:, 4]*a[:, 5])]  # sort best to worst
-        xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
-
-        radius = 30  # area to search for cross-class ious
-        for i in range(len(a)):
-            if i >= len(a) - 1:
-                break
-
-            close = ((abs(xywh[i, 0] - xywh[i + 1:, 0]) < radius) & (
-                    abs(xywh[i, 1] - xywh[i + 1:, 1]) < radius)).nonzero() + i + 1
-
-            if len(close) > 0:
-                iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4))
-                bad = close[iou > thresh]
-                if len(bad) > 0:
-                    mask = torch.ones(len(a)).type(torch.ByteTensor)
-                    mask[bad] = 0
-                    a = a[mask]
-                    xywh = xywh[mask]
-
-        output[image_i] = a
+        # thresh = 0.5
+        #
+        # a = output[image_i]
+        # a = a[np.argsort(-a[:, 4]*a[:, 5])]  # sort best to worst
+        # xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
+        #
+        # radius = 30  # area to search for cross-class ious
+        # for i in range(len(a)):
+        #     if i >= len(a) - 1:
+        #         break
+        #
+        #     close = ((abs(xywh[i, 0] - xywh[i + 1:, 0]) < radius) & (
+        #             abs(xywh[i, 1] - xywh[i + 1:, 1]) < radius)).nonzero() + i + 1
+        #
+        #     if len(close) > 0:
+        #         iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4))
+        #         bad = close[iou > thresh]
+        #         if len(bad) > 0:
+        #             mask = torch.ones(len(a)).type(torch.ByteTensor)
+        #             mask[bad] = 0
+        #             a = a[mask]
+        #             xywh = xywh[mask]
+        #
+        # output[image_i] = a
     return output
 
 
