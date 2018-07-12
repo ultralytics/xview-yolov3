@@ -100,7 +100,12 @@ class ListDataset_xview_crop():  # for training
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels0 = self.mat['targets'][i]
+
             nL0 = len(labels0)
+            if nL0 > 0:
+                lw0 = labels0[:, 3] - labels0[:, 1]
+                lh0 = labels0[:, 4] - labels0[:, 2]
+                area0 = lw0 * lh0
 
             img0 = cv2.imread(img_path)
             h, w, _ = img0.shape
@@ -111,11 +116,6 @@ class ListDataset_xview_crop():  # for training
 
                 if nL0 > 0:
                     labels = labels0.copy()
-                    if j == 0:
-                        lw0 = labels[:, 3] - labels[:, 1]
-                        lh0 = labels[:, 4] - labels[:, 2]
-                        area0 = lw0 * lh0
-
                     labels[:, [1, 3]] -= padx
                     labels[:, [2, 4]] -= pady
                     labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
@@ -174,13 +174,6 @@ class ListDataset_xview_crop():  # for training
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
         img_all -= self.rgb_mean
         img_all /= self.rgb_std
-
-        # for i in range(len(img_all)):
-        #     for c in range(3):
-        #         img_all[i, c] -= img_all[i, c].mean()
-        #         sigma = img_all[i, c].std()
-        #         if sigma>0:
-        #             img_all[i, c] /= sigma
 
         return torch.from_numpy(img_all), labels_all
 

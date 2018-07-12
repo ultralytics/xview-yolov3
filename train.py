@@ -40,7 +40,7 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'fresh8'
+        run_name = 'fresh9'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
@@ -55,10 +55,10 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/fresh3.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/fresh8.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -88,6 +88,7 @@ def main(opt):
     for epoch in range(opt.epochs):
         rloss = defaultdict(float)  # running loss
         ui = -1
+        metrics = torch.zeros((3,60))
         for i, (imgs, targets) in enumerate(dataloader):
 
             n = 4  # number of pictures at a time
@@ -102,15 +103,30 @@ def main(opt):
                 loss.backward()
                 optimizer.step()
 
-                if nGT > 0:
-                    ui += 1
-                    for key, val in model.losses.items():
-                        rloss[key] = (rloss[key] * ui + val) / (ui + 1)
+                ui += 1
+                metrics += model.losses['metrics']
+                for key, val in model.losses.items():
+                    rloss[key] = (rloss[key] * ui + val) / (ui + 1)
+
+
+                precision = metrics[0] / (metrics[0] + metrics[1] + 1e-16)
+                k = (metrics[0] + metrics[1]) > 0
+                if k.sum() > 0:
+                    mean_precision = precision[k].mean()
+                else:
+                    mean_precision = 0
+
+                recall = metrics[0] / (metrics[0] + metrics[2] + 1e-16)
+                k = (metrics[0] + metrics[2]) > 0
+                if k.sum() > 0:
+                    mean_recall = recall[k].mean()
+                else:
+                    mean_recall = 0
 
                 s = ('%10s%10s' + '%10.3g' * 14) % (
                     '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
                     rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
-                    rloss['loss'], rloss['precision'], rloss['recall'], model.losses['nGT'], model.losses['TP'],
+                    rloss['loss'], mean_precision, mean_recall, model.losses['nGT'], model.losses['TP'],
                     model.losses['FP'], model.losses['FN'], time.time() - t1)
                 t1 = time.time()
                 print(s)

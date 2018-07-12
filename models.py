@@ -235,17 +235,17 @@ class YOLOLayer(nn.Module):
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
-        # device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-        # weight = xview_class_weights(range(60)).to(device)
+        device = torch.device('cuda:0' if p.is_cuda else 'cpu')
+        weight = xview_class_weights(range(60)).to(device)
 
         bs = p.shape[0]
         nG = p.shape[2]
         stride = self.img_dim / nG
 
-        BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
+        BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(reduce=False)
         BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
         MSELoss = nn.MSELoss(size_average=False)
-        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight * 20, size_average=False)
+        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=True)
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -287,15 +287,15 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                # wC = weight[torch.argmax(tcls, 1)]  # weight class
-                # wC /= sum(wC)
+                wC = weight[torch.argmax(tcls, 1)]  # weight class
+                wC /= sum(wC)
                 lx = 1 * MSELoss(x[mask], tx[mask])# * wC).sum()
                 ly = 1 * MSELoss(y[mask], ty[mask])# * wC).sum()
                 lw = 1 * MSELoss(w[mask], tw[mask])# * wC).sum()
                 lh = 1 * MSELoss(h[mask], th[mask])# * wC).sum()
-                lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float()) #  * wC).sum()
-                lcls = nM * BCEWithLogitsLoss0(pred_cls[mask], tcls.float())
-                #lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lconf = nM * (BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float()) * wC).sum()
+                # lcls = nM * BCEWithLogitsLoss0(pred_cls[mask], tcls.float())
+                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
@@ -303,9 +303,15 @@ class YOLOLayer(nn.Module):
             lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
 
             loss = lx + ly + lw + lh + lconf + lcls
-            FPe = (F.sigmoid(pred_conf[~mask]) > 0.999).sum().item()
+            i = F.sigmoid(pred_conf[~mask]) > 0.999
+            FPe = torch.zeros(60)
+            if i.sum() > 0:
+                FP_classes = torch.argmax(pred_cls[~mask][i],1)
+                for c in FP_classes:
+                    FPe[c] += 1
+
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   ap, nGT, TP, FP, FPe, FN, TC, 0, 0
+                   ap, nGT, TP, FP, FPe, FN, TC
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
@@ -328,9 +334,7 @@ class Darknet(nn.Module):
         self.module_defs[0]['height'] = img_size
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC',
-                           'precision',
-                           'recall']
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC']
 
     def forward(self, x, targets=None, requestPrecision=False):
         is_training = targets is not None
@@ -357,30 +361,32 @@ class Darknet(nn.Module):
                 else:
                     x = module(x)
                 output.append(x)
-            # print(x.shape, module_def['type'])
             layer_outputs.append(x)
 
         if is_training:
             self.losses['nGT'] /= 3
             self.losses['TC'] /= 3
+            metrics = torch.zeros((3,60))  # TP, FP, FN
+            metrics[1] = self.losses['FPe']
 
             ui = np.unique(self.losses['TC'])[1:]
             for i in ui:
                 j = self.losses['TC'] == float(i)
-                TP = (self.losses['TP'][j] > 0).sum().float()
-                FP = (self.losses['FP'][j] > 0).sum().float()
-                FN = (self.losses['FN'][j] == 3).sum().float()
+                metrics[0, i] = (self.losses['TP'][j] > 0).sum().float()  # TP
+                metrics[1, i] = (self.losses['FP'][j] > 0).sum().float()  # FP
+                metrics[2, i] = (self.losses['FN'][j] == 3).sum().float()  # FN
 
                 # print('%20s: prec %g, rec %g' %
                 #      (xview_class2name(i),TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16)))
 
-                self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
-                self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
+                #self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
+                #self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
 
-            self.losses['TP'] = (self.losses['TP'] > 0).sum().float()
-            self.losses['FP'] = (self.losses['FP'] > 0).sum().float() + self.losses['FPe']
-            self.losses['FN'] = (self.losses['FN'] == 3).sum().float()
+            self.losses['TP'] = metrics[0].sum()
+            self.losses['FP'] = metrics[1].sum()
+            self.losses['FN'] = metrics[2].sum()
             self.losses['TC'] = 0
+            self.losses['metrics'] = metrics
 
         return sum(output) if is_training else torch.cat(output, 1)
 
