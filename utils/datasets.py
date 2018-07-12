@@ -172,13 +172,15 @@ class ListDataset_xview_crop():  # for training
         # Normalize
         img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        #img_all -= self.rgb_mean
-        #img_all /= self.rgb_std
+        img_all -= self.rgb_mean
+        img_all /= self.rgb_std
 
-        for i in range(len(img_all)):
-            for c in range(3):
-                img_all[i, c] -= img_all[i, c].mean()
-                img_all[i, c] /= img_all[i, c].std()
+        # for i in range(len(img_all)):
+        #     for c in range(3):
+        #         img_all[i, c] -= img_all[i, c].mean()
+        #         sigma = img_all[i, c].std()
+        #         if sigma>0:
+        #             img_all[i, c] /= sigma
 
         return torch.from_numpy(img_all), labels_all
 
