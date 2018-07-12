@@ -55,7 +55,7 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/fresh8.pt', map_location='cuda:0' if cuda else 'cpu')
@@ -108,7 +108,7 @@ def main(opt):
                 for key, val in model.losses.items():
                     rloss[key] = (rloss[key] * ui + val) / (ui + 1)
 
-
+                # Precision
                 precision = metrics[0] / (metrics[0] + metrics[1] + 1e-16)
                 k = (metrics[0] + metrics[1]) > 0
                 if k.sum() > 0:
@@ -116,6 +116,7 @@ def main(opt):
                 else:
                     mean_precision = 0
 
+                # Recall
                 recall = metrics[0] / (metrics[0] + metrics[2] + 1e-16)
                 k = (metrics[0] + metrics[2]) > 0
                 if k.sum() > 0:

@@ -110,24 +110,31 @@ class ListDataset_xview_crop():  # for training
             img0 = cv2.imread(img_path)
             h, w, _ = img0.shape
             for j in range(8):
-                padx = int(random.random() * (w - self.height))
-                pady = int(random.random() * (h - self.height))
+
+                nL = 0
+                counter = 0
+                while (counter < 5) & (nL == 0):
+                    padx = int(random.random() * (w - self.height))
+                    pady = int(random.random() * (h - self.height))
+
+                    if nL0 > 0:
+                        labels = labels0.copy()
+                        labels[:, [1, 3]] -= padx
+                        labels[:, [2, 4]] -= pady
+                        labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
+
+                        lw = labels[:, 3] - labels[:, 1]
+                        lh = labels[:, 4] - labels[:, 2]
+                        area = lw * lh
+
+                        # objects must have width and height > 4 pixels
+                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25)]
+                    else:
+                        labels = np.array([], dtype=np.float32)
+
+                    nL = len(labels)
+
                 img = img0[pady:pady + self.height, padx:padx + self.height]
-
-                if nL0 > 0:
-                    labels = labels0.copy()
-                    labels[:, [1, 3]] -= padx
-                    labels[:, [2, 4]] -= pady
-                    labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
-
-                    lw = labels[:, 3] - labels[:, 1]
-                    lh = labels[:, 4] - labels[:, 2]
-                    area = lw * lh
-
-                    # objects must have width and height > 4 pixels
-                    labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25)]
-                else:
-                    labels = np.array([], dtype=np.float32)
 
                 # plot
                 # import matplotlib.pyplot as plt
