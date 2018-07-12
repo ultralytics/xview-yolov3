@@ -113,7 +113,8 @@ class ListDataset_xview_crop():  # for training
 
                 nL = 0
                 counter = 0
-                while (counter < 5) & (nL == 0):
+                while (counter < 10) & (nL == 0):
+                    counter += 1
                     padx = int(random.random() * (w - self.height))
                     pady = int(random.random() * (h - self.height))
 
