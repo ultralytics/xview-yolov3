@@ -41,7 +41,7 @@ def main(opt):
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
         run_name = 'fresh8'
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
     else:
         torch.backends.cudnn.benchmark = True

@@ -31,28 +31,25 @@ chip_number = chip_number(v); clear v i
 
 % % reject images with < 10 targets
 [uchip_number,~,~,n]=fcnunique(chip_number);
-fprintf('Images target count range: %g-%g\n',min(n),max(n))
-% fig; histogram(n,linspace(0,300,301))
-% sortrows([n, uchip_number],-1)
+% fprintf('Images target count range: %g-%g\n',min(n),max(n))
+fig; histogram(n,linspace(0,300,301))
+sortrows([n, uchip_number],-1)
 
 % Target box width and height
 w = coords(:,3) - coords(:,1);
 h = coords(:,4) - coords(:,2);
 
-% to reject bad box predictions
+% stats for outlier bbox rejection
 class_stats = per_class_stats(classes,w,h);
 [~,~,~,n] = fcnunique(classes(:));
 weights = 1./n(:)';  weights=weights/sum(weights);
 vpa(n(:)')
 
 % image weights (1395 does not exist, remove it)
-image_weights = accumarray(chip_id,weights(xview_classes2indices(classes)));
-i=uchips_numeric ~= 1395; 
-image_weights = image_weights(i)./sum(image_weights(i));
-image_weights = image_weights(:)';
-fig; bar(uchips_numeric(i), image_weights)
-%[~,i] = sort(uchips_numeric);
-%image_weights = image_weights(i); % weights for image indices 1-847
+%image_weights = accumarray(chip_id,weights(xview_classes2indices(classes)),[1 847]);
+%i=uchips_numeric ~= 1395; 
+%image_weights = image_weights(i)./sum(image_weights(i));
+%fig; bar(uchips_numeric(i), image_weights)
 
 %a=class_stats(:,[7 9]); 
 %[~,i]=sort(prod(a,2));  a=a(i,:);
@@ -82,7 +79,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_60c.mat','wh','targets','id','class_stats','image_weights')
+save('targets_60c_nocars.mat','wh','targets','id','class_stats')
 
 
 function stats = per_class_stats(classes,w,h)
