@@ -57,7 +57,6 @@ class ImageFolder():  # for eval-only
 class ListDataset_xview_crop():  # for training
     def __init__(self, path, batch_size=1, img_size=608):
         self.files = sorted(glob.glob('%s/*.bmp' % path))
-        self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
@@ -79,6 +78,7 @@ class ListDataset_xview_crop():  # for training
     def __iter__(self):
         self.count = -1
         self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
+        # self.shuffled_vector = np.random.choice(self.nF, self.nF, p=self.mat['image_weights'].ravel())
         return self
 
     # @profile

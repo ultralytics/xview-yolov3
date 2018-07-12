@@ -25,10 +25,10 @@ else:  # gcp
     parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/fresh3.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/fresh6.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.9, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.5, help='iou thresshold for non-maximum suppression')
+parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
+parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')

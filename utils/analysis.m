@@ -1,14 +1,19 @@
 clc; clear; close
 load json_data.mat
 
-chip_id = zeros(numel(chips),1);
-chip_number = zeros(numel(chips),1);
+chip_id = zeros(numel(chips),1);  % 1-847
+chip_number = zeros(numel(chips),1);  % 5-2619
 for i=1:numel(chips)
     chip_id(i) = find(strcmp(chips(i),uchips));
     
     s = chips{i};
     s = s(1:end-4);
     chip_number(i) = str2double(s);
+end
+
+uchips_numeric = zeros(numel(uchips),1);
+for i=1:numel(uchips)
+    uchips_numeric(i) = eval(uchips{i}(1:end-4));
 end
 
 % clean coordinates that fall off images (remove or crop)
@@ -37,14 +42,24 @@ h = coords(:,4) - coords(:,2);
 % to reject bad box predictions
 class_stats = per_class_stats(classes,w,h);
 [~,~,~,n] = fcnunique(classes(:));
+weights = 1./n(:)';  weights=weights/sum(weights);
 vpa(n(:)')
+
+% image weights (1395 does not exist, remove it)
+image_weights = accumarray(chip_id,weights(xview_classes2indices(classes)));
+i=uchips_numeric ~= 1395; 
+image_weights = image_weights(i)./sum(image_weights(i));
+image_weights = image_weights(:)';
+fig; bar(uchips_numeric(i), image_weights)
+%[~,i] = sort(uchips_numeric);
+%image_weights = image_weights(i); % weights for image indices 1-847
 
 %a=class_stats(:,[7 9]); 
 %[~,i]=sort(prod(a,2));  a=a(i,:);
 %vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 30);
+C = fcn_kmeans([w h], 3);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -67,7 +82,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-%save('targets_60c_1s.mat','wh','targets','id','class_stats')
+save('targets_60c.mat','wh','targets','id','class_stats','image_weights')
 
 
 function stats = per_class_stats(classes,w,h)
@@ -149,7 +164,11 @@ valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
 end
 
-
+function indices = xview_classes2indices(classes)
+% remap xview classes 11-94 to 0-61
+indices = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14,15, -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34,35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, -1, 50, 51, -1, 52, -1,-1, -1, 53, 54, -1, 55, -1, -1, 56, -1, 57, -1, 58, 59];
+indices = indices(classes) + 2;    
+end           
 
 function C = fcn_kmeans(X, n)
 rng('default'); % For reproducibility

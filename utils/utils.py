@@ -317,7 +317,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             pconf = F.sigmoid(pred_conf[b, a, gj, gi]).cpu()
             iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
 
-            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
+            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) #& (pcls == tc)
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
@@ -412,30 +412,30 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        # thresh = 0.5
-        #
-        # a = output[image_i]
-        # a = a[np.argsort(-a[:, 4]*a[:, 5])]  # sort best to worst
-        # xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
-        #
-        # radius = 30  # area to search for cross-class ious
-        # for i in range(len(a)):
-        #     if i >= len(a) - 1:
-        #         break
-        #
-        #     close = ((abs(xywh[i, 0] - xywh[i + 1:, 0]) < radius) & (
-        #             abs(xywh[i, 1] - xywh[i + 1:, 1]) < radius)).nonzero() + i + 1
-        #
-        #     if len(close) > 0:
-        #         iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4))
-        #         bad = close[iou > thresh]
-        #         if len(bad) > 0:
-        #             mask = torch.ones(len(a)).type(torch.ByteTensor)
-        #             mask[bad] = 0
-        #             a = a[mask]
-        #             xywh = xywh[mask]
-        #
-        # output[image_i] = a
+        thresh = 0.95
+
+        a = output[image_i]
+        a = a[np.argsort(-a[:, 4]*a[:, 5])]  # sort best to worst
+        xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
+
+        radius = 30  # area to search for cross-class ious
+        for i in range(len(a)):
+            if i >= len(a) - 1:
+                break
+
+            close = ((abs(xywh[i, 0] - xywh[i + 1:, 0]) < radius) & (
+                    abs(xywh[i, 1] - xywh[i + 1:, 1]) < radius)).nonzero() + i + 1
+
+            if len(close) > 0:
+                iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4))
+                bad = close[iou > thresh]
+                if len(bad) > 0:
+                    mask = torch.ones(len(a)).type(torch.ByteTensor)
+                    mask[bad] = 0
+                    a = a[mask]
+                    xywh = xywh[mask]
+
+        output[image_i] = a
     return output
 
 
@@ -446,9 +446,11 @@ def plotResults():
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('/Users/glennjocher/Downloads/results6.txt',
               '/Users/glennjocher/Downloads/results3.txt',
-              '/Users/glennjocher/Downloads/results4.txt'):
+              '/Users/glennjocher/Downloads/results4.txt',
+              'results7.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, :], marker='.')
+            plt.plot(results[i, :], marker='.',label=f)
             plt.title(s[i])
+        plt.legend()
