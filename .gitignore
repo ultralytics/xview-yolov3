@@ -15,7 +15,7 @@ xview_predictions
 !zidane.jpg
 !images/*
 scoring
-results*.txt
+results*
 
 
 output
