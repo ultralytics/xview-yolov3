@@ -24,10 +24,14 @@ python3 detect.py -config_path 'cfg/yolovx_YL0.cfg' -weights_path 'checkpoints/f
 
 
 # get xview training data
-wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1530739498&Signature=ZbsIv1dxUTUceGBI-lGv7EeA~oHrBJnlLxwsds38FA1MBKdkrfMJnpntRYFLDqS04~27ps55NzGczHsLMd1xCMCvx4JYnqM0~xuONbZaqYzabTnqWc0RdJ4SNVxWVDgq8YFF4kq5yfpGA0oxFd8JtAZD9FG12eq-uGqFXYHc1JjVAT8OE9-usj5CkhMbobUsQBfeCCKaLitJoCAuAIuxbsgGr6YWQ~mPyyIk2-uWXOJSXJyKhlrjSKwXRhZL2TYZ2N~WG5IB1DpusIh4gg0IqntkszrcmT8VCmc7RfsNZMxBSFerHWpETsijq4LrWwRfA4kSwvr9D4W7TNljPcZ8wA__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
+wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1531465860&Signature=I0E6LJd3cfb0N7K~nbZWsO6twMHEDMCOVP1t5VCFAW2kicktnfaHhtgh-AXtOPaPSQzR57PpEYW3GnjunDAMJxq-7DhRyGTYGrPlgaVlccWIGFGzH6itlWLvmLDJCuVEgxtscBkHSvZPdfr46~QH-KNbXt-Cz4N~X7FY2EAJ-xzKAzTz3gIhv-bpI~tc6uHAxcdcyu6wiMv8F3sB0LfYrlpytAUvEA3-h9XEigPlcHAX1eMGRfBsDAFteSeziw8ZPOFYy~~agRW9mZe7PP60y8SCBH9dImehylAmQOZ2AYTamWZYI-8~20Lzaa8GmjBKy9Y9YL6LnBVNCPm2wqf4Tw__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
 tar -xvzf train_images.tgz
 sudo rm -rf train_images/._*
+sudo shutdown
 # lastly convert each .tif to a .bmp for faster loading in cv2
 
+cd yolo
+python3
 from utils import datasets
 datasets.convert_tif2bmp('../train_images')
+sudo shutdown now
