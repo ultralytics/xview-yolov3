@@ -289,7 +289,8 @@ class YOLOLayer(nn.Module):
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                sum_wC = sum(wC)
+                wC /= sum_wC
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
