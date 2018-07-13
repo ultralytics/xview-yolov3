@@ -39,7 +39,7 @@ def main(opt):
 
         # Get data configuration
     if platform == 'darwin':  # macos
-        torch.backends.cudnn.benchmark = True
+        # torch.backends.cudnn.benchmark = True
         run_name = 'fresh8'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
         #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
