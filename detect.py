@@ -17,12 +17,13 @@ from utils.utils import *
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-
     parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8', help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
+    cuda = torch.cuda.is_available()
 else:  # gcp
     parser.add_argument('-image_folder', type=str, default='../train_images3/', help='path to images')
     parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
+    cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
 parser.add_argument('-weights_path', type=str, default='checkpoints/fresh8.pt', help='weights path')
@@ -40,10 +41,7 @@ def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.system('rm -rf ' + opt.output_folder + '_img')
     os.makedirs(opt.output_folder, exist_ok=True)
-    os.makedirs(opt.output_folder + '_img', exist_ok=True)
-
-
-    cuda = torch.cuda.is_available()
+    os.makedirs(    opt.output_folder + '_img', exist_ok = True)
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # Set up model

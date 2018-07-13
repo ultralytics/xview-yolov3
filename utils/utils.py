@@ -231,11 +231,8 @@ def build_targets1(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, n
             TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
-            # FNall = (F.sigmoid(pred_conf[b]).cpu() > 0.99).sum()
-            # print(TP[b].sum(),FP[b].sum(),FN[b].sum(), FNall-FP[b].sum())
 
-    ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC
 
 
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
@@ -321,8 +318,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
-    ap = 0
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC
 
 
 def to_categorical(y, num_classes):
