@@ -1,5 +1,9 @@
+% 659.bmp and 769.bmp are bad pictures, delete
+
 clc; clear; close
 load json_data.mat
+
+%make_small_chips()
 
 chip_id = zeros(numel(chips),1);  % 1-847
 chip_number = zeros(numel(chips),1);  % 5-2619
@@ -79,22 +83,66 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_60c_nocars.mat','wh','targets','id','class_stats')
+save('targets_60c.mat','wh','targets','id','class_stats')
+
+
+function [] = make_small_chips()
+clc; close; clear
+load('targets_60c.mat')
+path_a = '/Users/glennjocher/downloads/DATA/xview/';
+
+rmdir([path_a 'classes'],'s')
+for i=0:59
+    mkdir(sprintf([path_a 'classes/%g'],i))
+end
+
+uid = unique(id)';
+class_count = zeros(1,60);
+count = 0;
+for i = uid
+    count = count+1;
+    fprintf('%g/847\n',count)
+    target_idx = find(id==i)';
+    img = imread(sprintf([path_a 'train_images/%g.bmp'],i));
+    %fig; imshow(img)
+
+    %fig(4,4)
+    for j = target_idx
+        t = targets(j,:); %#ok<*NODEF>
+        class = xview_classes2indices(t(1));
+        x1=t(2)+1;  y1=t(3)+1;  x2=t(4)+1;  y2=t(5)+1;
+        class_count(class+1) = class_count(class+1) + 1;
+        w = x2-x1;  h = y2-y1;
+        xc = (x2 + x1)/2;  yc = (y2 + y1)/2;
+        image_wh = wh(j,:);
+        
+        % make chip a square
+        l = round(max(w,h)*1.1 + 2); if mod(l,2)~=0; l = l + 1; end
+        x1 = max(xc-l/2,1); x2 = min(xc+l/2, image_wh(1)); 
+        y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
+        img1 = img(int16(y1:y2),int16(x1:x2),:);
+        img2 = imresize(img1,[32 32], 'bicubic');
+        imwrite(img2,sprintf([path_a 'classes/%g/%g.bmp'],class,class_count(class+1)));
+        % sca; imshow(img2); axis equal ij; title(class)
+    end
+end
+end
 
 
 function stats = per_class_stats(classes,w,h)
 % measure the min and max bbox sizes for rejecting bad predictions
-area = h.*w;
+area = log(h.*w);
 uc=unique(classes(:)); 
 n = numel(uc);
 limits = zeros(n,6); % minmax: [width, height, area]
 wh = zeros(n,3); % [class, wh1, wh2, wh3]
 for i = 1:n
     j = find(classes==uc(i));
-    wj = w(j);  hj = h(j);
-    limits(i,:) = [minmax3(wj), minmax3(hj), minmax3(area(j))];
+    wj = log(w(j));  hj = log(h(j));  aj = area(j);
+    % limits(i,:) = [minmax3(wj), minmax3(hj), minmax3(area(j))];
+    limits(i,:) = [mean(wj), std(wj), mean(hj), std(hj), mean(aj), std(aj)];
     [~,C] = kmeans([wj hj],1,'MaxIter',5000,'OnlinePhase','on');
-    wh(i,:) = [i-1, C(1,:)];
+    wh(i,:) = [i-1, exp(C(1,:))];
 
     % close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); 
     % plot(C(:,1),C(:,2),'g.','MarkerSize',50);     title(corr(wj,hj))
@@ -159,13 +207,8 @@ i9 = ~any(classes(:) == [18, 73],2);
 
 valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
-end
+end      
 
-function indices = xview_classes2indices(classes)
-% remap xview classes 11-94 to 0-61
-indices = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14,15, -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34,35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, -1, 50, 51, -1, 52, -1,-1, -1, 53, 54, -1, 55, -1, -1, 56, -1, 57, -1, 58, 59];
-indices = indices(classes) + 2;    
-end           
 
 function C = fcn_kmeans(X, n)
 rng('default'); % For reproducibility
@@ -188,3 +231,10 @@ legend('Cluster 1','Cluster 2','Medoids','Location','NW');
 title('Cluster Assignments and Medoids');
 hold off
 end
+
+
+function indices = xview_classes2indices(classes)
+% remap xview classes 11-94 to 0-61
+indices = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 0, 3.0, 0, 4.0, 5.0, 6.0, 7.0, 8.0, 0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 0, 0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 0, 23.0, 24.0, 25.0, 0, 26.0, 27.0, 0, 28.0, 0, 29.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0, 0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 0, 0, 0, 0, 46.0, 47.0, 48.0, 49.0, 0, 50.0, 51.0, 0, 52.0, 0, 0, 0, 53.0, 54.0, 0, 55.0, 0, 0, 56.0, 0, 57.0, 0, 58.0, 59.0];
+indices = indices(classes);    
+end     

@@ -1,23 +1,15 @@
 import argparse
-import os
 import time
 from sys import platform
-
-try:
-    from torch.utils.data import DataLoader
-except:  # required packaged not installed
-    os.system('conda install -y numpy opencv pytorch')
-    from torch.utils.data import DataLoader
 
 from models import *
 from utils.datasets import *
 from utils.utils import *
 
-
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8', help='path to images')
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8/', help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
     cuda = torch.cuda.is_available()
 else:  # gcp
@@ -26,17 +18,16 @@ else:  # gcp
     cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/fresh8.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_cont.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
+parser.add_argument('-conf_thres', type=float, default=0.98, help='object confidence threshold')
+parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
-# @profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.system('rm -rf ' + opt.output_folder + '_img')
@@ -170,8 +161,8 @@ def detect(opt):
                 cv2.imwrite(results_img_path.replace('.bmp', '.jpg'), img)
 
     from scoring import score
-    score.score('/Users/glennjocher/Documents/PyCharmProjects/yolo/data/predictions/',
-            '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+    score.score('data/predictions/', '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+
 
 
 if __name__ == '__main__':

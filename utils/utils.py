@@ -52,6 +52,16 @@ def xview_class_weights(indices):  # weights of each class in the training set, 
     weights /= weights.sum()
     return weights[indices]
 
+def xview_feedback_weights(indices):
+    weights = 1 / torch.FloatTensor(
+        [0.027, 0.215, 0.643, 1.0, 0.0633, 0.532, 0.113, 0.0143, 0.0231, 0.0197, 0.0713, 0.195, 0.0216, 0.0641, 0.0668,
+         0.147, 0.173, 0.5, 0.443, 0.666, 0, 0.403, 0.519, 0.0194, 0.094, 0, 0.281, 0.346, 0.0542, 0.106, 0.146, 0.0258,
+         0.357, 0.0217, 0.00758, 0, 0.263, 0.269, 0, 0.159, 0.434, 0.0708, 0.142, 0.176, 0.128, 0.0525, 0.00398, 0.0229,
+         0.471, 0.0691, 0.0452, 0.0415, 0.135, 0.0259, 0.0697, 0.186, 0.156, 0.0801, 0.307, 0])
+    weights = torch.clamp(weights, 0, 300)
+    # weights /= weights.sum()
+    return weights[indices]
+
 
 def plot_one_box(x, im, color=None, label=None, line_thickness=None):
     tl = line_thickness or round(0.003 * max(im.shape[0:2]))  # line thickness
@@ -343,7 +353,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         # Filter out confidence scores below threshold
         # Get score and class with highest confidence
         if image_pred.shape[1] == 6:  # tcls is numeric, not binary
-            class_pred = image_pred[:, 5]
+            class_pred = image_pred[:, 5].long()
             class_conf = image_pred[:, 4]
         else:
             class_conf, class_pred = torch.max(F.softmax(image_pred[:, 5:], 1), 1)
@@ -353,11 +363,17 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
         a = w * h  # area
         ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))  # aspect ratio
 
-        v = ((image_pred[:, 4] > conf_thres) & (class_conf > .2)).numpy()
-        v *= (ar < 20) & (a > 10) & (w > 3) & (h > 3)
-        v *= (w > mat['class_stats'][class_pred, 0]*1.1) & (w < mat['class_stats'][class_pred, 1]*.9)
-        v *= (h > mat['class_stats'][class_pred, 2]*1.1) & (h < mat['class_stats'][class_pred, 3]*.9)
-        v *= (a > mat['class_stats'][class_pred, 4]*1.1) & (a < mat['class_stats'][class_pred, 5]*.9)
+        # Gather bbox priors
+        srl = 3  # sigma rejection level
+        mu = mat['class_stats'][class_pred][:,[0, 2, 4]].T
+        sigma = mat['class_stats'][class_pred][:,[1, 3, 5]].T * srl
+
+        log_w, log_h, log_a = np.log(w), np.log(h), np.log(a)
+        v = ((image_pred[:, 4] > conf_thres) & (class_conf > .20)).numpy()
+        v *= (ar < 20) & (a > 20) & (w > 4) & (h > 4)
+        v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
+        v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
+        v *= (log_a > mu[2] - sigma[2]) & (log_a < mu[2] + sigma[2])
         v = v.nonzero()
 
         image_pred = image_pred[v]
@@ -408,10 +424,10 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.95
+        thresh = 0.8
 
         a = output[image_i]
-        a = a[np.argsort(-a[:, 4]*a[:, 5])]  # sort best to worst
+        a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst
         xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
 
         radius = 30  # area to search for cross-class ious
@@ -445,6 +461,6 @@ def plotResults():
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, :], marker='.',label=f)
+            plt.plot(results[i, :], marker='.', label=f)
             plt.title(s[i])
         plt.legend()

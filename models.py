@@ -72,7 +72,7 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 
-class YOLOLayer(nn.Module):
+class YOLOLayer1(nn.Module):
     # YOLO Layer 1
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -149,7 +149,7 @@ class YOLOLayer(nn.Module):
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
         pred_conf = p[..., 4]  # Conf
-        pred_cls = self.anchor_class.repeat(bs, 1, 1, 1)
+        pred_cls = self.anchor_class.repeat(bs, 1, 1, 1).to(device)
 
         # Training
         if targets is not None:
@@ -171,17 +171,18 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])]).squeeze()
             if nM > 0:
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # wC = weight[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
                 lh = MSELoss(h[mask], th[mask])
-                # lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
-                lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 mnz = torch.nonzero(mask)
                 lcls = .1 * nM * CrossEntropyLoss(pred_conf[mnz[:, 0], :, mnz[:, 2], mnz[:, 3]], mnz[:, 1])
+                # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
 
@@ -189,7 +190,7 @@ class YOLOLayer(nn.Module):
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.999
-            # FPe = torch.zeros(60)
+            FPe = torch.zeros(60)
             if i.sum() > 0:
                 FP_classes = pred_cls[~mask][i].long()
                 FPe = torch.from_numpy(np.bincount(FP_classes.numpy(), minlength=60)).float()
@@ -207,11 +208,12 @@ class YOLOLayer(nn.Module):
 
             # If not in training phase return predictions
             output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
-                                F.sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, 1)), -1)
+                                (F.softmax(pred_conf,1) * F.sigmoid(pred_conf)).view(bs, -1, 1),
+                                pred_cls.view(bs, -1, 1)), -1)
             return output.data
 
 
-class YOLOLayer0(nn.Module):
+class YOLOLayer(nn.Module):
     # YOLO Layer 0
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -247,7 +249,7 @@ class YOLOLayer0(nn.Module):
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
         device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-        weight = xview_class_weights(range(60)).to(device)
+        weight = (xview_class_weights(range(60)) * xview_feedback_weights(range(60))).to(device)
 
         bs = p.shape[0]
         nG = p.shape[2]
@@ -260,6 +262,7 @@ class YOLOLayer0(nn.Module):
         BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
 
         CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -311,7 +314,7 @@ class YOLOLayer0(nn.Module):
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 # lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = .1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = 0.1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
