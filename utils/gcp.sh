@@ -7,9 +7,9 @@
 # ctrl + a + d
 
 # clone repo
-sudo rm -rf drive
-mkdir drive
-google-drive-ocamlfuse drive
+# sudo rm -rf drive
+# mkdir drive
+# google-drive-ocamlfuse drive
 
 sudo rm -rf yolo
 git clone https://github.com/ultralytics/yolo
