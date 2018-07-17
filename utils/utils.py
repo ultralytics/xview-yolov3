@@ -2,7 +2,6 @@ import random
 
 import cv2
 import numpy as np
-import scipy.io
 import torch
 import torch.nn.functional as F
 
@@ -52,14 +51,15 @@ def xview_class_weights(indices):  # weights of each class in the training set, 
     weights /= weights.sum()
     return weights[indices]
 
+
 def xview_feedback_weights(indices):
     weights = 1 / torch.FloatTensor(
-        [0.027, 0.215, 0.643, 1.0, 0.0633, 0.532, 0.113, 0.0143, 0.0231, 0.0197, 0.0713, 0.195, 0.0216, 0.0641, 0.0668,
-         0.147, 0.173, 0.5, 0.443, 0.666, 0, 0.403, 0.519, 0.0194, 0.094, 0, 0.281, 0.346, 0.0542, 0.106, 0.146, 0.0258,
-         0.357, 0.0217, 0.00758, 0, 0.263, 0.269, 0, 0.159, 0.434, 0.0708, 0.142, 0.176, 0.128, 0.0525, 0.00398, 0.0229,
-         0.471, 0.0691, 0.0452, 0.0415, 0.135, 0.0259, 0.0697, 0.186, 0.156, 0.0801, 0.307, 0])
-    weights = torch.clamp(weights, 0, 300)
-    # weights /= weights.sum()
+        [0, 0.175, 0.72, 1.0, 0.0441, 0.486, 0.168, 0.0233, 0.0304, 0.0177, 0.087, 0.209, 0.0308, 0.103, 0.0927, 0.269,
+         0.285, 0, 0.294, 0.675, 0, 0.505, 0.456, 0.0557, 0.157, 0, 0.621, 0.24, 0.222, 0.222, 0.145, 0.0417, 0.429,
+         0.0606, 0.025, 0, 0.547, 0.531, 0.00133, 0.194, 0.547, 0.355, 0.17, 0.143, 0.233, 0.121, 0.00567, 0.0208,
+         0.517, 0.0184, 0.0255, 0.0191, 0.0813, 0.039, 0.233, 0.283, 0.0904, 0.0745, 0.402, 0])
+    weights = torch.clamp(weights, 0, 500)
+    weights /= weights.max()
     return weights[indices]
 
 
@@ -337,9 +337,8 @@ def to_categorical(y, num_classes):
 
 
 # @profile
-def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
+def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
     prediction = prediction.cpu()
-    mat = scipy.io.loadmat('utils/targets_60c.mat')
 
     """
     Removes detections with lower object confidence score than 'conf_thres' and performs
@@ -365,11 +364,11 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
 
         # Gather bbox priors
         srl = 3  # sigma rejection level
-        mu = mat['class_stats'][class_pred][:,[0, 2, 4]].T
-        sigma = mat['class_stats'][class_pred][:,[1, 3, 5]].T * srl
+        mu = mat['class_stats'][class_pred][:, [0, 2, 4]].T
+        sigma = mat['class_stats'][class_pred][:, [1, 3, 5]].T * srl
 
         log_w, log_h, log_a = np.log(w), np.log(h), np.log(a)
-        v = ((image_pred[:, 4] > conf_thres) & (class_conf > .20)).numpy()
+        v = ((image_pred[:, 4] > conf_thres) & (class_conf > .30)).numpy()
         v *= (ar < 20) & (a > 20) & (w > 4) & (h > 4)
         v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
         v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
@@ -407,6 +406,8 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
             detections_class = detections_class[conf_sort_index]
             # Perform non-maximum suppression
             max_detections = []
+
+            # print(detections_class)
             while detections_class.shape[0]:
                 # Get detection with highest confidence and save as max detection
                 max_detections.append(detections_class[0].unsqueeze(0))
@@ -415,16 +416,18 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                     break
                 # Get the IOUs for all boxes with lower confidence
                 ious = bbox_iou(max_detections[-1], detections_class[1:])
+
                 # Remove detections with IoU >= NMS threshold
                 detections_class = detections_class[1:][ious < nms_thres]
 
             max_detections = torch.cat(max_detections).data
+            # print(max_detections)
             # Add max detections to outputs
             output[image_i] = max_detections if output[image_i] is None else torch.cat(
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.8
+        thresh = 0.9
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst
@@ -448,6 +451,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4):
                     xywh = xywh[mask]
 
         output[image_i] = a
+
     return output
 
 
@@ -456,11 +460,11 @@ def plotResults():
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
-    for f in ('/Users/glennjocher/Downloads/results9.txt',
+    for f in ('/Users/glennjocher/Downloads/results.txt',
               'results.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, :], marker='.', label=f)
+            plt.plot(results[i, -5:], marker='.', label=f)
             plt.title(s[i])
         plt.legend()

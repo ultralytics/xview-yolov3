@@ -14,7 +14,7 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=5, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
@@ -76,9 +76,9 @@ def main(opt):
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
     # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=.0001)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=.00002)
 
-    # modelinfo(model)
+    modelinfo(model)
     t0 = time.time()
     t1 = time.time()
     best_loss = float('inf')

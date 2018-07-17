@@ -33,6 +33,7 @@ class ImageFolder():  # for eval-only
         self.count = -1
         return self
 
+    # @profile
     def __next__(self):
         self.count += 1
         if self.count == self.nB:

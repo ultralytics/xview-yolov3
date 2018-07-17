@@ -20,13 +20,21 @@ def create_modules(module_defs):
             filters = int(module_def['filters'])
             kernel_size = int(module_def['size'])
             pad = (kernel_size - 1) // 2 if int(module_def['pad']) else 0
+            # modules.add_module('conv_%d' % i, nn.Conv2d(in_channels=output_filters[-1],
+            #                                             out_channels=filters,
+            #                                             kernel_size=kernel_size,
+            #                                             stride=int(module_def['stride']),
+            #                                             dilation=1,
+            #                                             padding=pad,
+            #                                             bias=not bn))
+
             modules.add_module('conv_%d' % i, nn.Conv2d(in_channels=output_filters[-1],
                                                         out_channels=filters,
                                                         kernel_size=kernel_size,
                                                         stride=int(module_def['stride']),
                                                         dilation=1,
                                                         padding=pad,
-                                                        bias=not bn))
+                                                        bias=True))
 
             if bn:
                 modules.add_module('batch_norm_%d' % i, nn.BatchNorm2d(filters))
@@ -38,18 +46,18 @@ def create_modules(module_defs):
             modules.add_module('upsample_%d' % i, upsample)
 
         elif module_def['type'] == 'route':
-            layers = [int(x) for x in module_def["layers"].split(',')]
+            layers = [int(x) for x in module_def['layers'].split(',')]
             filters = sum([output_filters[layer_i] for layer_i in layers])
             modules.add_module('route_%d' % i, EmptyLayer())
 
         elif module_def['type'] == 'shortcut':
             filters = output_filters[int(module_def['from'])]
-            modules.add_module("shortcut_%d" % i, EmptyLayer())
+            modules.add_module('shortcut_%d' % i, EmptyLayer())
 
-        elif module_def["type"] == "yolo":
-            anchor_idxs = [int(x) for x in module_def["mask"].split(",")]
+        elif module_def['type'] == 'yolo':
+            anchor_idxs = [int(x) for x in module_def['mask'].split(',')]
             # Extract anchors
-            anchors = [float(x) for x in module_def["anchors"].split(",")]
+            anchors = [float(x) for x in module_def['anchors'].split(',')]
             anchors = [(anchors[i], anchors[i + 1]) for i in range(0, len(anchors), 2)]
             anchors = [anchors[i] for i in anchor_idxs]
             num_classes = int(module_def['classes'])
@@ -249,7 +257,7 @@ class YOLOLayer(nn.Module):
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
         device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-        weight = (xview_class_weights(range(60)) * xview_feedback_weights(range(60))).to(device)
+        weight = xview_class_weights(range(60)).to(device) # * xview_feedback_weights(range(60))).to(device)
 
         bs = p.shape[0]
         nG = p.shape[2]
@@ -313,8 +321,8 @@ class YOLOLayer(nn.Module):
                 lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
-                # lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = 0.1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls =  nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
+                # lcls = 0.1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
@@ -424,7 +432,7 @@ def parse_model_config(path):
             if module_defs[-1]['type'] == 'convolutional':
                 module_defs[-1]['batch_normalize'] = 0
         else:
-            key, value = line.split("=")
+            key, value = line.split('=')
             value = value.strip()
             module_defs[-1][key.rstrip()] = value.strip()
 

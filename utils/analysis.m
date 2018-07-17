@@ -3,7 +3,7 @@
 clc; clear; close
 load json_data.mat
 
-%make_small_chips()
+make_small_chips()
 
 chip_id = zeros(numel(chips),1);  % 1-847
 chip_number = zeros(numel(chips),1);  % 5-2619
@@ -98,16 +98,20 @@ end
 
 uid = unique(id)';
 class_count = zeros(1,60);
-count = 0;
+f_count = 0;  % file count
+c_count = 0;  % chip count
+X = zeros(650000,32,32,3, 'uint8');
+Y = zeros(1,650000,'uint8');
 for i = uid
-    count = count+1;
-    fprintf('%g/847\n',count)
+    f_count = f_count+1;
+    fprintf('%g/847\n',f_count)
     target_idx = find(id==i)';
     img = imread(sprintf([path_a 'train_images/%g.bmp'],i));
     %fig; imshow(img)
 
     %fig(4,4)
     for j = target_idx
+        c_count = c_count + 1;
         t = targets(j,:); %#ok<*NODEF>
         class = xview_classes2indices(t(1));
         x1=t(2)+1;  y1=t(3)+1;  x2=t(4)+1;  y2=t(5)+1;
@@ -122,10 +126,18 @@ for i = uid
         y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
         img1 = img(int16(y1:y2),int16(x1:x2),:);
         img2 = imresize(img1,[32 32], 'bicubic');
-        imwrite(img2,sprintf([path_a 'classes/%g/%g.bmp'],class,class_count(class+1)));
+        
+        Y(c_count) = class;
+        X(c_count,:,:,:) = img2;
+
+        % imwrite(img2,sprintf([path_a 'classes/%g/%g.bmp'],class,class_count(class+1)));
         % sca; imshow(img2); axis equal ij; title(class)
     end
 end
+X=permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
+Y=Y(1:c_count);
+
+save('-v6','class_net_data','X','Y')
 end
 
 
