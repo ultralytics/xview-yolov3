@@ -427,7 +427,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.8
+        thresh = 0.9
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst

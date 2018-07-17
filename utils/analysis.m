@@ -3,7 +3,7 @@
 clc; clear; close
 load json_data.mat
 
-make_small_chips()
+% make_small_chips()
 
 chip_id = zeros(numel(chips),1);  % 1-847
 chip_number = zeros(numel(chips),1);  % 5-2619
@@ -100,7 +100,7 @@ uid = unique(id)';
 class_count = zeros(1,60);
 f_count = 0;  % file count
 c_count = 0;  % chip count
-X = zeros(650000,32,32,3, 'uint8');
+X = zeros(650000,48,48,3, 'uint8');
 Y = zeros(1,650000,'uint8');
 for i = uid
     f_count = f_count+1;
@@ -109,7 +109,7 @@ for i = uid
     img = imread(sprintf([path_a 'train_images/%g.bmp'],i));
     %fig; imshow(img)
 
-    %fig(4,4)
+    % fig(4,4)
     for j = target_idx
         c_count = c_count + 1;
         t = targets(j,:); %#ok<*NODEF>
@@ -121,12 +121,11 @@ for i = uid
         image_wh = wh(j,:);
         
         % make chip a square
-        l = round(max(w,h)*1.4 + 10); if mod(l,2)~=0; l = l + 1; end
-        % l = round(max(w,h)*1.1 + 2); if mod(l,2)~=0; l = l + 1; end
+        l = round(max(w,h)*1.1 + 4); if mod(l,2)~=0; l = l + 1; end  % normal
         x1 = max(xc-l/2,1); x2 = min(xc+l/2, image_wh(1)); 
         y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
         img1 = img(int16(y1:y2),int16(x1:x2),:);
-        img2 = imresize(img1,[32 32], 'bicubic');
+        img2 = imresize(img1,[48 48], 'bicubic');
         
         Y(c_count) = class;
         X(c_count,:,:,:) = img2;
@@ -135,10 +134,16 @@ for i = uid
         % sca; imshow(img2); axis equal ij; title(class)
     end
 end
+%rgb_mean = [60.134, 49.697, 40.746];
+%rgb_std = [29.99, 24.498, 22.046];
+%for i=1:3
+%   X(:,:,:,i) =  (X(:,:,:,i)-rgb_mean(i)) / rgb_std(i);
+%end
+        
 X=permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
 Y=Y(1:c_count);
 
-save('-v6','class_net_data_xlarge','X','Y')
+save('-v7.3','class_chips48','X','Y')
 end
 
 
