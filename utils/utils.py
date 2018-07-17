@@ -427,7 +427,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.9
+        thresh = 0.8
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst
@@ -465,6 +465,6 @@ def plotResults():
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, :], marker='.', label=f)
+            plt.plot(results[i, -200:], marker='.', label=f)
             plt.title(s[i])
         # plt.legend()
