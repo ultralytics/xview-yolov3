@@ -7,11 +7,15 @@
 # ctrl + a + d
 
 # clone repo
+sudo rm -rf drive
+mkdir drive
+google-drive-ocamlfuse drive
+
 sudo rm -rf yolo
 git clone https://github.com/ultralytics/yolo
 # do training
 mkdir yolo/checkpoints
-#cp fresh3.pt yolo/checkpoints
+cp drive/fresh9_e450.pt yolo/checkpoints
 #cp results.txt yolo
 cd yolo
 python3 train.py -epochs 9999
