@@ -121,7 +121,8 @@ for i = uid
         image_wh = wh(j,:);
         
         % make chip a square
-        l = round(max(w,h)*1.1 + 2); if mod(l,2)~=0; l = l + 1; end
+        l = round(max(w,h)*1.4 + 10); if mod(l,2)~=0; l = l + 1; end
+        % l = round(max(w,h)*1.1 + 2); if mod(l,2)~=0; l = l + 1; end
         x1 = max(xc-l/2,1); x2 = min(xc+l/2, image_wh(1)); 
         y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
         img1 = img(int16(y1:y2),int16(x1:x2),:);
@@ -137,7 +138,7 @@ end
 X=permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
 Y=Y(1:c_count);
 
-save('-v6','class_net_data','X','Y')
+save('-v6','class_net_data_xlarge','X','Y')
 end
 
 
