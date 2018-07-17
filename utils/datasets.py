@@ -233,7 +233,8 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     S[1, 0] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
     M = R @ T @ S
-    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR)
+    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR,
+                              borderValue=[40.746, 49.697, 60.134])  # BGR borderValue order
 
     # Return warped points also
     if targets is not None:

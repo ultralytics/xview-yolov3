@@ -3,7 +3,7 @@
 clc; clear; close
 load json_data.mat
 
-% make_small_chips()
+make_small_chips()
 
 chip_id = zeros(numel(chips),1);  % 1-847
 chip_number = zeros(numel(chips),1);  % 5-2619
@@ -83,7 +83,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_60c.mat','wh','targets','id','class_stats')
+%save('targets_60c.mat','wh','targets','id','class_stats')
 
 
 function [] = make_small_chips()
@@ -100,8 +100,10 @@ uid = unique(id)';
 class_count = zeros(1,60);
 f_count = 0;  % file count
 c_count = 0;  % chip count
-X = zeros(650000,48,48,3, 'uint8');
+lengh = 64;
+X = zeros(650000,lengh,lengh,3, 'uint8');
 Y = zeros(1,650000,'uint8');
+border = 8;  % extra area around object of interest (for augmentation)
 for i = uid
     f_count = f_count+1;
     fprintf('%g/847\n',f_count)
@@ -111,7 +113,6 @@ for i = uid
 
     % fig(4,4)
     for j = target_idx
-        c_count = c_count + 1;
         t = targets(j,:); %#ok<*NODEF>
         class = xview_classes2indices(t(1));
         x1=t(2)+1;  y1=t(3)+1;  x2=t(4)+1;  y2=t(5)+1;
@@ -121,12 +122,13 @@ for i = uid
         image_wh = wh(j,:);
         
         % make chip a square
-        l = round(max(w,h)*1.1 + 4); if mod(l,2)~=0; l = l + 1; end  % normal
+        l = round(max(w,h)*1.1 + 2 + border*2); if mod(l,2)~=0; l = l + 1; end  % normal
         x1 = max(xc-l/2,1); x2 = min(xc+l/2, image_wh(1)); 
         y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
         img1 = img(int16(y1:y2),int16(x1:x2),:);
-        img2 = imresize(img1,[48 48], 'bicubic');
+        img2 = imresize(img1,[lengh lengh], 'bicubic');
         
+        c_count = c_count + 1;
         Y(c_count) = class;
         X(c_count,:,:,:) = img2;
 
@@ -143,7 +145,7 @@ end
 X=permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
 Y=Y(1:c_count);
 
-save('-v7.3','class_chips48','X','Y')
+save('-v7.3','class_chips48+16','X','Y')
 end
 
 
