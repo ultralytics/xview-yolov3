@@ -15,7 +15,9 @@ from utils.utils import xyxy2xywh
 class ImageFolder():  # for eval-only
     def __init__(self, path, batch_size=1, img_size=416):
         if os.path.isdir(path):
-            self.files = sorted(glob.glob('%s/*.*' % path))
+            self.files = []
+            self.files.extend(sorted(glob.glob('%s/*.bmp' % path)))
+            self.files.extend(sorted(glob.glob('%s/*.tif' % path)))
         elif os.path.isfile(path):
             self.files = [path]
 

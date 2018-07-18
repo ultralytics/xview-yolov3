@@ -331,11 +331,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC
 
 
-def to_categorical(y, num_classes):
-    """ 1-hot encodes a tensor """
-    return torch.from_numpy(np.eye(num_classes, dtype='uint8')[y])
-
-
 # @profile
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
     prediction = prediction.cpu()
@@ -461,11 +456,10 @@ def plotResults():
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('/Users/glennjocher/Downloads/results5.txt',
-              '/Users/glennjocher/Downloads/results4.txt',
               'results0.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, -200:], marker='.', label=f)
+            plt.plot(results[i, 30:], marker='.', label=f)
             plt.title(s[i])
         # plt.legend()
