@@ -153,98 +153,6 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     return inter_area / (b1_area + b2_area - inter_area + 1e-16)
 
 
-def build_targets1(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
-    """
-    returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
-    """
-    nB = len(target)  # target.shape[0]
-    nT = [len(x) for x in target]  # torch.argmin(target[:, :, 4], 1)  # targets per image
-    tx = torch.zeros(nB, nA, nG, nG)  # batch size (4), number of anchors (3), number of grid points (13)
-    ty = torch.zeros(nB, nA, nG, nG)
-    tw = torch.zeros(nB, nA, nG, nG)
-    th = torch.zeros(nB, nA, nG, nG)
-    tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    tcls = torch.ByteTensor(nB, nA, nG, nG, nC * 0 + 60).fill_(0)  # nC = number of classes
-    TP = torch.ByteTensor(nB, max(nT)).fill_(0)
-    FP = torch.ByteTensor(nB, max(nT)).fill_(0)
-    FN = torch.ByteTensor(nB, max(nT)).fill_(0)
-    TC = torch.ByteTensor(nB, max(nT)).fill_(0)  # target category
-
-    for b in range(nB):
-        nTb = nT[b]  # number of targets (measures index of first zero-height target box)
-        if nTb == 0:
-            continue
-        t = target[b]  # target[b, :nTb]
-        FN[b, :nTb] = 1
-
-        # Convert to position relative to box
-        tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
-        TC[b, :nTb] = tc
-        # Get grid box indices and prevent overflows (i.e. 13.01 on 13 anchors)
-        gi = torch.clamp(gx.long(), min=0, max=nG - 1)
-        gj = torch.clamp(gy.long(), min=0, max=nG - 1)
-
-        # iou of targets-anchors (using wh only)
-        box1 = t[:, 3:5] * nG
-        box2 = anchor_grid_wh[:, gj, gi]
-        inter_area = torch.min(box1, box2).prod(2)
-        iou_anch = inter_area / (gw * gh + box2.prod(2) - inter_area + 1e-16)
-
-        # set iou for out-of-class anchors to zero
-        anchor_classes = pred_cls[b, :, gj, gi].long()
-        iou_anch[tc != anchor_classes] = 0
-
-        # Select best iou_pred and anchor
-        iou_anch_best, a = iou_anch.max(0)  # best anchor [0-2] for each target
-
-        # Two targets can not claim the same anchor
-        if nTb > 1:
-            iou_order = np.argsort(-iou_anch_best)  # best to worst
-            # u = torch.cat((gi, gj, a), 0).view(3, -1).numpy()
-            # _, first_unique = np.unique(u[:, iou_order], axis=1, return_index=True)  # first unique indices
-            u = gi.float() * 0.4361538773074043 + gj.float() * 0.28012496588736746 + a.float() * 0.6627147212460307
-            _, first_unique = np.unique(u[iou_order], return_index=True)  # first unique indices
-            # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
-            i = iou_order[first_unique]
-            # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.01]  # DO NOT SET TO ZERO, rejects inappropriate anchor_classes-target matchups
-            if len(i) == 0:
-                continue
-
-            a, gj, gi, t = a[i], gj[i], gi[i], t[i]
-        else:
-            if iou_anch_best == 0:
-                continue
-            i = 0
-
-        tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
-
-        # Coordinates
-        tx[b, a, gj, gi] = gx - gi.float()
-        ty[b, a, gj, gi] = gy - gj.float()
-        # Width and height
-        tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
-        th[b, a, gj, gi] = torch.sqrt(gh / anchor_wh[a, 1]) / 2
-
-        # One-hot encoding of label
-        tcls[b, a, gj, gi, tc] = 1
-        tconf[b, a, gj, gi] = 1
-
-        if requestPrecision:
-            # predicted classes and confidence
-            tb = torch.cat((gx - gw / 2, gy - gh / 2, gx + gw / 2, gy + gh / 2)).view(4, -1).t()  # target boxes
-            pcls = pred_cls[b, a, gj, gi].long().cpu()
-            # pcls = torch.argmax(pred_cls[b, a, gj, gi], 1).cpu()
-            pconf = F.sigmoid(pred_conf[b, a, gj, gi]).cpu()
-            iou_pred = bbox_iou(tb, pred_boxes[b, a, gj, gi].cpu())
-
-            TP[b, i] = (pconf > 0.99) & (iou_pred > 0.5) & (pcls == tc)
-            FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
-            FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
-
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC
-
-
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
@@ -346,25 +254,29 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
     for image_i, image_pred in enumerate(prediction):
         # Filter out confidence scores below threshold
         # Get score and class with highest confidence
-        if image_pred.shape[1] == 6:  # tcls is numeric, not binary
-            class_pred = image_pred[:, 5].long()
-            class_conf = image_pred[:, 4]
-        else:
-            class_conf, class_pred = torch.max(F.softmax(image_pred[:, 5:], 1), 1)
 
         w = image_pred[:, 2].numpy()
         h = image_pred[:, 3].numpy()
         a = w * h  # area
-        ar =  h / (w + 1e-16)  # aspect ratio
+        ar = w / (h + 1e-16)  # aspect ratio
+        log_w, log_h, log_a, log_ar = np.log(w), np.log(h), np.log(a), np.log(ar)
+
+        # n = len(w)
+        # shape_likelihood = np.zeros((n, 60), dtype=np.float32)
+        # x = np.concatenate((log_w.reshape(-1, 1), log_h.reshape(-1, 1)), 1)
+        # from scipy.stats import multivariate_normal
+        # for c in range(60):
+        # shape_likelihood[:, c] = multivariate_normal.pdf(x, mean=mat['class_mu'][c, :2], cov=mat['class_cov'][c, :2, :2])
+
+        class_prob, class_pred = torch.max(F.softmax(image_pred[:, 5:], 1), 1)
 
         # Gather bbox priors
         srl = 3  # sigma rejection level
-        mu = mat['class_stats'][class_pred][:, [0, 2, 4, 6]].T
-        sigma = mat['class_stats'][class_pred][:, [1, 3, 5, 7]].T * srl
+        mu = mat['class_mu'][class_pred].T
+        sigma = mat['class_sigma'][class_pred].T * srl
 
-        log_w, log_h, log_a, log_ar = np.log(w), np.log(h), np.log(a), np.log(ar)
-        v = ((image_pred[:, 4] > conf_thres) & (class_conf > .30)).numpy()
-        v *= (a > 20) & (w > 4) & (h > 4)
+        v = ((image_pred[:, 4] > conf_thres) & (class_prob > .2)).numpy()
+        v *= (a > 20) & (w > 4) & (h > 4) & (ar < 10) & (ar > 1 / 10)
         v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
         v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
         v *= (log_a > mu[2] - sigma[2]) & (log_a < mu[2] + sigma[2])
@@ -372,7 +284,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
         v = v.nonzero()
 
         image_pred = image_pred[v]
-        class_conf = class_conf[v]
+        class_prob = class_prob[v]
         class_pred = class_pred[v]
 
         # If none are remaining => process next image
@@ -388,8 +300,8 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
         box_corner[:, 2:4] = xy + wh
         image_pred[:, :4] = box_corner
 
-        # Detections ordered as (x1, y1, x2, y2, obj_conf, class_conf, class_pred)
-        detections = torch.cat((image_pred[:, :5], class_conf.float().unsqueeze(1), class_pred.float().unsqueeze(1)), 1)
+        # Detections ordered as (x1, y1, x2, y2, obj_conf, class_prob, class_pred)
+        detections = torch.cat((image_pred[:, :5], class_prob.float().unsqueeze(1), class_pred.float().unsqueeze(1)), 1)
         # Iterate through all predicted classes
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:
@@ -423,7 +335,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.9
+        thresh = 0.8
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst

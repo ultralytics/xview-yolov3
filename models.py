@@ -79,148 +79,6 @@ class EmptyLayer(nn.Module):
     def __init__(self):
         super(EmptyLayer, self).__init__()
 
-
-class YOLOLayer1(nn.Module):
-    # YOLO Layer 1
-
-    def __init__(self, anchors, nC, img_dim, anchor_idxs):
-        super(YOLOLayer, self).__init__()
-
-        mat = scipy.io.loadmat('utils/targets_60c.mat')
-        wh = mat['class_stats'][:, 6:].reshape(-1, 3)
-        i = np.argsort(wh[:, 1] * wh[:, 2])  # smallest to largest area
-
-        nA = int(len(i) / 3)  # anchors per yolo layer
-        if anchor_idxs[0] == 40:  # 6
-            stride = 32
-            i = i[nA * 2:nA * 3]
-        elif anchor_idxs[0] == 20:  # 3
-            stride = 16
-            i = i[nA:nA * 2]
-        else:
-            stride = 8
-            i = i[:nA]
-
-        classes = wh[i, 0:1]
-        wh = wh[i, 1:]
-        self.anchors = [(a_w, a_h) for a_w, a_h in wh]  # (pixels)
-        self.nA = nA  # number of anchors (3)
-        self.nC = nC  # number of classes (60)
-        self.bbox_attrs = 5
-        self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
-
-        # Build anchor grids
-        nG = int(self.img_dim / stride)
-        nB = 1  # batch_size set to 1
-        shape = [nB, nA, nG, nG]
-        self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
-        self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
-        self.scaled_anchors = torch.FloatTensor(wh / stride)
-        self.anchor_w = self.scaled_anchors[:, 0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
-        self.classes = torch.FloatTensor(classes)
-        self.anchor_class = self.classes.repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-
-    def forward(self, p, targets=None, requestPrecision=False):
-        FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
-        device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-        weight = xview_class_weights(range(60)).to(device)
-        bs = p.shape[0]
-        nG = p.shape[2]
-        stride = self.img_dim / nG
-
-        MSELoss = nn.MSELoss(size_average=False)
-
-        BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
-        BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
-        BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-
-        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight[self.classes.long()])
-
-        if p.is_cuda and not self.grid_x.is_cuda:
-            self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
-            self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
-
-        # x.view(4, 650, 19, 19) -- > (4, 10, 19, 19, 65)  # (bs, anchors, grid, grid, classes + xywh) OLD
-        # x.view(4, 100, 19, 19) -- > (4, 20, 19, 19, 5)  # (bs, anchors, grid, grid, classes + xywh)
-        p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
-
-        # Get outputs
-        x = F.sigmoid(p[..., 0])  # Center x
-        y = F.sigmoid(p[..., 1])  # Center y
-        w = F.sigmoid(p[..., 2])  # Width
-        h = F.sigmoid(p[..., 3])  # Height
-        width = ((w.data * 2) ** 2) * self.anchor_w
-        height = ((h.data * 2) ** 2) * self.anchor_h
-
-        # Add offset and scale with anchors (in grid space, i.e. 0-13)
-        pred_boxes = FT(p[..., :4].shape)
-        pred_conf = p[..., 4]  # Conf
-        pred_cls = self.anchor_class.repeat(bs, 1, 1, 1).to(device)
-
-        # Training
-        if targets is not None:
-            if requestPrecision:
-                pred_boxes[..., 0] = x.data + self.grid_x - width / 2
-                pred_boxes[..., 1] = y.data + self.grid_y - height / 2
-                pred_boxes[..., 2] = x.data + self.grid_x + width / 2
-                pred_boxes[..., 3] = y.data + self.grid_y + height / 2
-
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC = \
-                build_targets1(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
-                               self.anchor_wh, requestPrecision)
-
-            tcls = tcls[mask]
-            if x.is_cuda:
-                tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
-
-            # Mask outputs to ignore non-existing objects (but keep confidence predictions)
-            nM = mask.sum().float()
-            nGT = FT([sum([len(x) for x in targets])]).squeeze()
-            if nM > 0:
-                # wC = weight[torch.argmax(tcls, 1)]  # weight class
-                # wC /= sum(wC)
-                lx = MSELoss(x[mask], tx[mask])
-                ly = MSELoss(y[mask], ty[mask])
-                lw = MSELoss(w[mask], tw[mask])
-                lh = MSELoss(h[mask], th[mask])
-                lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
-                # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
-
-                mnz = torch.nonzero(mask)
-                lcls = .1 * nM * CrossEntropyLoss(pred_conf[mnz[:, 0], :, mnz[:, 2], mnz[:, 3]], mnz[:, 1])
-                # lcls = FT([0])
-            else:
-                lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
-
-            lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
-            loss = lx + ly + lw + lh + lconf + lcls
-
-            i = F.sigmoid(pred_conf[~mask]) > 0.999
-            FPe = torch.zeros(60)
-            if i.sum() > 0:
-                FP_classes = pred_cls[~mask][i].long()
-                FPe = torch.from_numpy(np.bincount(FP_classes.numpy(), minlength=60)).float()
-                #for c in FP_classes:
-                #    FPe[c] += 1
-
-            return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   nGT, TP, FP, FPe, FN, TC
-
-        else:
-            pred_boxes[..., 0] = x.data + self.grid_x
-            pred_boxes[..., 1] = y.data + self.grid_y
-            pred_boxes[..., 2] = width
-            pred_boxes[..., 3] = height
-
-            # If not in training phase return predictions
-            output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
-                                (F.softmax(pred_conf,1) * F.sigmoid(pred_conf)).view(bs, -1, 1),
-                                pred_cls.view(bs, -1, 1)), -1)
-            return output.data
-
-
 class YOLOLayer(nn.Module):
     # YOLO Layer 0
 
@@ -256,21 +114,10 @@ class YOLOLayer(nn.Module):
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
-        device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-        weight = xview_class_weights(range(60)).to(device) # * xview_feedback_weights(range(60))).to(device)
 
         bs = p.shape[0]
         nG = p.shape[2]
         stride = self.img_dim / nG
-
-        MSELoss = nn.MSELoss(size_average=False)
-
-        BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
-        # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
-        BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-
-        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
-
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -294,6 +141,15 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
+            device = torch.device('cuda:0' if p.is_cuda else 'cpu')
+            weight = xview_class_weights(range(60)).to(device)  # * xview_feedback_weights(range(60))).to(device)
+
+            MSELoss = nn.MSELoss(size_average=False)
+            BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
+            # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
+            BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+
             if requestPrecision:
                 pred_boxes[..., 0] = x.data + self.grid_x - width / 2
                 pred_boxes[..., 1] = y.data + self.grid_y - height / 2
@@ -322,7 +178,7 @@ class YOLOLayer(nn.Module):
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 # lcls =  nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = 0.2 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = 0.1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
