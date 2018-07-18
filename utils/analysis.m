@@ -142,8 +142,8 @@ end
 %   X(:,:,:,i) =  (X(:,:,:,i)-rgb_mean(i)) / rgb_std(i);
 %end
 
-X=permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
-Y=Y(1:c_count);
+X = permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
+Y = Y(1:c_count);
 
 X = permute(X,[4,3,2,1]);  % for hd5y only (reads in backwards permuted)
 save('-v7.3','class_chips64+26','X','Y')

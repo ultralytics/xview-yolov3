@@ -240,7 +240,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
 
 # @profile
-def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
+def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model=None):
     prediction = prediction.cpu()
 
     """
@@ -251,12 +251,11 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
     """
 
     output = [None for _ in range(len(prediction))]
-    for image_i, image_pred in enumerate(prediction):
+    for image_i, pred in enumerate(prediction):
         # Filter out confidence scores below threshold
         # Get score and class with highest confidence
 
-        w = image_pred[:, 2].numpy()
-        h = image_pred[:, 3].numpy()
+        x, y, w, h = pred[:, 0].numpy(), pred[:, 1].numpy(), pred[:, 2].numpy(), pred[:, 3].numpy()
         a = w * h  # area
         ar = w / (h + 1e-16)  # aspect ratio
         log_w, log_h, log_a, log_ar = np.log(w), np.log(h), np.log(a), np.log(ar)
@@ -268,14 +267,14 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
         # for c in range(60):
         # shape_likelihood[:, c] = multivariate_normal.pdf(x, mean=mat['class_mu'][c, :2], cov=mat['class_cov'][c, :2, :2])
 
-        class_prob, class_pred = torch.max(F.softmax(image_pred[:, 5:], 1), 1)
+        class_prob, class_pred = torch.max(F.softmax(pred[:, 5:], 1), 1)
 
         # Gather bbox priors
         srl = 3  # sigma rejection level
         mu = mat['class_mu'][class_pred].T
         sigma = mat['class_sigma'][class_pred].T * srl
 
-        v = ((image_pred[:, 4] > conf_thres) & (class_prob > .2)).numpy()
+        v = ((pred[:, 4] > conf_thres) & (class_prob > .3)).numpy()
         v *= (a > 20) & (w > 4) & (h > 4) & (ar < 10) & (ar > 1 / 10)
         v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
         v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
@@ -283,25 +282,29 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
         v *= (log_ar > mu[3] - sigma[3]) & (log_ar < mu[3] + sigma[3])
         v = v.nonzero()
 
-        image_pred = image_pred[v]
+        pred = pred[v]
         class_prob = class_prob[v]
         class_pred = class_pred[v]
+        x, y, w, h = x[v], y[v], w[v], h[v]
 
         # If none are remaining => process next image
-        nP = image_pred.shape[0]
+        nP = pred.shape[0]
         if not nP:
             continue
 
+        # Start secondary classification of each chip
+        # class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model)
+
         # From (center x, center y, width, height) to (x1, y1, x2, y2)
-        box_corner = image_pred.new(nP, 4)
-        xy = image_pred[:, 0:2]
-        wh = image_pred[:, 2:4] / 2
+        box_corner = pred.new(nP, 4)
+        xy = pred[:, 0:2]
+        wh = pred[:, 2:4] / 2
         box_corner[:, 0:2] = xy - wh
         box_corner[:, 2:4] = xy + wh
-        image_pred[:, :4] = box_corner
+        pred[:, :4] = box_corner
 
         # Detections ordered as (x1, y1, x2, y2, obj_conf, class_prob, class_pred)
-        detections = torch.cat((image_pred[:, :5], class_prob.float().unsqueeze(1), class_pred.float().unsqueeze(1)), 1)
+        detections = torch.cat((pred[:, :5], class_prob.float().unsqueeze(1), class_pred.float().unsqueeze(1)), 1)
         # Iterate through all predicted classes
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:
@@ -335,7 +338,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.9
+        thresh = 0.6
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst
@@ -359,8 +362,55 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
                     xywh = xywh[mask]
 
         output[image_i] = a
-
     return output
+
+
+def secondary_class_detection(x, y, w, h, img, model):
+    cuda = torch.cuda.is_available()
+    device = torch.device('cuda:0' if cuda else 'cpu')
+
+    # 1. create 48-pixel squares from each chip
+    img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2
+
+    l = np.round(np.maximum(w, h) * 1.1 + 4)
+    x1 = np.maximum(x - l / 2, 1).astype(np.uint16)
+    x2 = np.minimum(x + l / 2, img.shape[1]).astype(np.uint16)
+    y1 = np.maximum(y - l / 2, 1).astype(np.uint16)
+    y2 = np.minimum(y + l / 2, img.shape[0]).astype(np.uint16)
+
+    n = len(x)
+    images = []
+    for i in range(n):
+        images.append(cv2.resize(img[y1[i]:y2[i], x1[i]:x2[i]], (48, 48), interpolation=cv2.INTER_LINEAR))
+
+    # plot
+    # images_numpy = images.copy()
+    # import matplotlib.pyplot as plt
+    # rgb_mean = [60.134, 49.697, 40.746]
+    # rgb_std = [29.99, 24.498, 22.046]
+    # for i in range(16):
+    #     im = images_numpy[i + 190].copy()
+    #     for j in range(3):
+    #         im[:, :, j] *= rgb_std[j]
+    #         im[:, :, j] += rgb_mean[j]
+    #
+    #     im /= 255
+    #    plt.subplot(4, 4, i + 1).imshow(im)
+
+    images = np.stack(images).transpose([0, 3, 1, 2])  # cv2 to pytorch
+    images = np.ascontiguousarray(images)
+    images = torch.from_numpy(images).to(device)
+
+    with torch.no_grad():
+
+        classes = []
+        for i in range(int(n / 1000) + 1):
+            j0 = int(i * 1000)
+            j1 = int(min(j0 + 1000, n))
+            classes.append(model(images[j0:j1]).cpu())
+
+        classes = torch.cat(classes, 0)
+    return torch.max(F.softmax(classes, 1), 1)
 
 
 def plotResults():
@@ -369,6 +419,7 @@ def plotResults():
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('/Users/glennjocher/Downloads/results5.txt',
+              '/Users/glennjocher/Downloads/results4.txt',
               'results0.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):

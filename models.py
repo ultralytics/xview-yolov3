@@ -20,13 +20,6 @@ def create_modules(module_defs):
             filters = int(module_def['filters'])
             kernel_size = int(module_def['size'])
             pad = (kernel_size - 1) // 2 if int(module_def['pad']) else 0
-            # modules.add_module('conv_%d' % i, nn.Conv2d(in_channels=output_filters[-1],
-            #                                             out_channels=filters,
-            #                                             kernel_size=kernel_size,
-            #                                             stride=int(module_def['stride']),
-            #                                             dilation=1,
-            #                                             padding=pad,
-            #                                             bias=not bn))
 
             modules.add_module('conv_%d' % i, nn.Conv2d(in_channels=output_filters[-1],
                                                         out_channels=filters,
@@ -34,7 +27,7 @@ def create_modules(module_defs):
                                                         stride=int(module_def['stride']),
                                                         dilation=1,
                                                         padding=pad,
-                                                        bias=True))
+                                                        bias=True)) #  bias=not bn))
 
             if bn:
                 modules.add_module('batch_norm_%d' % i, nn.BatchNorm2d(filters))
@@ -143,7 +136,7 @@ class YOLOLayer(nn.Module):
             device = torch.device('cuda:0' if p.is_cuda else 'cpu')
             weight = xview_class_weights(range(60)).to(device)  # * xview_feedback_weights(range(60))).to(device)
 
-            MSELoss = nn.MSELoss(size_average=False)
+            MSELoss = nn.MSELoss(reduce=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
             # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
@@ -167,17 +160,17 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                # wC = weight[torch.argmax(tcls, 1)]  # weight class
-                # wC /= sum(wC)
-                lx = MSELoss(x[mask], tx[mask])
-                ly = MSELoss(y[mask], ty[mask])
-                lw = MSELoss(w[mask], tw[mask])
-                lh = MSELoss(h[mask], th[mask])
-                lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                wC = weight[torch.argmax(tcls, 1)]  # weight class
+                wC /= sum(wC)
+                lx = nM * (MSELoss(x[mask], tx[mask]) * wC).sum()
+                ly = nM * (MSELoss(y[mask], ty[mask]) * wC).sum()
+                lw = nM * (MSELoss(w[mask], tw[mask]) * wC).sum()
+                lh = nM * (MSELoss(h[mask], th[mask]) * wC).sum()
+                lconf = nM * (BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float()) * wC).sum()
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 # lcls =  nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = 0.1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = 0.2 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
