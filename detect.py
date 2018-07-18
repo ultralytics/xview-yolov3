@@ -9,7 +9,8 @@ from utils.utils import *
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100/', help='path to images')
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100/',
+                        help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
     cuda = torch.cuda.is_available()
 else:  # gcp
@@ -21,19 +22,20 @@ parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help
 parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_5.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.6, help='iou threshold for non-maximum suppression')
+parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
+
 # @profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
     os.system('rm -rf ' + opt.output_folder + '_img')
     os.makedirs(opt.output_folder, exist_ok=True)
-    os.makedirs(    opt.output_folder + '_img', exist_ok = True)
+    os.makedirs(opt.output_folder + '_img', exist_ok=True)
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # Set up model
@@ -68,12 +70,14 @@ def detect(opt):
         preds = []
         ni = math.ceil(img.shape[1] / 608)
         nj = math.ceil(img.shape[2] / 608)
+
         for i in range(ni):
             print('row %g/%g: ' % (i, ni), end='')
 
             for j in range(nj):
                 print('%g ' % j, end='', flush=True)
 
+                # forward scan
                 y2 = min((i + 1) * 608, img.shape[1])
                 y1 = y2 - 608
                 x2 = min((j + 1) * 608, img.shape[2])
@@ -85,11 +89,48 @@ def detect(opt):
                 # plt.subplot(ni, nj, i * nj + j + 1).imshow(chip[1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
-                chip = torch.from_numpy(chip).unsqueeze(0).to(device)
                 # Get detections
+                chip = torch.from_numpy(chip).unsqueeze(0).to(device)
                 with torch.no_grad():
                     pred = model(chip)
                     pred = pred[pred[:, :, 4] > opt.conf_thres]
+
+                    if (j > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 8)]  # near left border
+                    if (j < nj) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 600)]  # near right border
+                    if (i > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 8)]  # near top border
+                    if (i < ni) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 600)]  # near bottom border
+
+                    if len(pred) > 0:
+                        pred[:, 0] += x1
+                        pred[:, 1] += y1
+                        preds.append(pred.unsqueeze(0))
+
+                # backward scan
+                y2 = max(img.shape[1] - i * 608, 608)
+                y1 = y2 - 608
+                x2 = max(img.shape[2] - j * 608, 608)
+                x1 = x2 - 608
+                chip = img[:, y1:y2, x1:x2]
+
+                # Get detections
+                chip = torch.from_numpy(chip).unsqueeze(0).to(device)
+                with torch.no_grad():
+                    pred = model(chip)
+                    pred = pred[pred[:, :, 4] > opt.conf_thres]
+
+                    if (j < nj) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 8)]  # near left border
+                    if (j > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 600)]  # near right border
+                    if (i < ni) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 8)]  # near top border
+                    if (i > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 600)]  # near bottom border
+
                     if len(pred) > 0:
                         pred[:, 0] += x1
                         pred[:, 1] += y1
@@ -154,7 +195,7 @@ def detect(opt):
 
                     if opt.plot_flag:
                         # Add the bbox to the plot
-                        label = '%s %.2f' % (classes[int(cls_pred)],cls_conf) if cls_conf > 0.05 else None
+                        label = '%s %.2f' % (classes[int(cls_pred)], cls_conf) if cls_conf > 0.05 else None
                         color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
                         plot_one_box([x1, y1, x2, y2], img, label=label, color=color, line_thickness=1)
 
@@ -164,7 +205,6 @@ def detect(opt):
 
     from scoring import score
     score.score('data/predictions/', '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
-
 
 
 if __name__ == '__main__':

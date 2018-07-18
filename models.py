@@ -80,7 +80,6 @@ class EmptyLayer(nn.Module):
         super(EmptyLayer, self).__init__()
 
 class YOLOLayer(nn.Module):
-    # YOLO Layer 0
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
         super(YOLOLayer, self).__init__()
