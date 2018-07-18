@@ -174,7 +174,7 @@ for i = 1:n
     xview_classes2indices(uc(i))
     class_name = xview_names(xview_classes2indices(uc(i)));
     % close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); plot(C(:,1),C(:,2),'g.','MarkerSize',50); title(sprintf('%s, cor = %g',class_name,corr(wj,hj)))
-    % ha=fig; histogram(arj, linspace(-3,3,50)); title(class_name); ha.YScale='linear';
+    ha=fig; histogram(arj, linspace(-3,3,50)); title(class_name); ha.YScale='linear';
 end
 stats = [limits, wh];
 end
