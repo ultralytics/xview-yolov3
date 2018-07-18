@@ -100,8 +100,8 @@ uid = unique(id)';
 class_count = zeros(1,60);
 f_count = 0;  % file count
 c_count = 0;  % chip count
-lengh = 64;
-X = zeros(650000,lengh,lengh,3, 'uint8');
+length = 56;
+X = zeros(650000,length,length,3, 'uint8');
 Y = zeros(1,650000,'uint8');
 border = 8;  % extra area around object of interest (for augmentation)
 for i = uid
@@ -122,11 +122,11 @@ for i = uid
         image_wh = wh(j,:);
         
         % make chip a square
-        l = round(max(w,h)*1.1 + 2 + border*2); if mod(l,2)~=0; l = l + 1; end  % normal
+        l = round((max(w,h)*1.1 + 4) * length/40); if mod(l,2)~=0; l = l + 1; end  % normal
         x1 = max(xc-l/2,1); x2 = min(xc+l/2, image_wh(1)); 
         y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
         img1 = img(int16(y1:y2),int16(x1:x2),:);
-        img2 = imresize(img1,[lengh lengh], 'bicubic');
+        img2 = imresize(img1,[length length], 'bicubic');
         
         c_count = c_count + 1;
         Y(c_count) = class;
@@ -141,11 +141,17 @@ end
 %for i=1:3
 %   X(:,:,:,i) =  (X(:,:,:,i)-rgb_mean(i)) / rgb_std(i);
 %end
-        
+
 X=permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
 Y=Y(1:c_count);
 
-save('-v7.3','class_chips48+16','X','Y')
+X = permute(X,[4,3,2,1]);  % for hd5y only (reads in backwards permuted)
+save('-v7.3','class_chips40+16','X','Y')
+
+% 32 + 14 = 46
+% 40 + 16 = 56
+% 50 + 20 = 70
+% 64 + 26 = 90
 end
 
 

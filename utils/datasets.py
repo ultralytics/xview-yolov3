@@ -217,7 +217,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    a += np.random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
@@ -229,8 +229,8 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
 
     # Shear
     S = np.eye(3)
-    S[0, 1] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
-    S[1, 0] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
+    S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
+    S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
     M = R @ T @ S
     imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR,
