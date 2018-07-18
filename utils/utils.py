@@ -355,19 +355,20 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=[]):
         w = image_pred[:, 2].numpy()
         h = image_pred[:, 3].numpy()
         a = w * h  # area
-        ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))  # aspect ratio
+        ar =  h / (w + 1e-16)  # aspect ratio
 
         # Gather bbox priors
         srl = 3  # sigma rejection level
-        mu = mat['class_stats'][class_pred][:, [0, 2, 4]].T
-        sigma = mat['class_stats'][class_pred][:, [1, 3, 5]].T * srl
+        mu = mat['class_stats'][class_pred][:, [0, 2, 4, 6]].T
+        sigma = mat['class_stats'][class_pred][:, [1, 3, 5, 7]].T * srl
 
-        log_w, log_h, log_a = np.log(w), np.log(h), np.log(a)
+        log_w, log_h, log_a, log_ar = np.log(w), np.log(h), np.log(a), np.log(ar)
         v = ((image_pred[:, 4] > conf_thres) & (class_conf > .30)).numpy()
-        v *= (ar < 20) & (a > 20) & (w > 4) & (h > 4)
+        v *= (a > 20) & (w > 4) & (h > 4)
         v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
         v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
         v *= (log_a > mu[2] - sigma[2]) & (log_a < mu[2] + sigma[2])
+        v *= (log_ar > mu[3] - sigma[3]) & (log_ar < mu[3] + sigma[3])
         v = v.nonzero()
 
         image_pred = image_pred[v]

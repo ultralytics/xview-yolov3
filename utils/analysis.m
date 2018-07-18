@@ -1,9 +1,9 @@
 % 659.bmp and 769.bmp are bad pictures, delete
 
-clc; clear; close
+clc; clear; close all
 load json_data.mat
 
-make_small_chips()
+% make_small_chips()
 
 chip_id = zeros(numel(chips),1);  % 1-847
 chip_number = zeros(numel(chips),1);  % 5-2619
@@ -83,7 +83,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-%save('targets_60c.mat','wh','targets','id','class_stats')
+save('targets_60c2.mat','wh','targets','id','class_stats')
 
 
 function [] = make_small_chips()
@@ -158,20 +158,23 @@ end
 function stats = per_class_stats(classes,w,h)
 % measure the min and max bbox sizes for rejecting bad predictions
 area = log(h.*w);
+aspect_ratio = log(h./w);
 uc=unique(classes(:)); 
 n = numel(uc);
-limits = zeros(n,6); % minmax: [width, height, area]
+limits = zeros(n,8); % minmax: [width, height, area, aspect_ratio]
 wh = zeros(n,3); % [class, wh1, wh2, wh3]
 for i = 1:n
     j = find(classes==uc(i));
-    wj = log(w(j));  hj = log(h(j));  aj = area(j);
+    wj = log(w(j));  hj = log(h(j));  aj = area(j);  arj = aspect_ratio(j,:);
     % limits(i,:) = [minmax3(wj), minmax3(hj), minmax3(area(j))];
-    limits(i,:) = [mean(wj), std(wj), mean(hj), std(hj), mean(aj), std(aj)];
+    limits(i,:) = [mean(wj), std(wj), mean(hj), std(hj), mean(aj), std(aj), mean(arj), std(arj)];
     [~,C] = kmeans([wj hj],1,'MaxIter',5000,'OnlinePhase','on');
     wh(i,:) = [i-1, exp(C(1,:))];
 
-    % close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); 
-    % plot(C(:,1),C(:,2),'g.','MarkerSize',50);     title(corr(wj,hj))
+    xview_classes2indices(uc(i))
+    class_name = xview_names(xview_classes2indices(uc(i)));
+    % close all; hist211(wj,hj,{linspace(0,max(wj),40),linspace(0,max(hj),40)}); plot(C(:,1),C(:,2),'g.','MarkerSize',50); title(sprintf('%s, cor = %g',class_name,corr(wj,hj)))
+    % ha=fig; histogram(arj, linspace(-3,3,50)); title(class_name); ha.YScale='linear';
 end
 stats = [limits, wh];
 end
@@ -263,4 +266,69 @@ function indices = xview_classes2indices(classes)
 % remap xview classes 11-94 to 0-61
 indices = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 2.0, 0, 3.0, 0, 4.0, 5.0, 6.0, 7.0, 8.0, 0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 0, 0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 0, 23.0, 24.0, 25.0, 0, 26.0, 27.0, 0, 28.0, 0, 29.0, 30.0, 31.0, 32.0, 33.0, 34.0, 35.0, 36.0, 37.0, 0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0, 45.0, 0, 0, 0, 0, 46.0, 47.0, 48.0, 49.0, 0, 50.0, 51.0, 0, 52.0, 0, 0, 0, 53.0, 54.0, 0, 55.0, 0, 0, 56.0, 0, 57.0, 0, 58.0, 59.0];
 indices = indices(classes);    
-end     
+end   
+
+function names = xview_names(classes)
+x = {'Fixed-wing Aircraft'
+'Small Aircraft'
+'Cargo Plane'
+'Helicopter'
+'Passenger Vehicle'
+'Small Car'
+'Bus'
+'Pickup Truck'
+'Utility Truck'
+'Truck'
+'Cargo Truck'
+'Truck w/Box'
+'Truck Tractor'
+'Trailer'
+'Truck w/Flatbed'
+'Truck w/Liquid'
+'Crane Truck'
+'Railway Vehicle'
+'Passenger Car'
+'Cargo Car'
+'Flat Car'
+'Tank car'
+'Locomotive'
+'Maritime Vessel'
+'Motorboat'
+'Sailboat'
+'Tugboat'
+'Barge'
+'Fishing Vessel'
+'Ferry'
+'Yacht'
+'Container Ship'
+'Oil Tanker'
+'Engineering Vehicle'
+'Tower crane'
+'Container Crane'
+'Reach Stacker'
+'Straddle Carrier'
+'Mobile Crane'
+'Dump Truck'
+'Haul Truck'
+'Scraper/Tractor'
+'Front loader/Bulldozer'
+'Excavator'
+'Cement Mixer'
+'Ground Grader'
+'Hut/Tent'
+'Shed'
+'Building'
+'Aircraft Hangar'
+'Damaged Building'
+'Facility'
+'Construction Site'
+'Vehicle Lot'
+'Helipad'
+'Storage Tank'
+'Shipping container lot'
+'Shipping Container'
+'Pylon'
+'Tower'};
+
+names = x{classes+1};
+end
