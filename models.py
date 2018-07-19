@@ -134,8 +134,9 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-            weight = (xview_class_weights(range(60)) * xview_feedback_weights(range(60))).to(device)
-            weight /= weight.sum()
+            weight = xview_class_weights(range(60)).to(device)
+            # weight = (xview_class_weights(range(60)) * xview_feedback_weights(range(60))).to(device)
+            # weight /= weight.sum()
 
             MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
@@ -171,7 +172,7 @@ class YOLOLayer(nn.Module):
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 # lcls =  2 * nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = 0.2 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = 0.1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1

@@ -37,7 +37,12 @@ chip_number = chip_number(v); clear v i
 [uchip_number,~,~,n]=fcnunique(chip_number);
 % fprintf('Images target count range: %g-%g\n',min(n),max(n))
 fig; histogram(n,linspace(0,300,301))
-sortrows([n, uchip_number],-1)
+a=sortrows([n, uchip_number],-1);
+i=find(a(:,1)<2);
+fprintf('rm -rf %g.bmp\n',a(i,2))
+
+
+
 
 % Target box width and height
 w = coords(:,3) - coords(:,1);
