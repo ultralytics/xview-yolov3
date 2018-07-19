@@ -137,7 +137,7 @@ class YOLOLayer(nn.Module):
             weight = xview_class_weights(range(60)).to(device)  # * xview_feedback_weights(range(60))).to(device)
 
             MSELoss = nn.MSELoss(reduce=False)
-            # BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
+            BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
             BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
