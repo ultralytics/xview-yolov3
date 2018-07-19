@@ -274,7 +274,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         mu = mat['class_mu'][class_pred].T
         sigma = mat['class_sigma'][class_pred].T * srl
 
-        v = ((pred[:, 4] > conf_thres) & (class_prob > .3)).numpy()
+        v = ((pred[:, 4] > conf_thres) & (class_prob > .2)).numpy()
         v *= (a > 20) & (w > 4) & (h > 4) & (ar < 10) & (ar > 1 / 10)
         v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
         v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
@@ -338,7 +338,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.6
+        thresh = 0.9
 
         a = output[image_i]
         a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst
