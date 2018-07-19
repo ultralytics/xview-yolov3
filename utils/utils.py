@@ -274,7 +274,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         mu = mat['class_mu'][class_pred].T
         sigma = mat['class_sigma'][class_pred].T * srl
 
-        v = ((pred[:, 4] > conf_thres) & (class_prob > .2)).numpy()
+        v = ((pred[:, 4] > conf_thres) & (class_prob > .3)).numpy()
         v *= (a > 20) & (w > 4) & (h > 4) & (ar < 10) & (ar > 1 / 10)
         v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
         v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
@@ -338,10 +338,10 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                 (output[image_i], max_detections))
 
         # suppress boxes from other classes (with worse conf) if iou over threshold
-        thresh = 0.9
+        thresh = 0.7
 
         a = output[image_i]
-        a = a[np.argsort(-a[:, 4] * a[:, 5])]  # sort best to worst
+        a = a[np.argsort(-a[:, 4])]  # sort best to worst
         xywh = torch.from_numpy(xyxy2xywh(a[:, :4].cpu().numpy().copy()))
 
         radius = 30  # area to search for cross-class ious
@@ -420,10 +420,11 @@ def plotResults():
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('/Users/glennjocher/Downloads/results5.txt',
               '/Users/glennjocher/Downloads/results4.txt',
-              'results0.txt'):
+              '/Users/glennjocher/Downloads/results4_gcp.txt',
+              'results.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
             plt.plot(results[i, 1:], marker='.', label=f)
             plt.title(s[i])
-        # plt.legend()
+        plt.legend()

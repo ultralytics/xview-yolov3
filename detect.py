@@ -9,7 +9,7 @@ from utils.utils import *
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100/',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8/',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -19,10 +19,10 @@ else:  # gcp
     cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_5_e83.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_4gcp.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.5, help='iou threshold for non-maximum suppression')
+parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
@@ -55,6 +55,7 @@ class ConvNetb(nn.Module):
         x = x.reshape(x.size(0), -1)
         x = self.fc(x)
         return x
+
 
 # @profile
 def detect(opt):
@@ -94,6 +95,17 @@ def detect(opt):
     # # 3. load the new state dict
     # model2.load_state_dict(state)
 
+    # load model 2
+    model = Darknet('checkpoints/fresh9_5_e140', img_size=opt.img_size).to(device).eval()
+    state = model.state_dict()
+    pretrained_dict = torch.load(opt.weights_path, map_location='cuda:0' if cuda else 'cpu')
+    # 1. filter out unnecessary keys
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
+    # 2. overwrite entries in the existing state dict
+    state.update(pretrained_dict)
+    # 3. load the new state dict
+    model.load_state_dict(state)
+
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
     dataloader = ImageFolder(opt.image_folder, batch_size=opt.batch_size, img_size=opt.img_size)
@@ -109,10 +121,10 @@ def detect(opt):
         ni = math.ceil(img.shape[1] / 608)
         nj = math.ceil(img.shape[2] / 608)
 
-        for i in range(ni):
+        for i in range(int(ni - 1)):
             print('row %g/%g: ' % (i, ni), end='')
 
-            for j in range(nj):
+            for j in range(int(nj - 1)):
                 print('%g ' % j, end='', flush=True)
 
                 # forward scan
@@ -133,14 +145,14 @@ def detect(opt):
                     pred = model(chip)
                     pred = pred[pred[:, :, 4] > opt.conf_thres]
 
-                    # if (j > 0) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 4)]  # near left border
-                    # if (j < nj) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 604)]  # near right border
-                    # if (i > 0) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 4)]  # near top border
-                    # if (i < ni) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 604)]  # near bottom border
+                    if (j > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 4)]  # near left border
+                    if (j < nj) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 604)]  # near right border
+                    if (i > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 4)]  # near top border
+                    if (i < ni) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 604)]  # near bottom border
 
                     if len(pred) > 0:
                         pred[:, 0] += x1
@@ -154,25 +166,25 @@ def detect(opt):
                 x1 = x2 - 608
                 chip = img[:, y1:y2, x1:x2]
 
-                # # Get detections
-                # chip = torch.from_numpy(chip).unsqueeze(0).to(device)
-                # with torch.no_grad():
-                #     pred = model(chip)
-                #     pred = pred[pred[:, :, 4] > opt.conf_thres]
-                #
-                #     if (j < nj) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 4)]  # near left border
-                #     if (j > 0) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 604)]  # near right border
-                #     if (i < ni) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 4)]  # near top border
-                #     if (i > 0) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 604)]  # near bottom border
-                #
-                #     if len(pred) > 0:
-                #         pred[:, 0] += x1
-                #         pred[:, 1] += y1
-                #         preds.append(pred.unsqueeze(0))
+                # Get detections
+                chip = torch.from_numpy(chip).unsqueeze(0).to(device)
+                with torch.no_grad():
+                    pred = model(chip)
+                    pred = pred[pred[:, :, 4] > opt.conf_thres]
+
+                    if (j < nj) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 4)]  # near left border
+                    if (j > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 604)]  # near right border
+                    if (i < ni) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 4)]  # near top border
+                    if (i > 0) & (len(pred) > 0):
+                        pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 604)]  # near bottom border
+
+                    if len(pred) > 0:
+                        pred[:, 0] += x1
+                        pred[:, 1] += y1
+                        preds.append(pred.unsqueeze(0))
 
         detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
 

@@ -134,9 +134,10 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-            weight = xview_class_weights(range(60)).to(device)  # * xview_feedback_weights(range(60))).to(device)
+            weight = (xview_class_weights(range(60)) * xview_feedback_weights(range(60))).to(device)
+            weight /= weight.sum()
 
-            MSELoss = nn.MSELoss(reduce=False)
+            MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
             BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
@@ -160,22 +161,22 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
-                lx = nM * (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = nM * (MSELoss(y[mask], ty[mask]) * wC).sum()
-                lw = nM * (MSELoss(w[mask], tw[mask]) * wC).sum()
-                lh = nM * (MSELoss(h[mask], th[mask]) * wC).sum()
-                # lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
-                lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
+                # wC = weight[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
+                lx = MSELoss(x[mask], tx[mask])
+                ly = MSELoss(y[mask], ty[mask])
+                lw = MSELoss(w[mask], tw[mask])
+                lh = MSELoss(h[mask], th[mask])
+                lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
-                # lcls =  nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
+                # lcls =  2 * nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
                 lcls = 0.2 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
                 # lcls = FT([0])
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
 
-            lconf += 0.5 * nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.999
