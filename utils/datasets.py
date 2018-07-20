@@ -141,14 +141,14 @@ class ListDataset_xview_crop():  # for training
                 img = img0[pady:pady + self.height, padx:padx + self.height]
 
                 # plot
-                # import matplotlib.pyplot as plt
-                # plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
-                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                #import matplotlib.pyplot as plt
+                #plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
+                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                if random.random() > 0.8:
-                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.05, 0.05),
-                                                scale=(.9, 1.1))
+                if random.random() > 0.2:
+                    img, labels = random_affine(img, targets=labels, degrees=(-179.9, 179.9), translate=(0.05, 0.05),
+                                                scale=(.8, 1.2))
 
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
@@ -212,14 +212,14 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2)):
+def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    # a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)

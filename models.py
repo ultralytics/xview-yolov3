@@ -134,15 +134,15 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-            weight = xview_class_weights(range(60)).to(device)
+            weight = xview_feedback_weights(range(60)).to(device)
             # weight = (xview_class_weights(range(60)) * xview_feedback_weights(range(60))).to(device)
-            # weight /= weight.sum()
+            weight /= weight.sum()
 
             MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
-            # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
+            BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+            CrossEntropyLoss = nn.CrossEntropyLoss()
 
             if requestPrecision:
                 pred_boxes[..., 0] = x.data + self.grid_x - width / 2
