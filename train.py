@@ -41,7 +41,7 @@ def main(opt):
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
         run_name = 'f10_f9e450'
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_clahe'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_copy'
     else:
         torch.backends.cudnn.benchmark = True
         run_name = 'f10'
@@ -54,7 +54,7 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/fresh9_4_e140.pt', map_location='cuda:0' if cuda else 'cpu')

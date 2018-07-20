@@ -205,8 +205,8 @@ class ListDataset_xview_crop():  # for training
         # Normalize
         img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        img_all -= self.rgb_mean
-        img_all /= self.rgb_std
+        #img_all -= self.rgb_mean
+        #img_all /= self.rgb_std
 
         return torch.from_numpy(img_all), labels_all
 
@@ -291,21 +291,21 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
         return imw
 
 
-def convert_tif2bmp_clahe(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images3'):
+def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_hsv'):
     import glob
     import cv2
     import os
     files = sorted(glob.glob('%s/*.tif' % p))
-    clahe = cv2.createCLAHE()
+    clahe = cv2.createCLAHE(tileGridSize=(32,32))
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
 
         img = cv2.imread(f)
-        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         # equalize the histogram of the Y channel
-        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        img_yuv[:, :, 2] = clahe.apply(img_yuv[:, :, 2])
         # convert the YUV image back to RGB format
-        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
 
         cv2.imwrite(f.replace('.tif', '.bmp'), img_output)
         os.system('rm -rf ' + f)
@@ -319,7 +319,7 @@ def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_re
     files = sorted(glob.glob('%s/*.bmp' % p))
     nF = len(files)
     stats = np.zeros((nF,6))
-    clahe = cv2.createCLAHE()
+    clahe = cv2.createCLAHE(tileGridSize=(32,32))
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
         img = cv2.imread(f)
@@ -327,14 +327,19 @@ def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_re
             stats[i, j+0] = img[:, :, j].astype(np.float32).mean()
             stats[i, j+3] = img[:, :, j].astype(np.float32).std()
 
-        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-        # equalize the histogram of the Y channel
-        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-        # convert the YUV image back to RGB format
-        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
-
-        cv2.imwrite(f, img_output)
-        # os.system('rm -rf ' + f)
+        # #img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/307.bmp')
+        #
+        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        # # equalize the histogram of the Y channel
+        # img_yuv[:, :, 2] = clahe.apply(img_yuv[:, :, 2])
+        # # convert the YUV image back to RGB format
+        # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
+        #
+        # # import matplotlib.pyplot as plt
+        # # plt.imshow(img_output[:,:,::-1])
+        #
+        # cv2.imwrite(f, img_output)
+        # # os.system('rm -rf ' + f)
 
     print('Done. images mu +/- sigma = ', stats.mean(0))
 
