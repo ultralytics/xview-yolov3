@@ -15,7 +15,7 @@ sudo rm -rf yolo
 git clone https://github.com/ultralytics/yolo
 # do training
 mkdir yolo/checkpoints
-cp drive/fresh9_5_e201.pt yolo/checkpoints/fresh9_5_e201.pt
+cp fresh9_5.pt yolo/checkpoints/fresh9_5.pt
 cp results.txt yolo
 cd yolo
 python3 train.py -epochs 9999
