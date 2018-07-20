@@ -291,7 +291,7 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
         return imw
 
 
-def convert_tif2bmp(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images3'):
+def convert_tif2bmp_clahe(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images3'):
     import glob
     import cv2
     import os
@@ -305,9 +305,9 @@ def convert_tif2bmp(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/tr
         # equalize the histogram of the Y channel
         img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
         # convert the YUV image back to RGB format
-        img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
-        cv2.imwrite(f.replace('.tif', '.bmp'), img)
+        cv2.imwrite(f.replace('.tif', '.bmp'), img_output)
         os.system('rm -rf ' + f)
 
 
