@@ -302,7 +302,7 @@ def convert_tif2bmp(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/tr
         os.system('rm -rf ' + f)
 
 
-def convert_hsv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_hsv_clahe'):
+def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_clahe'):
     import glob
     import cv2
     import os
@@ -318,15 +318,15 @@ def convert_hsv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_re
             stats[i, j+0] = img[:, :, j].astype(np.float32).mean()
             stats[i, j+3] = img[:, :, j].astype(np.float32).std()
 
-        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-        # # equalize the histogram of the Y channel
-        # img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-        # # convert the YUV image back to RGB format
-        # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
-        #
-        # cv2.imwrite(f, img_output)
-        # # os.system('rm -rf ' + f)
+        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+        # equalize the histogram of the Y channel
+        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        # convert the YUV image back to RGB format
+        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
-    print(stats.mean(0))
+        cv2.imwrite(f, img_output)
+        # os.system('rm -rf ' + f)
+
+    print('Done. images mu +/- sigma = ', stats.mean(0))
 
 
