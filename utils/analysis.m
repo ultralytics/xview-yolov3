@@ -219,9 +219,9 @@ i0 = ~any(isnan(coords) | isinf(coords), 2);
 uc=unique(classes(:));
 for i = 1:numel(uc)
     j = find(classes==uc(i));
-    [~,v] = fcnsigmarejection(area(j),9,3);  i1(j) = i1(j) & v;
-    [~,v] = fcnsigmarejection(w(j),9,3);     i2(j) = i2(j) & v;
-    [~,v] = fcnsigmarejection(h(j),9,3);     i3(j) = i3(j) & v;
+    [~,v] = fcnsigmarejection(area(j),12,3);  i1(j) = i1(j) & v;
+    [~,v] = fcnsigmarejection(w(j),12,3);     i2(j) = i2(j) & v;
+    [~,v] = fcnsigmarejection(h(j),12,3);     i3(j) = i3(j) & v;
 end
 
 % manual dimension requirements

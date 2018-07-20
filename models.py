@@ -101,9 +101,8 @@ class YOLOLayer(nn.Module):
         self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
         self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
-        self.anchor_w = self.scaled_anchors[:, 0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
+        self.anchor_w = self.scaled_anchors[:, 0:1].view((1,nA,1,1))
+        self.anchor_h = self.scaled_anchors[:, 1:2].view((1,nA,1,1))
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
@@ -127,6 +126,7 @@ class YOLOLayer(nn.Module):
         width = ((w.data * 2) ** 2) * self.anchor_w
         height = ((h.data * 2) ** 2) * self.anchor_h
 
+
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
         pred_conf = p[..., 4]  # Conf
@@ -136,7 +136,7 @@ class YOLOLayer(nn.Module):
         if targets is not None:
             device = torch.device('cuda:0' if p.is_cuda else 'cpu')
             # weight = xview_feedback_weights(range(60)).to(device)
-            weight = (xview_class_weights(range(60)) * xview_feedback_weights(range(60))).to(device)
+            weight = (xview_class_weights(range(60))).to(device) # * xview_feedback_weights(range(60))).to(device)
             # weight /= weight.sum()
 
             MSELoss = nn.MSELoss(size_average=False)
@@ -146,14 +146,16 @@ class YOLOLayer(nn.Module):
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
             if requestPrecision:
-                pred_boxes[..., 0] = x.data + self.grid_x - width / 2
-                pred_boxes[..., 1] = y.data + self.grid_y - height / 2
-                pred_boxes[..., 2] = x.data + self.grid_x + width / 2
-                pred_boxes[..., 3] = y.data + self.grid_y + height / 2
+                gx = self.grid_x[:, :, 0:nG, 0:nG]
+                gy = self.grid_y[:, :, 0:nG, 0:nG]
+                pred_boxes[..., 0] = x.data + gx - width / 2
+                pred_boxes[..., 1] = y.data + gy - height / 2
+                pred_boxes[..., 2] = x.data + gx + width / 2
+                pred_boxes[..., 3] = y.data + gy + height / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
-                              self.anchor_wh, requestPrecision)
+                              requestPrecision)
 
             tcls = tcls[mask]
             if x.is_cuda:
@@ -163,8 +165,8 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                # wC = weight[torch.argmax(tcls, 1)]  # weight class
-                # wC /= sum(wC)
+                wC = weight[torch.argmax(tcls, 1)]  # weight class
+                wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
@@ -172,9 +174,8 @@ class YOLOLayer(nn.Module):
                 lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
-                # lcls =  2 * nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = 0.2 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
-                # lcls = FT([0])
+                lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
+                # lcls =  nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
 

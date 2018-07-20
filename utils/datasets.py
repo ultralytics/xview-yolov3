@@ -73,10 +73,16 @@ class ListDataset_xview_crop():  # for training
         # os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
-        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+        #self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        #self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+
+        # RGB normalization of YUV-equalized images
+        self.rgb_mean = np.array([104.238, 124.764, 137.982], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_std = np.array([61.557, 70.385, 78.514], dtype=np.float32).reshape((1, 3, 1, 1))
+
         # self.hsv_mean = np.array([24.956, 91.347, 61.362], dtype=np.float32).reshape((1, 3, 1, 1))
         # self.hsv_std = np.array([15.825, 26.98, 29.618], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.clahe = cv2.createCLAHE()
 
     def __iter__(self):
         self.count = -1
@@ -95,6 +101,11 @@ class ListDataset_xview_crop():  # for training
 
         img_all = []  # np.zeros((len(range(ia, ib)), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
+
+        height = self.height
+        #height = int(random.choice([13, 15, 19]) * 32)
+        #print(height)
+
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
@@ -111,8 +122,18 @@ class ListDataset_xview_crop():  # for training
                 area0 = lw0 * lh0
 
             img0 = cv2.imread(img_path)
+            # img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
+
+            # # Y channel histogram equalization
+            # img_yuv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
+            # # equalize the histogram of the Y channel
+            # # img_yuv[:, :, 2] = cv2.equalizeHist(img_yuv[:, :, 2])
+            # img_yuv[:, :, 2] = self.clahe.apply(img_yuv[:, :, 2])
+            # # convert the YUV image back to RGB format
+            # img0 = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
+
             h, w, _ = img0.shape
-            padded_height = 912
+            padded_height = int(height * 1.5)  # 608 * 1.5 = 912
             for j in range(8):
 
                 nL = 0
@@ -147,9 +168,9 @@ class ListDataset_xview_crop():  # for training
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                #if random.random() > 0.2:
-                img, labels = random_affine(img, height=self.height, targets=labels, degrees=(-30, 30),
-                                                translate=(0.05, 0.05), scale=(.8, 1.2), shear=(-10, 10))
+                # if random.random() > 0.2:
+                img, labels = random_affine(img, height=height, targets=labels, degrees=(-25, 25),
+                                            translate=(0.05, 0.05), scale=(.8, 1.25), shear=(-5, 5))
 
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
@@ -213,7 +234,8 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
+def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1),
+                  shear=(-10, 10)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
@@ -227,17 +249,17 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
 
     # Translation
     T = np.eye(3)
-    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] - 156 # x translation (pixels)
-    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] - 156 # y translation (pixels)
+    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] - height / 4  # x translation (pixels)
+    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] - height / 4  # y translation (pixels)
 
     # Shear
     S = np.eye(3)
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-    M = T @ R @ S
-    imw = cv2.warpPerspective(img, M, dsize=(608, 608), flags=cv2.INTER_LINEAR,
-                              borderValue=[40.746, 49.697, 60.134])  # BGR borderValue order
+    M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
+    imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
+                              borderValue=[137.982, 124.764, 104.238])  # BGR order (YUV-equalized BGR means)
 
     # Return warped points also
     if targets is not None:
@@ -257,7 +279,7 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
             xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
             # select good inlier points (width and height > 4 pixels, and >20% remaining area)
-            xy = np.clip(xy, 0, 608)
+            xy = np.clip(xy, 0, height)
             area = (xy[:, 2] - xy[:, 0]) * (xy[:, 3] - xy[:, 1])
             i = ((xy[:, 2] - xy[:, 0]) > 4) & ((xy[:, 3] - xy[:, 1]) > 4) & ((area / area0) > 0.2)
 
@@ -278,3 +300,33 @@ def convert_tif2bmp(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/tr
         print('%g/%g' % (i, len(files)))
         cv2.imwrite(f.replace('.tif', '.bmp'), cv2.imread(f))
         os.system('rm -rf ' + f)
+
+
+def convert_hsv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_hsv_clahe'):
+    import glob
+    import cv2
+    import os
+    import numpy as np
+    files = sorted(glob.glob('%s/*.bmp' % p))
+    nF = len(files)
+    stats = np.zeros((nF,6))
+    clahe = cv2.createCLAHE(clipLimit=2.0)
+    for i, f in enumerate(files):
+        print('%g/%g' % (i, len(files)))
+        img = cv2.imread(f)
+        for j in range(3):
+            stats[i, j+0] = img[:, :, j].astype(np.float32).mean()
+            stats[i, j+3] = img[:, :, j].astype(np.float32).std()
+
+        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+        # # equalize the histogram of the Y channel
+        # img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        # # convert the YUV image back to RGB format
+        # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+        #
+        # cv2.imwrite(f, img_output)
+        # # os.system('rm -rf ' + f)
+
+    print(stats.mean(0))
+
+

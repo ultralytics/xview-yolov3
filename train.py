@@ -14,7 +14,7 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
@@ -41,8 +41,7 @@ def main(opt):
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
         run_name = 'fresh9_cont'
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
-        #train_path = '/Users/glennjocher/Documents/PyCharmProjects/yolo/data/train_images8'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_clahe'
     else:
         torch.backends.cudnn.benchmark = True
         run_name = 'fresh9'
@@ -55,7 +54,7 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/fresh9.pt', map_location='cuda:0' if cuda else 'cpu')
