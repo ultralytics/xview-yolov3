@@ -29,32 +29,6 @@ parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted
 opt = parser.parse_args()
 print(opt)
 
-class ConvNetb(nn.Module):
-    def __init__(self, num_classes=60):
-        super(ConvNetb, self).__init__()
-        n = 64  # initial convolution size
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(n),
-            nn.ReLU())
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(n * 2),
-            nn.ReLU())
-        self.layer3 = nn.Sequential(
-            nn.Conv2d(n * 2, n * 4, kernel_size=3, stride=2, padding=1),
-            nn.BatchNorm2d(n * 4),
-            nn.ReLU())
-        self.fc = nn.Linear(18432 * 2, num_classes)  # chips48+16 3layer 64n
-
-    def forward(self, x):  # x.size() = [512, 1, 28, 28]
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = x.reshape(x.size(0), -1)
-        x = self.fc(x)
-        return x
-
 
 # @profile
 def detect(opt):
