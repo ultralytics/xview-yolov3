@@ -73,15 +73,21 @@ class ListDataset_xview_crop():  # for training
         # os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
-        #self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
-        #self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
 
-        # RGB normalization of YUV-equalized images
-        self.rgb_mean = np.array([104.238, 124.764, 137.982], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.rgb_std = np.array([61.557, 70.385, 78.514], dtype=np.float32).reshape((1, 3, 1, 1))
+        # RGB normalization of HSV-equalized images
+        # self.rgb_mean = np.array([122.367,107.586,86.987], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_std = np.array([65.914,55.797,47.340], dtype=np.float32).reshape((1, 3, 1, 1))
 
-        # self.hsv_mean = np.array([24.956, 91.347, 61.362], dtype=np.float32).reshape((1, 3, 1, 1))
-        # self.hsv_std = np.array([15.825, 26.98, 29.618], dtype=np.float32).reshape((1, 3, 1, 1))
+        # RGB normalization of YUV-equalized images clipped at 5
+        self.rgb_mean = np.array([100.931, 90.863, 82.412], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_std = np.array([52.022, 47.313, 44.845], dtype=np.float32).reshape((1, 3, 1, 1))
+
+        # # RGB normalization of YUV-equalized images no clipping
+        # self.rgb_mean = np.array([137.513, 127.813, 119.410], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_std = np.array([69.095, 66.369, 64.236], dtype=np.float32).reshape((1, 3, 1, 1))
+
         self.clahe = cv2.createCLAHE()
 
     def __iter__(self):
@@ -103,8 +109,8 @@ class ListDataset_xview_crop():  # for training
         labels_all = []
 
         height = self.height
-        #height = int(random.choice([13, 15, 19]) * 32)
-        #print(height)
+        # height = int(random.choice([13, 15, 19]) * 32)
+        # print(height)
 
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
@@ -170,7 +176,8 @@ class ListDataset_xview_crop():  # for training
                 # random affine
                 # if random.random() > 0.2:
                 img, labels = random_affine(img, height=height, targets=labels, degrees=(-25, 25),
-                                            translate=(0.05, 0.05), scale=(.8, 1.25), shear=(-5, 5))
+                                            translate=(0.05, 0.05), scale=(.80, 1.25), shear=(-5, 5),
+                                            borderValue=[82.412, 90.863, 100.931])
 
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
@@ -205,8 +212,8 @@ class ListDataset_xview_crop():  # for training
         # Normalize
         img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        #img_all -= self.rgb_mean
-        #img_all /= self.rgb_std
+        img_all -= self.rgb_mean
+        img_all /= self.rgb_std
 
         return torch.from_numpy(img_all), labels_all
 
@@ -235,7 +242,7 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
 
 
 def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1),
-                  shear=(-10, 10)):
+                  shear=(-10, 10), borderValue=(0, 0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
@@ -259,7 +266,7 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
 
     M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
     imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
-                              borderValue=[137.982, 124.764, 104.238])  # BGR order (YUV-equalized BGR means)
+                              borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
 
     # Return warped points also
     if targets is not None:
@@ -291,56 +298,50 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
         return imw
 
 
-def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_hsv'):
+def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_cl5'):
     import glob
     import cv2
-    import os
-    files = sorted(glob.glob('%s/*.tif' % p))
-    clahe = cv2.createCLAHE(tileGridSize=(32,32))
+    files = sorted(glob.glob('%s/*.bmp' % p))
+    clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
 
         img = cv2.imread(f)
-        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
         # equalize the histogram of the Y channel
-        img_yuv[:, :, 2] = clahe.apply(img_yuv[:, :, 2])
+        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
         # convert the YUV image back to RGB format
-        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
+        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
         cv2.imwrite(f.replace('.tif', '.bmp'), img_output)
         os.system('rm -rf ' + f)
 
 
-def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_clahe'):
+def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv'):
     import glob
     import cv2
-    import os
     import numpy as np
     files = sorted(glob.glob('%s/*.bmp' % p))
     nF = len(files)
-    stats = np.zeros((nF,6))
-    clahe = cv2.createCLAHE(tileGridSize=(32,32))
+    stats = np.zeros((nF, 6))
+    clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
         img = cv2.imread(f)
         for j in range(3):
-            stats[i, j+0] = img[:, :, j].astype(np.float32).mean()
-            stats[i, j+3] = img[:, :, j].astype(np.float32).std()
+            stats[i, j + 0] = img[:, :, j].astype(np.float32).mean()
+            stats[i, j + 3] = img[:, :, j].astype(np.float32).std()
 
-        # #img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/307.bmp')
-        #
+        # img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/5.bmp')
         # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         # # equalize the histogram of the Y channel
         # img_yuv[:, :, 2] = clahe.apply(img_yuv[:, :, 2])
         # # convert the YUV image back to RGB format
         # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
+        # import matplotlib.pyplot as plt
+        # plt.imshow(img_output[:, :, ::-1])
         #
-        # # import matplotlib.pyplot as plt
-        # # plt.imshow(img_output[:,:,::-1])
-        #
-        # cv2.imwrite(f, img_output)
-        # # os.system('rm -rf ' + f)
+        # # cv2.imwrite(f, img_output)
+        # # # os.system('rm -rf ' + f)
 
-    print('Done. images mu +/- sigma = ', stats.mean(0))
-
-
+    print(stats.mean(0))  # *WARNING THESE ARE BGR ORDER* !!!

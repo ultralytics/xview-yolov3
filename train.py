@@ -41,7 +41,7 @@ def main(opt):
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
         run_name = 'f10_f9e450'
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_copy'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_cl5'
     else:
         torch.backends.cudnn.benchmark = True
         run_name = 'f10'
