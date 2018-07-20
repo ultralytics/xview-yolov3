@@ -301,7 +301,7 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
 def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_cl5'):
     import glob
     import cv2
-    files = sorted(glob.glob('%s/*.tif' % p))
+    files = sorted(glob.glob('%s/*.bmp' % p))
     clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
