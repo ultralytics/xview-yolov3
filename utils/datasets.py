@@ -296,9 +296,18 @@ def convert_tif2bmp(p='/Users/glennjocher/Documents/PyCharmProjects/yolo/data/tr
     import cv2
     import os
     files = sorted(glob.glob('%s/*.tif' % p))
+    clahe = cv2.createCLAHE()
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
-        cv2.imwrite(f.replace('.tif', '.bmp'), cv2.imread(f))
+
+        img = cv2.imread(f)
+        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+        # equalize the histogram of the Y channel
+        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        # convert the YUV image back to RGB format
+        img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+
+        cv2.imwrite(f.replace('.tif', '.bmp'), img)
         os.system('rm -rf ' + f)
 
 
@@ -310,7 +319,7 @@ def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_re
     files = sorted(glob.glob('%s/*.bmp' % p))
     nF = len(files)
     stats = np.zeros((nF,6))
-    clahe = cv2.createCLAHE(clipLimit=2.0)
+    clahe = cv2.createCLAHE()
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
         img = cv2.imread(f)

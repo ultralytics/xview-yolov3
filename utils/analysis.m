@@ -88,7 +88,7 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);
-save('targets_60c.mat','wh','targets','id','class_mu','class_sigma','class_cov')
+% save('targets_60c.mat','wh','targets','id','class_mu','class_sigma','class_cov')
 
 
 function [] = make_small_chips()
