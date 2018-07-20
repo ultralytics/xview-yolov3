@@ -142,7 +142,7 @@ class ListDataset_xview_crop():  # for training
                 img = img0[pady:pady + padded_height, padx:padx + padded_height]
 
                 # plot
-                import matplotlib.pyplot as plt
+                # import matplotlib.pyplot as plt
                 # plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
