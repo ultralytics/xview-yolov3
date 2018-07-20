@@ -54,7 +54,7 @@ def main(opt):
     dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/fresh9_4_e140.pt', map_location='cuda:0' if cuda else 'cpu')
@@ -91,8 +91,6 @@ def main(opt):
         for i, (imgs, targets) in enumerate(dataloader):
 
             n = 4  # number of pictures at a time
-
-
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
