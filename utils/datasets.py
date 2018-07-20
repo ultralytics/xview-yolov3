@@ -112,43 +112,44 @@ class ListDataset_xview_crop():  # for training
 
             img0 = cv2.imread(img_path)
             h, w, _ = img0.shape
+            padded_height = 912
             for j in range(8):
 
                 nL = 0
                 counter = 0
                 while (counter < 10) & (nL == 0):
                     counter += 1
-                    padx = int(random.random() * (w - self.height))
-                    pady = int(random.random() * (h - self.height))
+                    padx = int(random.random() * (w - padded_height))
+                    pady = int(random.random() * (h - padded_height))
 
                     if nL0 > 0:
                         labels = labels0.copy()
                         labels[:, [1, 3]] -= padx
                         labels[:, [2, 4]] -= pady
-                        labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
+                        labels[:, 1:5] = np.clip(labels[:, 1:5], 0, padded_height)
 
                         lw = labels[:, 3] - labels[:, 1]
                         lh = labels[:, 4] - labels[:, 2]
                         area = lw * lh
 
                         # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25)]
+                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.2)]
                     else:
                         labels = np.array([], dtype=np.float32)
 
                     nL = len(labels)
 
-                img = img0[pady:pady + self.height, padx:padx + self.height]
+                img = img0[pady:pady + padded_height, padx:padx + padded_height]
 
                 # plot
-                #import matplotlib.pyplot as plt
-                #plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
-                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                import matplotlib.pyplot as plt
+                # plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                if random.random() > 0.2:
-                    img, labels = random_affine(img, targets=labels, degrees=(-179.9, 179.9), translate=(0.05, 0.05),
-                                                scale=(.8, 1.2))
+                #if random.random() > 0.2:
+                img, labels = random_affine(img, height=self.height, targets=labels, degrees=(-30, 30),
+                                                translate=(0.05, 0.05), scale=(.8, 1.2), shear=(-10, 10))
 
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
@@ -212,30 +213,30 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
+def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    # a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
 
     # Translation
     T = np.eye(3)
-    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0]  # x translation (pixels)
-    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1]  # y translation (pixels)
+    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] - 156 # x translation (pixels)
+    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] - 156 # y translation (pixels)
 
     # Shear
     S = np.eye(3)
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-    M = R @ T @ S
-    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR,
+    M = T @ R @ S
+    imw = cv2.warpPerspective(img, M, dsize=(608, 608), flags=cv2.INTER_LINEAR,
                               borderValue=[40.746, 49.697, 60.134])  # BGR borderValue order
 
     # Return warped points also
@@ -243,6 +244,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         if len(targets) > 0:
             n = targets.shape[0]
             points = targets[:, 1:5].copy()
+            area0 = (points[:, 2] - points[:, 0]) * (points[:, 3] - points[:, 1])
 
             # warp points
             xy = np.ones((n * 4, 3))
@@ -254,10 +256,10 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             y = xy[:, [1, 3, 5, 7]]
             xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
-            # reject warped points outside of image
-            # i = np.all((xy > 0) & (xy < img.shape[0]), 1)
-            xy = np.clip(xy, 0, img.shape[0])
-            i = ((xy[:, 2] - xy[:, 0]) > 5) & ((xy[:, 3] - xy[:, 1]) > 5)  # width and height > 5 pixels
+            # select good inlier points (width and height > 4 pixels, and >20% remaining area)
+            xy = np.clip(xy, 0, 608)
+            area = (xy[:, 2] - xy[:, 0]) * (xy[:, 3] - xy[:, 1])
+            i = ((xy[:, 2] - xy[:, 0]) > 4) & ((xy[:, 3] - xy[:, 1]) > 4) & ((area / area0) > 0.2)
 
             targets = targets[i]
             targets[:, 1:5] = xy[i]
