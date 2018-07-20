@@ -72,6 +72,7 @@ class EmptyLayer(nn.Module):
     def __init__(self):
         super(EmptyLayer, self).__init__()
 
+
 class YOLOLayer(nn.Module):
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
@@ -183,7 +184,7 @@ class YOLOLayer(nn.Module):
             i = F.sigmoid(pred_conf[~mask]) > 0.999
             FPe = torch.zeros(60)
             if i.sum() > 0:
-                FP_classes = torch.argmax(pred_cls[~mask][i],1)
+                FP_classes = torch.argmax(pred_cls[~mask][i], 1)
                 for c in FP_classes:
                     FPe[c] += 1
 
@@ -243,7 +244,7 @@ class Darknet(nn.Module):
         if is_training:
             self.losses['nGT'] /= 3
             self.losses['TC'] /= 3
-            metrics = torch.zeros((3,60))  # TP, FP, FN
+            metrics = torch.zeros((3, 60))  # TP, FP, FN
             metrics[1] = self.losses['FPe']
 
             ui = np.unique(self.losses['TC'])[1:]
@@ -256,8 +257,8 @@ class Darknet(nn.Module):
                 # print('%20s: prec %g, rec %g' %
                 #      (xview_class2name(i),TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16)))
 
-                #self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
-                #self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
+                # self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
+                # self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
 
             self.losses['TP'] = metrics[0].sum()
             self.losses['FP'] = metrics[1].sum()
