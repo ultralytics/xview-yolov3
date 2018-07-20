@@ -40,11 +40,11 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'fresh9_cont'
+        run_name = 'f10_f9e450'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_clahe'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'fresh9'
+        run_name = 'f10'
         train_path = '../train_images'
 
         # Initiate model
@@ -57,7 +57,7 @@ def main(opt):
     resume_training = False
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/fresh9.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/fresh9_e450.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
