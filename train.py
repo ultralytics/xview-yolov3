@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 21, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -39,8 +39,8 @@ def main(opt):
 
         # Get data configuration
     if platform == 'darwin':  # macos
-        torch.backends.cudnn.benchmark = True
-        run_name = 'f10_f9e450'
+        # torch.backends.cudnn.benchmark = True
+        run_name = 'f11'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_cl5'
     else:
         torch.backends.cudnn.benchmark = True

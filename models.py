@@ -27,7 +27,7 @@ def create_modules(module_defs):
                                                         stride=int(module_def['stride']),
                                                         dilation=1,
                                                         padding=pad,
-                                                        bias=not bn))
+                                                        bias=True))
 
             if bn:
                 modules.add_module('batch_norm_%d' % i, nn.BatchNorm2d(filters))
@@ -96,10 +96,8 @@ class YOLOLayer(nn.Module):
 
         # Build anchor grids
         nG = int(self.img_dim / stride)
-        nB = 1  # batch_size set to 1
-        shape = [nB, nA, nG, nG]
-        self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
-        self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
+        self.grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).float()
+        self.grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).float()
         self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
         self.anchor_w = self.scaled_anchors[:, 0:1].view((1,nA,1,1))
         self.anchor_h = self.scaled_anchors[:, 1:2].view((1,nA,1,1))
