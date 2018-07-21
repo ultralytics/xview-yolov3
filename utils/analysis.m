@@ -39,7 +39,7 @@ chip_number = chip_number(v); clear v i
 fig; histogram(n,linspace(0,300,301))
 a=sortrows([n, uchip_number],-1);
 i=find(a(:,1)<2);
-fprintf('rm -rf %g.bmp\n',a(i,2))
+%fprintf('rm -rf %g.bmp\n',a(i,2))
 
 
 
@@ -65,7 +65,7 @@ vpa(n(:)')
 %vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 3);
+C = fcn_kmeans([w h], 9);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -87,8 +87,8 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
-id = single(chip_number);
-% save('targets_60c.mat','wh','targets','id','class_mu','class_sigma','class_cov')
+id = single(chip_number);  numel(id)
+save('targets_c6.mat','wh','targets','id','class_mu','class_sigma','class_cov')
 
 
 function [] = make_small_chips()
@@ -241,9 +241,15 @@ i7 = ~any(isnan(hw) | isinf(hw) | hw < 32, 2);
 i8 = ~any(classes(:) == [75, 82],2);
 
 % remove 18 and 73 (small cars and buildings) as an experiment
-i9 = ~any(classes(:) == [18, 73],2);
+%i9 = any(classes(:) == [11, 12, 13, 15, 74, 84],2);  % group 0 aircraft
+%i9 = any(classes(:) == [17, 18, 19],2);  % group 1 cars
+%i9 = any(classes(:) == [71, 72, 76, 77, 79, 83, 86, 89, 93, 94],2);  % group 2 buildings
+%i9 = any(classes(:) == [20, 21, 23, 24, 25, 26, 27, 28, 29, 32, 60, 91],2);  % group 3 trucks
+%i9 = any(classes(:) == [33, 34, 35, 36, 37, 38],2);  % group 4 trains
+%i9 = any(classes(:) == [40, 41, 42, 44, 45, 47, 49, 50, 51, 52],2);  % group 5 boats
+%i9 = any(classes(:) == [53, 54, 55, 56, 57, 59, 61, 62, 63, 64, 65, 66],2);  % group 6 docks
 
-valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
+valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8 & i9;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
 end      
 
@@ -253,9 +259,9 @@ rng('default'); % For reproducibility
 %X = [randn(100,2)*0.75+ones(100,2);
 %    randn(100,2)*0.55-ones(100,2)];
 
-opts = statset('Display','iter');
+% opts = statset('Display','iter');
 %[idx,C, sumd] = kmedoids(X,n,'Distance','cityblock','Options',opts);
-[idx,C, sumd] = kmeans(X,n,'MaxIter',400,'OnlinePhase','on','Options',opts);
+[idx,C, sumd] = kmeans(X,n,'MaxIter',400,'OnlinePhase','on');
 %sumd
 
 
@@ -341,3 +347,4 @@ x = {'Fixed-wing Aircraft'
 
 names = x{classes+1};
 end
+

@@ -14,10 +14,10 @@ from utils.utils import *
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=5, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 21, help='size of each image dimension')
+parser.add_argument('-config_path', type=str, default='cfg/c3.cfg', help='cfg file path')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -47,17 +47,18 @@ def main(opt):
         run_name = 'f10CE'
         train_path = '../train_images'
 
-        # Initiate model
-    model = Darknet(opt.config_path, opt.img_size).to(device).train()
+    # Initiate model
+    targets_path = 'utils/targets_c3.mat'
+    model = Darknet(opt.config_path, opt.img_size, targets=targets_path).to(device).train()
 
     # Get dataloader
-    dataloader = ListDataset_xview_crop(train_path, batch_size=opt.batch_size, img_size=opt.img_size)
+    dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
     resume_training = False
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/fresh9_cont_feedbackw.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/f11.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -131,9 +132,10 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            #if i == 40:
-            #    print(time.time() - t0)
-            #    return
+            #if i == 30:
+            #   torch.save(model.state_dict(), 'pretrained_bbox.pt')
+             #   print(time.time() - t0)
+             #   return
 
         with open('results.txt', 'a') as file:
             file.write(s + '\n')

@@ -70,17 +70,24 @@ class ImageFolder():  # for eval-only
         return self.nB  # number of batches
 
 
-class ListDataset_xview_crop():  # for training
-    def __init__(self, path, batch_size=1, img_size=608):
+class ListDataset():  # for training
+    def __init__(self, path, batch_size=1, img_size=608, targets_path=''):
+        # load targets
+        self.mat = scipy.io.loadmat(targets_path)
+        self.mat['id'] = self.mat['id'].squeeze()
+
+        self.path = path
         self.files = sorted(glob.glob('%s/*.bmp' % path))
-        self.nF = len(self.files)  # number of image files
+        # self.nF = len(self.files)  # number of image files
+
+        self.good_file_ids = np.unique(self.mat['id']).astype(np.uint16)
+        self.nF = len(self.good_file_ids)  # number of image files
+
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
         assert self.nB > 0, 'No images found in path %s' % path
         self.height = img_size
-        # load targets
-        self.mat = scipy.io.loadmat('utils/targets_60c.mat')
-        self.mat['id'] = self.mat['id'].squeeze()
+
         # make folder for reduced size images
         # self.small_folder = path + '_' + str(img_size) + '/'
         # os.makedirs(self.small_folder, exist_ok=True)
@@ -91,7 +98,7 @@ class ListDataset_xview_crop():  # for training
 
         # RGB normalization of HSV-equalized images
         # self.rgb_mean = np.array([122.367, 107.586, 86.987], dtype=np.float32).reshape((1, 3, 1, 1))
-         #self.rgb_std = np.array([65.914, 55.797, 47.340], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_std = np.array([65.914, 55.797, 47.340], dtype=np.float32).reshape((1, 3, 1, 1))
 
         # RGB normalization of YUV-equalized images clipped at 5
         self.rgb_mean = np.array([100.931, 90.863, 82.412], dtype=np.float32).reshape((1, 3, 1, 1))
@@ -103,7 +110,9 @@ class ListDataset_xview_crop():  # for training
 
     def __iter__(self):
         self.count = -1
-        self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
+        self.shuffled_vector = self.good_file_ids # shuffled vector
+        np.random.shuffle(self.shuffled_vector)
+        # self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
         # self.shuffled_vector = np.random.choice(self.nF, self.nF, p=self.mat['image_weights'].ravel())
         return self
 
@@ -119,13 +128,13 @@ class ListDataset_xview_crop():  # for training
         img_all = []  # np.zeros((len(range(ia, ib)), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
 
-        # height = self.height
-        height = int(random.choice([15, 17, 19, 21, 23]) * 32)
+        height = self.height
+        # height = int(random.choice([15, 17, 19, 21, 23]) * 32)
         # print(height)
 
         for index, files_index in enumerate(range(ia, ib)):
-            img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
+            # img_path = self.files[self.shuffled_vector[files_index]]
+            img_path = self.path + '/%g' % self.shuffled_vector[files_index] + '.bmp' # BGR
 
             # load labels
             chip = img_path.rsplit('/')[-1]
@@ -139,6 +148,8 @@ class ListDataset_xview_crop():  # for training
                 area0 = lw0 * lh0
 
             img0 = cv2.imread(img_path)
+            if img0 is None:
+                continue
             # img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
 
             # # Y channel histogram equalization
@@ -150,12 +161,12 @@ class ListDataset_xview_crop():  # for training
             # img0 = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
 
             h, w, _ = img0.shape
-            padded_height = int(height * 4/3)  # 608 * 1.5 = 912
+            padded_height = int(height * 4 / 3)  # 608 * 1.5 = 912
             for j in range(8):
 
                 nL = 0
                 counter = 0
-                while (counter < 20) & (nL == 0):
+                while (counter < 100) & (nL == 0):
                     counter += 1
                     padx = int(random.random() * (w - padded_height))
                     pady = int(random.random() * (h - padded_height))
@@ -180,28 +191,28 @@ class ListDataset_xview_crop():  # for training
                 img = img0[pady:pady + padded_height, padx:padx + padded_height]
 
                 # plot
-                import matplotlib.pyplot as plt
+                # import matplotlib.pyplot as plt
                 # plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
                 # if random.random() > 0.2:
                 img, labels = random_affine(img, height=height, targets=labels, degrees=(-20, 20),
-                                            translate=(0, 0), scale=(.80, 1.25), shear=(-3, 3),
+                                            translate=(0, 0), scale=(.80, 1.20), shear=(-3, 3),
                                             borderValue=[82.412, 90.863, 100.931])  # YUV
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
                 # borderValue=[82.412, 90.863, 100.931]) # YUV
                 # borderValue=[40.746, 49.697, 60.134])  # RGB
 
-                plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
-                plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
                     # convert labels to xywh
                     labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
                     # remap xview classes 11-94 to 0-61
-                    labels[:, 0] = xview_classes2indices(labels[:, 0])
+                    # labels[:, 0] = xview_classes2indices(labels[:, 0])
 
                 # random lr flip
                 if random.random() > 0.5:

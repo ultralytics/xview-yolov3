@@ -1,4 +1,5 @@
 from collections import defaultdict
+import scipy.io
 
 import torch.nn as nn
 
@@ -27,12 +28,12 @@ def create_modules(module_defs):
                                                         stride=int(module_def['stride']),
                                                         dilation=1,
                                                         padding=pad,
-                                                        bias=True))
+                                                        bias=not bn))
 
             if bn:
                 modules.add_module('batch_norm_%d' % i, nn.BatchNorm2d(filters))
             if module_def['activation'] == 'leaky':
-                modules.add_module('leaky_%d' % i, nn.LeakyReLU(0.1))
+                modules.add_module('leaky_%d' % i, nn.LeakyReLU())
 
         elif module_def['type'] == 'upsample':
             upsample = nn.Upsample(scale_factor=int(module_def['stride']), mode='bilinear', align_corners=True)
@@ -56,7 +57,7 @@ def create_modules(module_defs):
             num_classes = int(module_def['classes'])
             img_height = int(hyperparams['height'])
             # Define detection layer
-            yolo_layer = YOLOLayer(anchors, num_classes, img_height, anchor_idxs)
+            yolo_layer = YOLOLayer(anchors, num_classes, img_height, anchor_idxs, hyperparams['targets_path'])
             modules.add_module('yolo_%d' % i, yolo_layer)
 
         # Register module list and number of output filters
@@ -75,7 +76,7 @@ class EmptyLayer(nn.Module):
 
 class YOLOLayer(nn.Module):
 
-    def __init__(self, anchors, nC, img_dim, anchor_idxs):
+    def __init__(self, anchors, nC, img_dim, anchor_idxs, targets_path):
         super(YOLOLayer, self).__init__()
 
         anchors = [(a_w, a_h) for a_w, a_h in anchors]  # (pixels)
@@ -86,6 +87,11 @@ class YOLOLayer(nn.Module):
         self.nC = nC  # number of classes (60)
         self.bbox_attrs = 5 + nC
         self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
+
+        # define class weights
+        _, n = np.unique(scipy.io.loadmat(targets_path)['targets'][:,0], return_counts=True)
+        self.class_weights = torch.zeros(nC)
+        self.class_weights[0:len(n)] = torch.from_numpy((1 / n) / (1 / n).sum())
 
         if anchor_idxs[0] == (nA * 2):  # 6
             stride = 32
@@ -134,14 +140,14 @@ class YOLOLayer(nn.Module):
         if targets is not None:
             device = torch.device('cuda:0' if p.is_cuda else 'cpu')
             # weight = xview_feedback_weights(range(60)).to(device)
-            weight = (xview_class_weights(range(60))).to(device) # * xview_feedback_weights(range(60))).to(device)
+            # weight = (xview_class_weights(range(60))).to(device) # * xview_feedback_weights(range(60))).to(device)
             # weight /= weight.sum()
 
             MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
-            BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
+            # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.class_weights.to(device))
 
             if requestPrecision:
                 gx = self.grid_x[:, :, 0:nG, 0:nG]
@@ -163,8 +169,9 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # print(tx[mask].mean().item(),ty[mask].mean().item(),tw[mask].mean().item(),th[mask].mean().item())
+                # wC = weight[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
@@ -205,10 +212,12 @@ class YOLOLayer(nn.Module):
 class Darknet(nn.Module):
     """YOLOv3 object detection model"""
 
-    def __init__(self, config_path, img_size=416):
+    def __init__(self, config_path, img_size=608, targets=''):
         super(Darknet, self).__init__()
+        self.mat = scipy.io.loadmat(targets)
         self.module_defs = parse_model_config(config_path)
         self.module_defs[0]['height'] = img_size
+        self.module_defs[0]['targets_path'] = targets
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC']
