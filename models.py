@@ -92,7 +92,7 @@ class YOLOLayer(nn.Module):
         _, n = np.unique(scipy.io.loadmat(targets_path)['targets'][:, 0], return_counts=True)
         self.class_weights = torch.zeros(nC) + 1e-16
         self.class_weights[0:len(n)] = 1 / torch.from_numpy(n).float()
-        self.class_weights /= self.class_weights.mean()
+        self.class_weights /= self.class_weights[self.class_weights > 2e-16].mean()
 
         # define class mask (1 means class is present in the targets)
         self.class_mask = torch.zeros(nC).float()
