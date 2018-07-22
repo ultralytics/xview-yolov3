@@ -147,7 +147,7 @@ class YOLOLayer(nn.Module):
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
             BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-            CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.class_weights)
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.class_weights, size_average=False)
 
             if requestPrecision:
                 gx = self.grid_x[:, :, 0:nG, 0:nG]
