@@ -40,7 +40,7 @@ def main(opt):
 
         # Get data configuration
     if platform == 'darwin':  # macos
-        #torch.backends.cudnn.benchmark = True
+        # torch.backends.cudnn.benchmark = True
         run_name = 'c3'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
     else:
