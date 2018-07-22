@@ -101,8 +101,12 @@ class ListDataset():  # for training
         # self.rgb_std = np.array([65.914, 55.797, 47.340], dtype=np.float32).reshape((1, 3, 1, 1))
 
         # RGB normalization of YUV-equalized images clipped at 5
-        self.rgb_mean = np.array([100.931, 90.863, 82.412], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.rgb_std = np.array([52.022, 47.313, 44.845], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_mean = np.array([100.931, 90.863, 82.412], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_std = np.array([52.022, 47.313, 44.845], dtype=np.float32).reshape((1, 3, 1, 1))
+
+        # RGB normalization of YUV-equalized images clipped at 3
+        self.rgb_mean = np.array([45.068, 40.035, 37.538], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_std = np.array([89.836, 79.490, 71.011], dtype=np.float32).reshape((1, 3, 1, 1))
 
         # RGB normalization of YUV-equalized images no clipping
         # self.rgb_mean = np.array([137.513, 127.813, 119.410], dtype=np.float32).reshape((1, 3, 1, 1))
@@ -166,7 +170,7 @@ class ListDataset():  # for training
 
                 nL = 0
                 counter = 0
-                while (counter < 100) & (nL == 0):
+                while (counter < 10) & (nL == 0):
                     counter += 1
                     padx = int(random.random() * (w - padded_height))
                     pady = int(random.random() * (h - padded_height))
@@ -197,11 +201,12 @@ class ListDataset():  # for training
 
                 # random affine
                 # if random.random() > 0.2:
-                img, labels = random_affine(img, height=height, targets=labels, degrees=(-20, 20),
-                                            translate=(0, 0), scale=(.80, 1.20), shear=(-3, 3),
-                                            borderValue=[82.412, 90.863, 100.931])  # YUV
+                img, labels = random_affine(img, height=height, targets=labels, degrees=(-25, 25),
+                                            translate=(.05, .05), scale=(.80, 1.25), shear=(-5, 5),
+                                            borderValue=[37.538, 40.035, 45.068])  # YUV 3-clipped
+                # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
-                # borderValue=[82.412, 90.863, 100.931]) # YUV
+                # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
                 # borderValue=[40.746, 49.697, 60.134])  # RGB
 
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
@@ -323,11 +328,12 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
         return imw
 
 
-def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_cl5'):
+def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'):
     import glob
     import cv2
+    import os
     files = sorted(glob.glob('%s/*.tif' % p))
-    clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
+    clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=3)
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
 
@@ -342,14 +348,14 @@ def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_image
         os.system('rm -rf ' + f)
 
 
-def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv'):
+def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'):
     import glob
     import cv2
     import numpy as np
     files = sorted(glob.glob('%s/*.bmp' % p))
     nF = len(files)
     stats = np.zeros((nF, 6))
-    clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
+    # clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
         img = cv2.imread(f)
@@ -357,18 +363,18 @@ def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_re
             stats[i, j + 0] = img[:, :, j].astype(np.float32).mean()
             stats[i, j + 3] = img[:, :, j].astype(np.float32).std()
 
-        img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/33.bmp')
-        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        # equalize the histogram of the Y channel
-        # img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-        # img_yuv[:, :, 1] = clahe.apply(img_yuv[:, :, 1])
-        img_yuv[:, :, 2] = clahe.apply(img_yuv[:, :, 2])
-        # convert the YUV image back to RGB format
-        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
-        import matplotlib.pyplot as plt
-        plt.imshow(img_output[:, :, ::-1])
+        # img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/33.bmp')
+        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        # # equalize the histogram of the Y channel
+        # # img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        # # img_yuv[:, :, 1] = clahe.apply(img_yuv[:, :, 1])
+        # img_yuv[:, :, 2] = clahe.apply(img_yuv[:, :, 2])
+        # # convert the YUV image back to RGB format
+        # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
+        # import matplotlib.pyplot as plt
+        # plt.imshow(img_output[:, :, ::-1])
 
         # # cv2.imwrite(f, img_output)
         # # # os.system('rm -rf ' + f)
 
-    print(stats.mean(0))  # *WARNING THESE ARE BGR ORDER* !!!
+    print(stats.mean(0), stats.mean(0)[::-1])  # *WARNING THESE ARE BGR ORDER* !!!

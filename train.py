@@ -12,12 +12,13 @@ from utils.utils import *
 # batch_size 2: 32*35 = 1120 (1.40 vs 800, 2.06 cumulative)
 # batch_size 1: 32*49 = 1568 (1.40 vs 1120, 2.88 cumulative)
 
+targets_path = 'utils/targets_c3.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=5, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c3.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -39,16 +40,15 @@ def main(opt):
 
         # Get data configuration
     if platform == 'darwin':  # macos
-        # torch.backends.cudnn.benchmark = True
-        run_name = 'f11'
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced_yuv_cl5'
+        torch.backends.cudnn.benchmark = True
+        run_name = 'c3'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
     else:
         torch.backends.cudnn.benchmark = True
         run_name = 'f10CE'
         train_path = '../train_images'
 
     # Initiate model
-    targets_path = 'utils/targets_c3.mat'
     model = Darknet(opt.config_path, opt.img_size, targets=targets_path).to(device).train()
 
     # Get dataloader
