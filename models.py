@@ -154,7 +154,7 @@ class YOLOLayer(nn.Module):
             BCEWithLogitsLoss1_weighted = nn.BCEWithLogitsLoss(size_average=False, weight=weight)
             BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=False)
 
             if requestPrecision:
                 gx = self.grid_x[:, :, 0:nG, 0:nG]
@@ -177,8 +177,8 @@ class YOLOLayer(nn.Module):
             nGT = sum([len(x) for x in targets])
             if nM > 0:
                 # print(tx[mask].mean().item(),ty[mask].mean().item(),tw[mask].mean().item(),th[mask].mean().item())
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # wC = weight[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
@@ -186,13 +186,13 @@ class YOLOLayer(nn.Module):
                 lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
-                lcls = BCEWithLogitsLoss1_weighted(pred_cls[mask], tcls.float())
+                # lcls = BCEWithLogitsLoss1_weighted(pred_cls[mask], tcls.float())
                 # lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / self.nC
-                # lcls = 0.1 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += (2 * nGT) * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            lconf += (1 * nGT) * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.999
