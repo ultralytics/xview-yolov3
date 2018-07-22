@@ -154,7 +154,7 @@ class YOLOLayer(nn.Module):
             BCEWithLogitsLoss1_weighted = nn.BCEWithLogitsLoss(size_average=False, weight=weight)
             BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=False)
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
             if requestPrecision:
                 gx = self.grid_x[:, :, 0:nG, 0:nG]
@@ -186,7 +186,7 @@ class YOLOLayer(nn.Module):
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 # lcls = BCEWithLogitsLoss1_weighted(pred_cls[mask], tcls.float())
-                lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
