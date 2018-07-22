@@ -6,13 +6,13 @@ from models import *
 from utils.datasets import *
 from utils.utils import *
 
-targets_path = 'utils/targets_c0.mat'
+targets_path = 'utils/targets_c3.mat'
 
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
     parser.add_argument('-image_folder', type=str,
-                        default='/Users/glennjocher/Downloads/DATA/xview/train_images/1677.bmp',
+                        default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.tif',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -21,10 +21,10 @@ else:  # gcp
     parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
     cuda = False
 
-parser.add_argument('-config_path', type=str, default='cfg/c0.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/c0.pt', help='weights path')
+parser.add_argument('-config_path', type=str, default='cfg/c3.cfg', help='cfg file path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/c3.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
+parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
