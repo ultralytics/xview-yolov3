@@ -170,7 +170,7 @@ class YOLOLayer(nn.Module):
             nGT = sum([len(x) for x in targets])
             if nM > 0:
                 # print(tx[mask].mean().item(),ty[mask].mean().item(),tw[mask].mean().item(),th[mask].mean().item())
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
+                wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
