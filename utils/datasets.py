@@ -170,7 +170,7 @@ class ListDataset():  # for training
 
                 nL = 0
                 counter = 0
-                while (counter < 10) & (nL == 0):
+                while (counter < 30) & (nL == 0):
                     counter += 1
                     padx = int(random.random() * (w - padded_height))
                     pady = int(random.random() * (h - padded_height))
