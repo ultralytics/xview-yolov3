@@ -12,7 +12,7 @@ from utils.utils import *
 # batch_size 2: 32*35 = 1120 (1.40 vs 800, 2.06 cumulative)
 # batch_size 1: 32*49 = 1568 (1.40 vs 1120, 2.88 cumulative)
 
-targets_path = 'utils/targets_60c.mat'
+targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
@@ -89,7 +89,7 @@ def main(opt):
     for epoch in range(opt.epochs):
         rloss = defaultdict(float)  # running loss
         ui = -1
-        metrics = torch.zeros((3,60))
+        metrics = torch.zeros((3, 60))
         for i, (imgs, targets) in enumerate(dataloader):
 
             n = 4  # number of pictures at a time
@@ -133,10 +133,10 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            #if i == 30:
+            # if i == 30:
             #   torch.save(model.state_dict(), 'pretrained_bbox.pt')
-             #   print(time.time() - t0)
-             #   return
+            #   print(time.time() - t0)
+            #   return
 
         with open('results.txt', 'a') as file:
             file.write(s + '\n')

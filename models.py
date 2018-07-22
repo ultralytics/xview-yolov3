@@ -89,7 +89,7 @@ class YOLOLayer(nn.Module):
         self.img_dim = img_dim  # from hyperparams in cfg file, NOT from parser
 
         # define class weights
-        _, n = np.unique(scipy.io.loadmat(targets_path)['targets'][:,0], return_counts=True)
+        _, n = np.unique(scipy.io.loadmat(targets_path)['targets'][:, 0], return_counts=True)
         self.class_weights = torch.zeros(nC) + 1e-16
         self.class_weights[0:len(n)] = 1 / torch.from_numpy(n).float()
         self.class_weights /= self.class_weights.sum()
@@ -110,8 +110,8 @@ class YOLOLayer(nn.Module):
         self.grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).float()
         self.grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).float()
         self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
-        self.anchor_w = self.scaled_anchors[:, 0:1].view((1,nA,1,1))
-        self.anchor_h = self.scaled_anchors[:, 1:2].view((1,nA,1,1))
+        self.anchor_w = self.scaled_anchors[:, 0:1].view((1, nA, 1, 1))
+        self.anchor_h = self.scaled_anchors[:, 1:2].view((1, nA, 1, 1))
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
@@ -134,7 +134,6 @@ class YOLOLayer(nn.Module):
         h = F.sigmoid(p[..., 3])  # Height
         width = ((w.data * 2) ** 2) * self.anchor_w
         height = ((h.data * 2) ** 2) * self.anchor_h
-
 
         # Add offset and scale with anchors (in grid space, i.e. 0-13)
         pred_boxes = FT(p[..., :4].shape)
@@ -186,7 +185,8 @@ class YOLOLayer(nn.Module):
                 lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
-                lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / self.nC
+                lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(
+                    1)).sum() / self.nC
                 # lcls = 0.2 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
