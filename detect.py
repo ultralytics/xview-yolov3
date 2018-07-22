@@ -11,7 +11,8 @@ targets_path = 'utils/targets_c0.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/1677.bmp',
+    parser.add_argument('-image_folder', type=str,
+                        default='/Users/glennjocher/Downloads/DATA/xview/train_images/1677.bmp',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
     cuda = torch.cuda.is_available()
