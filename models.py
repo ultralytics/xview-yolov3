@@ -174,7 +174,7 @@ class YOLOLayer(nn.Module):
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nM = mask.sum().float()
-            nGT = FT([sum([len(x) for x in targets])])
+            nGT = sum([len(x) for x in targets])
             if nM > 0:
                 # print(tx[mask].mean().item(),ty[mask].mean().item(),tw[mask].mean().item(),th[mask].mean().item())
                 wC = weight[torch.argmax(tcls, 1)]  # weight class
