@@ -145,7 +145,7 @@ class YOLOLayer(nn.Module):
         if targets is not None:
             MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
-            BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
+            # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.class_weights, size_average=False)
 
@@ -182,7 +182,7 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += (2 * nGT) * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            lconf += (nGT * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())) ** 2
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.99
