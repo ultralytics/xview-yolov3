@@ -183,7 +183,7 @@ class YOLOLayer(nn.Module):
 
                 # lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / self.nC
                 weight /= weight.mean()
-                lcls = (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * weight.unsqueeze(0)).sum()
+                lcls = (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * weight.unsqueeze(0)).sum() / self.nC
 
                 # lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
