@@ -45,7 +45,7 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c60'
+        run_name = 'c0'
         train_path = '../train_images'
 
     # Initiate model
@@ -55,7 +55,7 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/c60.pt', map_location='cuda:0' if cuda else 'cpu')
