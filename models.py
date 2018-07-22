@@ -115,7 +115,6 @@ class YOLOLayer(nn.Module):
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
-
         bs = p.shape[0]
         nG = p.shape[2]
         stride = self.img_dim / nG
