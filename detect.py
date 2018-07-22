@@ -6,10 +6,12 @@ from models import *
 from utils.datasets import *
 from utils.utils import *
 
+targets_path = 'utils/targets_c0.mat'
+
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/1677.bmp',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -18,13 +20,13 @@ else:  # gcp
     parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
     cuda = False
 
-parser.add_argument('-config_path', type=str, default='cfg/yolovx_YL0.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_cont_feedbackw.pt', help='weights path')
+parser.add_argument('-config_path', type=str, default='cfg/c0.cfg', help='cfg file path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/c0.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
+parser.add_argument('-conf_thres', type=float, default=0.999, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
@@ -46,7 +48,7 @@ def detect(opt):
     #     opt.weights_path = 'xvw1.pt'
 
     # load model 1
-    model = Darknet(opt.config_path, img_size=opt.img_size).to(device).eval()
+    model = Darknet(opt.config_path, opt.img_size, targets=targets_path).to(device).train()
     state = model.state_dict()
     pretrained_dict = torch.load(opt.weights_path, map_location='cuda:0' if cuda else 'cpu')
     # 1. filter out unnecessary keys
@@ -87,13 +89,14 @@ def detect(opt):
     img_detections = []  # Stores detections for each image index
     prev_time = time.time()
     detections = None
-    mat_priors = scipy.io.loadmat('utils/targets_60c.mat')
+    mat_priors = scipy.io.loadmat(targets_path)
     for batch_i, (img_paths, img) in enumerate(dataloader):
         print('\n', batch_i, img.shape, end=' ')
 
         preds = []
-        ni = int(math.ceil(img.shape[1] / 608))  # up-down
-        nj = int(math.ceil(img.shape[2] / 608))  # left-right
+        length = opt.img_size
+        ni = int(math.ceil(img.shape[1] / length))  # up-down
+        nj = int(math.ceil(img.shape[2] / length))  # left-right
         for i in range(ni):  # single scan
             # for i in range(ni - 1):
             print('row %g/%g: ' % (i, ni), end='')
@@ -103,10 +106,10 @@ def detect(opt):
                 print('%g ' % j, end='', flush=True)
 
                 # forward scan
-                y2 = min((i + 1) * 608, img.shape[1])
-                y1 = y2 - 608
-                x2 = min((j + 1) * 608, img.shape[2])
-                x1 = x2 - 608
+                y2 = min((i + 1) * length, img.shape[1])
+                y1 = y2 - length
+                x2 = min((j + 1) * length, img.shape[2])
+                x1 = x2 - length
                 chip = img[:, y1:y2, x1:x2]
 
                 # Get detections
@@ -130,10 +133,10 @@ def detect(opt):
                         preds.append(pred.unsqueeze(0))
 
                 # # backward scan
-                # y2 = max(img.shape[1] - i * 608, 608)
-                # y1 = y2 - 608
-                # x2 = max(img.shape[2] - j * 608, 608)
-                # x1 = x2 - 608
+                # y2 = max(img.shape[1] - i * length, length)
+                # y1 = y2 - length
+                # x2 = max(img.shape[2] - j * length, length)
+                # x1 = x2 - length
                 # chip = img[:, y1:y2, x1:x2]
                 #
                 # # plot
@@ -174,7 +177,6 @@ def detect(opt):
     color_list = [[random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)] for _ in range(len(classes))]
 
     if len(img_detections) == 0:
-
         return
 
     # Iterate through images and save plot of detections

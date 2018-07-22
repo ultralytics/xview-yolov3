@@ -420,15 +420,13 @@ def plotResults():
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
-    for f in ('/Users/glennjocher/Downloads/results.txt',
-              '/Users/glennjocher/Downloads/results_f10CE_e134.txt',
-              '/Users/glennjocher/Downloads/results4.txt',
-              '/Users/glennjocher/Downloads/results5.txt',
-              'resultsCE.txt',
+    for f in ('/Users/glennjocher/Downloads/results450.txt',
+              '/Users/glennjocher/Downloads/results.txt',
+              '/Users/glennjocher/Downloads/results (1).txt',
               'results.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, 0:200], marker='.', label=f)
+            plt.plot(results[i, 2:], marker='.', label=f)
             plt.title(s[i])
         # plt.legend()

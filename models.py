@@ -94,6 +94,10 @@ class YOLOLayer(nn.Module):
         self.class_weights[0:len(n)] = 1 / torch.from_numpy(n).float()
         self.class_weights /= self.class_weights.sum()
 
+        # define class mask (1 means class is present in the targets)
+        self.class_mask = torch.zeros(nC).float()
+        self.class_mask[0:len(n)] = 1
+
         if anchor_idxs[0] == (nA * 2):  # 6
             stride = 32
         elif anchor_idxs[0] == nA:  # 3
@@ -185,9 +189,9 @@ class YOLOLayer(nn.Module):
                 lcls = nM * (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / self.nC
                 # lcls = 0.2 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
-                lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
+                lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), nGT + 10
 
-            lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            lconf += 2 * nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.999

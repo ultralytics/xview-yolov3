@@ -41,7 +41,7 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'c3'
+        run_name = 'tests'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
     else:
         torch.backends.cudnn.benchmark = True
@@ -55,7 +55,7 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/c0.pt', map_location='cuda:0' if cuda else 'cpu')
