@@ -28,13 +28,13 @@ class ImageFolder():  # for eval-only
         assert self.nF > 0, 'No images found in path %s' % path
 
         # RGB normalization values
-        # self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
-        # self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
+        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
+        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
 
         # RGB normalization of YUV-equalized images clipped at 5
-        self.rgb_mean = np.array([100.931, 90.863, 82.412], dtype=np.float32).reshape((3, 1, 1))
-        self.rgb_std = np.array([52.022, 47.313, 44.845], dtype=np.float32).reshape((3, 1, 1))
-        self.clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
+        #self.rgb_mean = np.array([100.931, 90.863, 82.412], dtype=np.float32).reshape((3, 1, 1))
+        #self.rgb_std = np.array([52.022, 47.313, 44.845], dtype=np.float32).reshape((3, 1, 1))
+        #self.clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=3)
 
     def __iter__(self):
         self.count = -1
@@ -51,12 +51,11 @@ class ImageFolder():  # for eval-only
         img = cv2.imread(img_path)  # BGR
 
         # Y channel histogram equalization
-        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+        #img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
         # equalize the histogram of the Y channel
-        # img_yuv[:, :, 2] = cv2.equalizeHist(img_yuv[:, :, 2])
-        # img_yuv[:, :, 0] = self.clahe.apply(img_yuv[:, :, 0])
+        #img_yuv[:, :, 0] = self.clahe.apply(img_yuv[:, :, 0])
         # convert the YUV image back to RGB format
-        # img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+        #img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
         # Normalize RGB
         img = img[:, :, ::-1].transpose(2, 0, 1)
@@ -332,21 +331,21 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
         return imw
 
 
-def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'):
+def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images'):
     import glob
     import cv2
     import os
     files = sorted(glob.glob('%s/*.tif' % p))
-    clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=3)
+    # clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=3)
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
 
         img = cv2.imread(f)
-        img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-        # equalize the histogram of the Y channel
-        img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-        # convert the YUV image back to RGB format
-        img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
+        # # equalize the histogram of the Y channel
+        # img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
+        # # convert the YUV image back to RGB format
+        # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
         cv2.imwrite(f.replace('.tif', '.bmp'), img_output)
         os.system('rm -rf ' + f)
