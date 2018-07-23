@@ -21,7 +21,7 @@ else:  # gcp
     cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/c0.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/c60.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
@@ -74,7 +74,7 @@ def detect(opt):
     # load model 2
     model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path).to(device).eval()
     state = model2.state_dict()
-    pretrained_dict = torch.load('checkpoints/c0.pt', map_location='cuda:0' if cuda else 'cpu')
+    pretrained_dict = torch.load('checkpoints/c60.pt', map_location='cuda:0' if cuda else 'cpu')
     # 1. filter out unnecessary keys
     pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
