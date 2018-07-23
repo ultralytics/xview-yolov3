@@ -45,7 +45,7 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'f4c60'
+        run_name = 'c60'
         train_path = '../train_images'
 
     # Initiate model

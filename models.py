@@ -170,15 +170,15 @@ class YOLOLayer(nn.Module):
             if nM > 0:
                 wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = 2 * MSELoss(x[mask], tx[mask])
-                ly = 2 * MSELoss(y[mask], ty[mask])
-                lw = 2 * MSELoss(w[mask], tw[mask])
-                lh = 2 * MSELoss(h[mask], th[mask])
-                lconf = 1.5 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                lx = MSELoss(x[mask], tx[mask])
+                ly = MSELoss(y[mask], ty[mask])
+                lw = MSELoss(w[mask], tw[mask])
+                lh = MSELoss(h[mask], th[mask])
+                lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
-                # lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * nM * 0.2
-                lcls = (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum()
+                lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * nM * 0.1
+                # lcls = (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum()
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 

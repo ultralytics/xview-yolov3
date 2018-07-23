@@ -366,6 +366,105 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         # output[image_i] = a
     return output
 
+# @profile
+def non_max_suppression2(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model=None):
+    prediction = prediction.cpu()
+
+    """
+    Removes detections with lower object confidence score than 'conf_thres' and performs
+    Non-Maximum Suppression to further filter detections.
+    Returns detections with shape:
+        (x1, y1, x2, y2, object_conf, class_score, class_pred)
+    """
+
+    output = [None for _ in range(len(prediction))]
+    for image_i, pred in enumerate(prediction):
+        # Filter out confidence scores below threshold
+        # Get score and class with highest confidence
+
+        x, y, w, h = pred[:, 0].numpy(), pred[:, 1].numpy(), pred[:, 2].numpy(), pred[:, 3].numpy()
+        a = w * h  # area
+        ar = w / (h + 1e-16)  # aspect ratio
+        log_w, log_h, log_a, log_ar = np.log(w), np.log(h), np.log(a), np.log(ar)
+
+        # n = len(w)
+        # shape_likelihood = np.zeros((n, 60), dtype=np.float32)
+        # x = np.concatenate((log_w.reshape(-1, 1), log_h.reshape(-1, 1)), 1)
+        # from scipy.stats import multivariate_normal
+        # for c in range(60):
+        # shape_likelihood[:, c] = multivariate_normal.pdf(x, mean=mat['class_mu'][c, :2], cov=mat['class_cov'][c, :2, :2])
+
+        class_prob, class_pred = torch.max(F.softmax(pred[:, 5:], 1), 1)
+
+        # Gather bbox priors
+        srl = 3  # sigma rejection level
+        mu = mat['class_mu'][class_pred].T
+        sigma = mat['class_sigma'][class_pred].T * srl
+
+        v = ((pred[:, 4] > conf_thres) & (class_prob > .3)).numpy()
+        v *= (a > 20) & (w > 4) & (h > 4) & (ar < 10) & (ar > 1 / 10)
+        v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
+        v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
+        v *= (log_a > mu[2] - sigma[2]) & (log_a < mu[2] + sigma[2])
+        v *= (log_ar > mu[3] - sigma[3]) & (log_ar < mu[3] + sigma[3])
+        v = v.nonzero()
+
+        pred = pred[v]
+        class_prob = class_prob[v]
+        class_pred = class_pred[v]
+        x, y, w, h = x[v], y[v], w[v], h[v]
+
+        # If none are remaining => process next image
+        nP = pred.shape[0]
+        if not nP:
+            continue
+
+        # Start secondary classification of each chip
+        # class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model)
+
+        # From (center x, center y, width, height) to (x1, y1, x2, y2)
+        box_corner = pred.new(nP, 4)
+        xy = pred[:, 0:2]
+        wh = pred[:, 2:4] / 2
+        box_corner[:, 0:2] = xy - wh
+        box_corner[:, 2:4] = xy + wh
+        pred[:, :4] = box_corner
+
+        # Detections ordered as (x1, y1, x2, y2, obj_conf, class_prob, class_pred)
+        detections = torch.cat((pred[:, :5], class_prob.float().unsqueeze(1), class_pred.float().unsqueeze(1)), 1)
+        # Iterate through all predicted classes
+        unique_labels = detections[:, -1].cpu().unique()
+        if prediction.is_cuda:
+            unique_labels = unique_labels.cuda()
+        for c in unique_labels:
+            # Get the detections with the particular class
+            detections_class = detections[detections[:, -1] == c]
+            # Sort the detections by maximum objectness confidence
+            _, conf_sort_index = torch.sort(detections_class[:, 4], descending=True)
+            detections_class = detections_class[conf_sort_index]
+            # Perform non-maximum suppression
+            max_detections = []
+
+            while detections_class.shape[0]:
+                if len(detections_class) == 1:
+                    break
+
+                ious = bbox_iou(detections_class[0:1], detections_class[1:])
+
+                if ious.max() > 0.5:
+                    max_detections.append(detections_class[0].unsqueeze(0))
+
+                # Remove detections with IoU >= NMS threshold
+                detections_class = detections_class[1:][ious < nms_thres]
+
+            if len(max_detections) > 0:
+                max_detections = torch.cat(max_detections).data
+                # Add max detections to outputs
+                output[image_i] = max_detections if output[image_i] is None else torch.cat(
+                    (output[image_i], max_detections))
+
+    return output
+
 
 def secondary_class_detection(x, y, w, h, img, model):
     cuda = torch.cuda.is_available()

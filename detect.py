@@ -11,7 +11,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100/',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -21,9 +21,9 @@ else:  # gcp
     cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_5_e140.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_5_e201.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
+parser.add_argument('-conf_thres', type=float, default=0.98, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
@@ -57,6 +57,7 @@ def detect(opt):
     state.update(pretrained_dict)
     # 3. load the new state dict
     model.load_state_dict(state)
+    del state, pretrained_dict
 
     # # load model 2
     # model2 = ConvNetb().to(device).eval()
@@ -70,16 +71,17 @@ def detect(opt):
     # # 3. load the new state dict
     # model2.load_state_dict(state)
 
-    # # load model 2
-    # model = Darknet('checkpoints/fresh9_5_e140', img_size=opt.img_size).to(device).eval()
-    # state = model.state_dict()
-    # pretrained_dict = torch.load(opt.weights_path, map_location='cuda:0' if cuda else 'cpu')
-    # # 1. filter out unnecessary keys
-    # pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
-    # # 2. overwrite entries in the existing state dict
-    # state.update(pretrained_dict)
-    # # 3. load the new state dict
-    # model.load_state_dict(state)
+    # load model 2
+    model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path).to(device).eval()
+    state = model2.state_dict()
+    pretrained_dict = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
+    # 1. filter out unnecessary keys
+    pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
+    # 2. overwrite entries in the existing state dict
+    state.update(pretrained_dict)
+    # 3. load the new state dict
+    model2.load_state_dict(state)
+    del state, pretrained_dict
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
@@ -97,12 +99,12 @@ def detect(opt):
         length = opt.img_size
         ni = int(math.ceil(img.shape[1] / length))  # up-down
         nj = int(math.ceil(img.shape[2] / length))  # left-right
-        for i in range(ni):  # single scan
-            # for i in range(ni - 1):
+        # for i in range(ni):  # single scan
+        for i in range(ni):  # for i in range(ni - 1):
             print('row %g/%g: ' % (i, ni), end='')
 
-            for j in range(nj):  # single scan
-                # for j in range(nj if i==0 else nj - 1):
+            # for j in range(nj):  # single scan
+            for j in range(nj): # for j in range(nj if i==0 else nj - 1):
                 print('%g ' % j, end='', flush=True)
 
                 # forward scan
@@ -119,54 +121,53 @@ def detect(opt):
                     pred = pred[pred[:, :, 4] > opt.conf_thres]
 
                     # if (j > 0) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 4)]  # near left border
+                    #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 2)]  # near left border
                     # if (j < nj) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 604)]  # near right border
+                    #     pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 606)]  # near right border
                     # if (i > 0) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 4)]  # near top border
+                    #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 2)]  # near top border
                     # if (i < ni) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 604)]  # near bottom border
+                    #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 606)]  # near bottom border
 
                     if len(pred) > 0:
                         pred[:, 0] += x1
                         pred[:, 1] += y1
                         preds.append(pred.unsqueeze(0))
 
-                # # backward scan
-                # y2 = max(img.shape[1] - i * length, length)
-                # y1 = y2 - length
-                # x2 = max(img.shape[2] - j * length, length)
-                # x1 = x2 - length
-                # chip = img[:, y1:y2, x1:x2]
-                #
-                # # plot
-                # #import matplotlib.pyplot as plt
-                # #plt.subplot(ni, nj, i * nj + j + 1).imshow(chip[1])
-                # # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
-                #
-                #
-                # # Get detections
-                # chip = torch.from_numpy(chip).unsqueeze(0).to(device)
-                # with torch.no_grad():
-                #     pred = model(chip)
-                #     pred = pred[pred[:, :, 4] > opt.conf_thres]
-                #
-                #     if (j < nj) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 4)]  # near left border
-                #     if (j > 0) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 604)]  # near right border
-                #     if (i < ni) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 4)]  # near top border
-                #     if (i > 0) & (len(pred) > 0):
-                #         pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 604)]  # near bottom border
-                #
-                #     if len(pred) > 0:
-                #         pred[:, 0] += x1
-                #         pred[:, 1] += y1
-                #         preds.append(pred.unsqueeze(0))
+                # backward scan
+                y2 = max(img.shape[1] - i * length, length)
+                y1 = y2 - length
+                x2 = max(img.shape[2] - j * length, length)
+                x1 = x2 - length
+                chip = img[:, y1:y2, x1:x2]
+
+                # plot
+                #import matplotlib.pyplot as plt
+                #plt.subplot(ni, nj, i * nj + j + 1).imshow(chip[1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+
+                # Get detections
+                chip = torch.from_numpy(chip).unsqueeze(0).to(device)
+                with torch.no_grad():
+                    pred = model2(chip)
+                    pred = pred[pred[:, :, 4] > opt.conf_thres]
+
+                    # if (j < nj) & (len(pred) > 0):
+                    #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 2)]  # near left border
+                    # if (j > 0) & (len(pred) > 0):
+                    #     pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 606)]  # near right border
+                    # if (i < ni) & (len(pred) > 0):
+                    #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 2)]  # near top border
+                    # if (i > 0) & (len(pred) > 0):
+                    #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 606)]  # near bottom border
+
+                    if len(pred) > 0:
+                        pred[:, 0] += x1
+                        pred[:, 1] += y1
+                        preds.append(pred.unsqueeze(0))
 
         if len(preds) > 0:
-            detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
+            detections = non_max_suppression2(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
             img_detections.extend(detections)
             imgs.extend(img_paths)
 
