@@ -347,7 +347,7 @@ def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_image
         # # convert the YUV image back to RGB format
         # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
-        cv2.imwrite(f.replace('.tif', '.bmp'), img_output)
+        cv2.imwrite(f.replace('.tif', '.bmp'), img)
         os.system('rm -rf ' + f)
 
 
