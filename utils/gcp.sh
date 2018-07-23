@@ -14,8 +14,8 @@
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo
 # do training
 mkdir yolo/checkpoints
-cp f10_e236.pt yolo/checkpoints/c60.pt
-cp results_e236.txt yolo
+cp c0.pt yolo/checkpoints/c0.pt
+cp results.txt yolo
 cd yolo
 python3 train.py -epochs 9999 -img_size 608
 
