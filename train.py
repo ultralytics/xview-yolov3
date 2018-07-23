@@ -42,7 +42,7 @@ def main(opt):
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
         run_name = 'c0'
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
         run_name = 'c60'
@@ -58,7 +58,7 @@ def main(opt):
     resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/restart.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -78,11 +78,17 @@ def main(opt):
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
     # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 15, eta_min=0.00001, last_epoch=-1)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 14, eta_min=0.00001, last_epoch=-1)
 
-    # for i in range(200):
+    # x=[]
+    # for i in range(50):
+    #     if i % 15 == 0:
+    #         scheduler.last_epoch = -1
     #     scheduler.step()
-    #     print(optimizer.param_groups[0]['lr'])
+    #     x.append(optimizer.param_groups[0]['lr'])
+    #
+    # import matplotlib.pyplot as plt
+    # plt.plot(x)
 
     modelinfo(model)
     t0 = time.time()
@@ -92,7 +98,10 @@ def main(opt):
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'nGT', 'TP', 'FP', 'FN',
         'time'))
     for epoch in range(opt.epochs):
+        if epoch % 15 == 0:
+            scheduler.last_epoch = -1
         scheduler.step()
+
         rloss = defaultdict(float)  # running loss
         ui = -1
         metrics = torch.zeros((3, 60))

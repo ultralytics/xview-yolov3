@@ -139,6 +139,11 @@ class ListDataset():  # for training
             # img_path = self.files[self.shuffled_vector[files_index]]
             img_path = self.path + '/%g' % self.shuffled_vector[files_index] + '.bmp' # BGR
 
+            # load iamte
+            img0 = cv2.imread(img_path)
+            if img0 is None:
+                continue
+
             # load labels
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
@@ -150,11 +155,7 @@ class ListDataset():  # for training
                 lh0 = labels0[:, 4] - labels0[:, 2]
                 area0 = lw0 * lh0
 
-            img0 = cv2.imread(img_path)
-            if img0 is None:
-                continue
             # img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
-
             # # Y channel histogram equalization
             # img_yuv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
             # # equalize the histogram of the Y channel
