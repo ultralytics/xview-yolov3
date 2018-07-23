@@ -12,12 +12,12 @@ from utils.utils import *
 # batch_size 2: 32*35 = 1120 (1.40 vs 800, 2.06 cumulative)
 # batch_size 1: 32*49 = 1568 (1.40 vs 1120, 2.88 cumulative)
 
-targets_path = 'utils/targets_c0.mat'
+targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/c0.cfg', help='cfg file path')
+parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
@@ -45,7 +45,7 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c0'
+        run_name = 'c60'
         train_path = '../train_images'
 
     # Initiate model
@@ -58,7 +58,7 @@ def main(opt):
     resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/c0.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/c60.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
