@@ -92,7 +92,7 @@ class YOLOLayer(nn.Module):
         _, n = np.unique(scipy.io.loadmat(targets_path)['targets'][:, 0], return_counts=True)
         self.class_weights = torch.zeros(nC) + 1e-16
         self.class_weights[0:len(n)] = 1 / torch.from_numpy(n).float()
-        self.class_weights /= self.class_weights[self.class_weights > 2e-16].mean()
+        self.class_weights /= self.class_weights[self.class_weights > 2e-16].sum()
 
         # define class mask (1 means class is present in the targets)
         self.class_mask = torch.zeros(nC).float()
@@ -168,16 +168,16 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = sum([len(x) for x in targets])
             if nM > 0:
-                wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
                 lh = MSELoss(h[mask], th[mask])
-                lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
-                lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * nM * 0.1
+                lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * nM * 0.15
                 # lcls = (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum()
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
