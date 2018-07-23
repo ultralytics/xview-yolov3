@@ -17,7 +17,7 @@ mkdir yolo/checkpoints
 cp c0.pt yolo/checkpoints/c0.pt
 cp results.txt yolo
 cd yolo
-python3 train.py -epochs 9999 -img_size 608
+python3 train.py -epochs 9999 -img_size 800
 
 
 python3 detect.py -config_path 'cfg/c60.cfg' -weights_path 'checkpoints/fresh9.pt' -conf_thres 0.999
