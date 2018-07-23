@@ -82,13 +82,13 @@ def main(opt):
 
     # x=[]
     # for i in range(50):
-    #     if i % 15 == 0:
+    #     if i % 25 == 0:
     #         scheduler.last_epoch = -1
     #     scheduler.step()
     #     x.append(optimizer.param_groups[0]['lr'])
     #
     # import matplotlib.pyplot as plt
-    # plt.plot(x)
+    # plt.plot(x,'.')
 
     modelinfo(model)
     t0 = time.time()
