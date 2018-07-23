@@ -12,13 +12,13 @@ from utils.utils import *
 # batch_size 2: 32*35 = 1120 (1.40 vs 800, 2.06 cumulative)
 # batch_size 1: 32*49 = 1568 (1.40 vs 1120, 2.88 cumulative)
 
-targets_path = 'utils/targets_c5.mat'
+targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=9999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/c5.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
+parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -41,7 +41,7 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'c5'
+        run_name = 'c0'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'
     else:
         torch.backends.cudnn.benchmark = True
@@ -77,7 +77,7 @@ def main(opt):
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
     # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=.0001)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
 
     modelinfo(model)
     t0 = time.time()
@@ -92,7 +92,7 @@ def main(opt):
         metrics = torch.zeros((3, 60))
         for i, (imgs, targets) in enumerate(dataloader):
 
-            n = 4  # number of pictures at a time
+            n = 1  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
@@ -142,7 +142,7 @@ def main(opt):
             file.write(s + '\n')
 
         if (epoch >= opt.checkpoint_interval) & (rloss['loss'] < best_loss):
-            best_loss = rloss['loss']
+            best_loss = rloss['loss'] / rloss['nGT']
             opt.weights_path = '%s/%s.pt' % (opt.checkpoint_dir, run_name)  # best weight path
             torch.save(model.state_dict(), opt.weights_path)
             # torch.save(model, 'filename.pt')
