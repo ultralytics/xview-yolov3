@@ -148,10 +148,10 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            if i == 30:
-              torch.save(model.state_dict(), 'pretrained_bbox.pt')
-              print(time.time() - t0)
-              return
+            # if i == 30:
+            #   torch.save(model.state_dict(), 'pretrained_bbox.pt')
+            #   print(time.time() - t0)
+            #   return
 
         with open('results.txt', 'a') as file:
             file.write(s + '\n')
