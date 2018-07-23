@@ -184,9 +184,10 @@ class ListDataset():  # for training
                         lw = labels[:, 3] - labels[:, 1]
                         lh = labels[:, 4] - labels[:, 2]
                         area = lw * lh
+                        ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                         # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.2)]
+                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.2) & (ar < 10)]
                     else:
                         labels = np.array([], dtype=np.float32)
 
@@ -195,7 +196,7 @@ class ListDataset():  # for training
                 img = img0[pady:pady + padded_height, padx:padx + padded_height]
 
                 # plot
-                # import matplotlib.pyplot as plt
+                import matplotlib.pyplot as plt
                 # plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
@@ -209,8 +210,8 @@ class ListDataset():  # for training
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
                 # borderValue=[40.746, 49.697, 60.134])  # RGB
 
-                # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
-                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                plt.subplot(2, 4, j+1).imshow(img[:, :, ::-1])
+                plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
@@ -317,8 +318,11 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
 
             # select good inlier points (width and height > 4 pixels, and >20% remaining area)
             xy = np.clip(xy, 0, height)
-            area = (xy[:, 2] - xy[:, 0]) * (xy[:, 3] - xy[:, 1])
-            i = ((xy[:, 2] - xy[:, 0]) > 4) & ((xy[:, 3] - xy[:, 1]) > 4) & ((area / area0) > 0.2)
+            w = xy[:, 2] - xy[:, 0]
+            h = xy[:, 3] - xy[:, 1]
+            area = w * h
+            ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
+            i = (w > 4) & (h > 4) & ((area / area0) > 0.2) & (ar < 10)
 
             targets = targets[i]
             targets[:, 1:5] = xy[i]
