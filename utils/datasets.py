@@ -92,8 +92,8 @@ class ListDataset():  # for training
         # os.makedirs(self.small_folder, exist_ok=True)
 
         # RGB normalization values
-        # self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
-        # self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
+        self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
 
         # RGB normalization of HSV-equalized images
         # self.rgb_mean = np.array([122.367, 107.586, 86.987], dtype=np.float32).reshape((1, 3, 1, 1))
@@ -104,8 +104,8 @@ class ListDataset():  # for training
         # self.rgb_std = np.array([52.022, 47.313, 44.845], dtype=np.float32).reshape((1, 3, 1, 1))
 
         # RGB normalization of YUV-equalized images clipped at 3
-        self.rgb_mean = np.array([45.068, 40.035, 37.538], dtype=np.float32).reshape((1, 3, 1, 1))
-        self.rgb_std = np.array([89.836, 79.490, 71.011], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_mean = np.array([45.068, 40.035, 37.538], dtype=np.float32).reshape((1, 3, 1, 1))
+        # self.rgb_std = np.array([89.836, 79.490, 71.011], dtype=np.float32).reshape((1, 3, 1, 1))
 
         # RGB normalization of YUV-equalized images no clipping
         # self.rgb_mean = np.array([137.513, 127.813, 119.410], dtype=np.float32).reshape((1, 3, 1, 1))
@@ -203,7 +203,7 @@ class ListDataset():  # for training
                 # if random.random() > 0.2:
                 img, labels = random_affine(img, height=height, targets=labels, degrees=(-20, 20),
                                             translate=(.05, .05), scale=(.80, 1.25), shear=(-2, 2),
-                                            borderValue=[37.538, 40.035, 45.068])  # YUV 3-clipped
+                                            borderValue=[40.746, 49.697, 60.134])  # RGB
                 # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
