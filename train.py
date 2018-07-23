@@ -55,7 +55,7 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/restart.pt', map_location='cuda:0' if cuda else 'cpu')
@@ -77,7 +77,12 @@ def main(opt):
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
     # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 15, eta_min=0.00001, last_epoch=-1)
+
+    # for i in range(200):
+    #     scheduler.step()
+    #     print(optimizer.param_groups[0]['lr'])
 
     modelinfo(model)
     t0 = time.time()
@@ -87,6 +92,7 @@ def main(opt):
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'nGT', 'TP', 'FP', 'FN',
         'time'))
     for epoch in range(opt.epochs):
+        scheduler.step()
         rloss = defaultdict(float)  # running loss
         ui = -1
         metrics = torch.zeros((3, 60))
