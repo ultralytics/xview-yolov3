@@ -58,7 +58,7 @@ def main(opt):
     resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/restart.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/fresh9_5_e140.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -151,7 +151,6 @@ def main(opt):
             best_loss = rloss['loss'] / rloss['nGT']
             opt.weights_path = '%s/%s.pt' % (opt.checkpoint_dir, run_name)  # best weight path
             torch.save(model.state_dict(), opt.weights_path)
-            # torch.save(model, 'filename.pt')
 
     # save final model
     dt = time.time() - t0
