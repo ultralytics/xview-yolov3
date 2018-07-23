@@ -41,6 +41,7 @@ datasets.convert_tif2bmp_clahe('../train_images')
 exit()
 
 
+cd train_images
 rm -rf 149.bmp
 rm -rf 374.bmp
 rm -rf 401.bmp
@@ -75,3 +76,4 @@ rm -rf 1888.bmp
 rm -rf 2247.bmp
 rm -rf 2495.bmp
 rm -rf 2503.bmp
+cd ..
