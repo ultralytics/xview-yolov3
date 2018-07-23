@@ -33,7 +33,7 @@ def create_modules(module_defs):
             if bn:
                 modules.add_module('batch_norm_%d' % i, nn.BatchNorm2d(filters))
             if module_def['activation'] == 'leaky':
-                modules.add_module('leaky_%d' % i, nn.LeakyReLU())
+                modules.add_module('leaky_%d' % i, nn.LeakyReLU(0.1))
 
         elif module_def['type'] == 'upsample':
             upsample = nn.Upsample(scale_factor=int(module_def['stride']), mode='bilinear', align_corners=True)
@@ -182,7 +182,7 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            lconf += nGT * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.999

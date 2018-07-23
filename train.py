@@ -15,7 +15,7 @@ from utils.utils import *
 targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
@@ -58,7 +58,7 @@ def main(opt):
     resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/restart.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -77,8 +77,8 @@ def main(opt):
 
     # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
     # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 19, eta_min=0.00001, last_epoch=-1)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0005)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
 
     # x=[]
     # for i in range(50):
@@ -98,7 +98,7 @@ def main(opt):
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'nGT', 'TP', 'FP', 'FN',
         'time'))
     for epoch in range(opt.epochs):
-        if epoch % 20 == 0:
+        if epoch % 25 == 0:
             scheduler.last_epoch = -1
         scheduler.step()
 
@@ -148,10 +148,10 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            # if i == 30:
-            #   torch.save(model.state_dict(), 'pretrained_bbox.pt')
-            #   print(time.time() - t0)
-            #   return
+            if i == 30:
+              torch.save(model.state_dict(), 'pretrained_bbox.pt')
+              print(time.time() - t0)
+              return
 
         with open('results.txt', 'a') as file:
             file.write(s + '\n')
