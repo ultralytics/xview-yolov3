@@ -92,7 +92,7 @@ def main(opt):
         metrics = torch.zeros((3, 60))
         for i, (imgs, targets) in enumerate(dataloader):
 
-            n = 1  # number of pictures at a time
+            n = 4  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
