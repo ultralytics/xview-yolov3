@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -55,7 +55,7 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
         state = model.state_dict()
         pretrained_dict = torch.load('checkpoints/c60.pt', map_location='cuda:0' if cuda else 'cpu')
@@ -92,7 +92,7 @@ def main(opt):
         metrics = torch.zeros((3, 60))
         for i, (imgs, targets) in enumerate(dataloader):
 
-            n = 4  # number of pictures at a time
+            n = 1  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
@@ -142,7 +142,7 @@ def main(opt):
             file.write(s + '\n')
 
         if (epoch >= opt.checkpoint_interval) & (rloss['loss'] < best_loss):
-            best_loss = rloss['loss']
+            best_loss = rloss['loss'] / rloss['nGT']
             opt.weights_path = '%s/%s.pt' % (opt.checkpoint_dir, run_name)  # best weight path
             torch.save(model.state_dict(), opt.weights_path)
             # torch.save(model, 'filename.pt')
