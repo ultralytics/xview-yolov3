@@ -58,6 +58,7 @@ def main(opt):
 
     # reload saved optimizer state
     resume_training = True
+    start_epoch = 0
     if resume_training:
         checkpoint = torch.load('../fresh9_5_e201.pt')  # , map_location='cuda:0' if cuda else 'cpu')
 
@@ -70,8 +71,6 @@ def main(opt):
         current.update(saved)
         # 3. load the new state dict
         model.load_state_dict(current)
-        start_epoch = 0
-
 
         # # Transfer learning
         # for i, (name, p) in enumerate(model.named_parameters()):
@@ -88,7 +87,6 @@ def main(opt):
         del current, saved, checkpoint
     else:
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
-        start_epoch = 0
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
