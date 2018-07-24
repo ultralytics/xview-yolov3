@@ -144,7 +144,7 @@ class YOLOLayer(nn.Module):
         if targets is not None:
             MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
-            BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
+            # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.class_weights, size_average=True)
 
@@ -168,14 +168,14 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = sum([len(x) for x in targets])
             if nM > 0:
-                wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
                 lh = MSELoss(h[mask], th[mask])
-                # lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
-                lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
+                lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                # lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * nM * 0.125
                 # lcls = (BCEWithLogitsLoss1_reduceFalse(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum()
