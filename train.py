@@ -70,6 +70,8 @@ def main(opt):
         current.update(saved)
         # 3. load the new state dict
         model.load_state_dict(current)
+        start_epoch = 0
+
 
         # # Transfer learning
         # for i, (name, p) in enumerate(model.named_parameters()):
