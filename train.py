@@ -61,7 +61,7 @@ def main(opt):
     if resume_training:
         checkpoint = torch.load('../fresh9_5_e201.pt')  # , map_location='cuda:0' if cuda else 'cpu')
 
-        current = model.state_dict()
+        current = checkpoint # model.state_dict()
         # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
         saved = checkpoint['model']
         # 1. filter out unnecessary keys
@@ -79,9 +79,9 @@ def main(opt):
         #     if p.shape[0] != 650:  # not YOLO layer
         #         p.requires_grad = False
 
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        start_epoch = checkpoint['epoch'] + 1
+       #optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        #optimizer.load_state_dict(checkpoint['optimizer'])
+        #start_epoch = checkpoint['epoch'] + 1
 
         del current, saved, checkpoint
     else:
