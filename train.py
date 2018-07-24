@@ -39,7 +39,7 @@ def main(opt):
     # Configure run
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'test3'
+        run_name = 'c60_e201_'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
@@ -114,12 +114,13 @@ def main(opt):
         #     scheduler.last_epoch = -1  # for cosine annealing, restart every 25 epochs
         # scheduler.step()
         for g in optimizer.param_groups:
-            g['lr'] = 0.0005 * (0.992 ** epoch)
+            # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
+            g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 
         ui = -1
         rloss = defaultdict(float)  # running loss
         metrics = torch.zeros((3, 60))
-        for i, (imgs, targets) in enumerate(dataloader):
+        for i, (imgs, targets) in enumerate6(dataloader):
 
             n = 4  # number of pictures at a time
             for j in range(int(len(imgs) / n)):

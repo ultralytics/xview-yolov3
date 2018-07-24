@@ -19,7 +19,7 @@ sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo
 # cp c60.pt yolo/checkpoints/restart.pt
 # cp results.txt yolo/results.txt
 cd yolo
-python3 train.py -epochs 9999 -img_size 608
+python3 train.py -epochs 1 -img_size 608
 
 
 python3 detect.py -config_path 'cfg/c60.cfg' -weights_path 'checkpoints/fresh9.pt' -conf_thres 0.999
@@ -30,7 +30,7 @@ python3 detect.py -config_path 'cfg/c60.cfg' -weights_path 'checkpoints/fresh9.p
 
 
 # get xview training data
-wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1532390753&Signature=ldl2aKik9YcBf2NnNBOWmsV8OBthCIgz~AhqRNSir1900N9tNTWL8hwCo8y12gwKwmRS91~XQrBDLSP1PyKJVU4O1uxlrVRHzUEEASLBiVo3H-JFqSKNA1pm84jwxdWMzzL2oH3nngh~nwzyvcO9oN72dTD3aCnUZHwI9d3vgTNBrLh10MrbjvafCfW9SSwqxJr83ZKerJtR~9S145zBhAGm4eojbGMBl88tIMlEcjNNcttfKjhnLYwdHh7avVH~SDP0PBOAbFsL7SY3Q3obr60qynfdl0FlV2fz~-JbQlA0oPJi~IrvikL3ijYL7DTs2X5s37bN0Zn-jH2RupAzaQ__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
+wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1532486025&Signature=SuEPUV--8W2B8D13pd20swm2dx7k2L2HeHpHshRLl5LqwlnV0SQSsKr5uym6rdv8QpqVQSMVSWBm97BSrKD5mqjQq3AHTYkZrWFFFDCkWy1R1b9uDgLpT5-m4NDCQTheqy~p3A4jH1sMGTZP0Tfp4jl4WgdEenOZl4qC~HHXvt0RMOwu4s9rGhylHSbW4VWnaWkxuoZAPF9WOPxjCkGoRsxef1~4SICgNre0wWek8drne1xl2dR15QqUEcZd48Pax1KY7C6HIdTf0QnHJYZZErPhun695iCnH-0QAkPbtrx0BxxMKfRLdiME52ELL0oHVeMWCguqVxykd5I2ZIzGww__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
 tar -xvzf train_images.tgz
 sudo rm -rf train_images/._* train_images/659.tif train_images/769.tif
 
