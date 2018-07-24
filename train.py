@@ -154,9 +154,9 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            if i == 1:
-                epoch = 6
-                break
+            # if i == 1:
+            #     epoch = 6
+            #    break
 
         # Write epoch results
         with open('results.txt', 'a') as file:
