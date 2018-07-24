@@ -16,10 +16,10 @@ google-drive-ocamlfuse drive
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo
 # do training
 # mkdir yolo/checkpoints
-cp c60.pt yolo/checkpoints/restart.pt
-cp results.txt yolo/results.txt
+# cp c60.pt yolo/checkpoints/restart.pt
+# cp results.txt yolo/results.txt
 cd yolo
-python3 train.py -epochs 9999 -img_size 608
+python3 train.py -epochs 9999 -img_size 800
 
 
 python3 detect.py -config_path 'cfg/c60.cfg' -weights_path 'checkpoints/fresh9.pt' -conf_thres 0.999

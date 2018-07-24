@@ -166,7 +166,7 @@ class ListDataset():  # for training
 
             h, w, _ = img0.shape
             padded_height = int(height * 4 / 3)  # 608 * 1.5 = 912
-            for j in range(6):
+            for j in range(8):
 
                 nL = 0
                 counter = 0
