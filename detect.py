@@ -21,7 +21,7 @@ else:  # gcp
     cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/test2_model.pt', help='weights path')
+parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_5_e201.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
@@ -48,40 +48,32 @@ def detect(opt):
     #     opt.weights_path = 'xvw1.pt'
 
     # load model 1
-    model = Darknet(opt.config_path, opt.img_size, targets=targets_path).to(device).train()
-    state = model.state_dict()
-    pretrained_dict = torch.load(opt.weights_path, map_location='cuda:0' if cuda else 'cpu')
+    model = Darknet(opt.config_path, opt.img_size, targets=targets_path)
+    current = model.state_dict()
+    # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
+    saved = torch.load('checkpoints/fresh9_5_e201.pt')
     # 1. filter out unnecessary keys
-    pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
+    saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
-    state.update(pretrained_dict)
+    current.update(saved)
     # 3. load the new state dict
-    model.load_state_dict(state)
-    del state, pretrained_dict
-
-    # # load model 2
-    # model2 = ConvNetb().to(device).eval()
-    # state = model2.state_dict()
-    # pretrained_dict = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/chips.pt',
-    #                              map_location='cuda:0' if cuda else 'cpu')
-    # # 1. filter out unnecessary keys
-    # pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
-    # # 2. overwrite entries in the existing state dict
-    # state.update(pretrained_dict)
-    # # 3. load the new state dict
-    # model2.load_state_dict(state)
+    model.load_state_dict(current)
+    model = model.to(device).eval()
+    del current, saved
 
     # load model 2
-    model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path).to(device).eval()
-    state = model2.state_dict()
-    pretrained_dict = torch.load('checkpoints/test2_model.pt', map_location='cuda:0' if cuda else 'cpu')
+    model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path)
+    current = model2.state_dict()
+    # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
+    saved = torch.load('checkpoints/fresh9_5_e201.pt')
     # 1. filter out unnecessary keys
-    pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
+    saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
-    state.update(pretrained_dict)
+    current.update(saved)
     # 3. load the new state dict
-    model2.load_state_dict(state)
-    del state, pretrained_dict
+    model2.load_state_dict(current)
+    model2 = model2.to(device).eval()
+    del current, saved
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
@@ -167,7 +159,7 @@ def detect(opt):
                         preds.append(pred.unsqueeze(0))
 
         if len(preds) > 0:
-            detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
+            detections = non_max_suppression2(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
             img_detections.extend(detections)
             imgs.extend(img_paths)
 
