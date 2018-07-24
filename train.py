@@ -80,7 +80,7 @@ def main(opt):
         #     if p.shape[0] != 650:  # not YOLO layer
         #         p.requires_grad = False
 
-       #optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
         #optimizer.load_state_dict(checkpoint['optimizer'])
         #start_epoch = checkpoint['epoch'] + 1
 
