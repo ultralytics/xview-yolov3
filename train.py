@@ -41,7 +41,7 @@ def main(opt):
         # Get data configuration
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'c60_relu0_1'
+        run_name = 'c60_relu0_5'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
@@ -55,10 +55,10 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
         state = model.state_dict()
-        pretrained_dict = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
+        pretrained_dict = torch.load('../c60.pt', map_location='cuda:0' if cuda else 'cpu')
         # 1. filter out unnecessary keys
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -148,10 +148,10 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            # if i == 30:
+            # if i == 3:
             #   torch.save(model.state_dict(), 'pretrained_bbox.pt')
             #   print(time.time() - t0)
-            #   return
+            #     return
 
         with open('results.txt', 'a') as file:
             file.write(s + '\n')

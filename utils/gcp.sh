@@ -13,9 +13,9 @@ google-drive-ocamlfuse drive
 
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo
 # do training
-mkdir yolo/checkpoints
-cp drive/fresh9_5_e201.pt yolo/checkpoints/restart.pt
-# cp results_e236.txt yolo/results.txt
+# mkdir yolo/checkpoints
+# cp drive/c60.pt yolo/checkpoints/restart.pt
+cp results.txt yolo/results.txt
 cd yolo
 python3 train.py -epochs 9999 -img_size 608
 
