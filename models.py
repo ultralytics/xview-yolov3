@@ -28,12 +28,12 @@ def create_modules(module_defs):
                                                         stride=int(module_def['stride']),
                                                         dilation=1,
                                                         padding=pad,
-                                                        bias=True))
+                                                        bias=not bn))
 
             if bn:
                 modules.add_module('batch_norm_%d' % i, nn.BatchNorm2d(filters))
             if module_def['activation'] == 'leaky':
-                modules.add_module('leaky_%d' % i, nn.LeakyReLU(0.1))
+                modules.add_module('leaky_%d' % i, nn.LeakyReLU())
 
         elif module_def['type'] == 'upsample':
             upsample = nn.Upsample(scale_factor=int(module_def['stride']), mode='bilinear', align_corners=True)
@@ -142,7 +142,7 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
-            MSELoss = nn.MSELoss(reduce=False)
+            MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
             BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
@@ -170,10 +170,10 @@ class YOLOLayer(nn.Module):
             if nM > 0:
                 wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
-                lx = (MSELoss(x[mask], tx[mask]) * wC).sum()
-                ly = (MSELoss(y[mask], ty[mask]) * wC).sum()
-                lw = (MSELoss(w[mask], tw[mask]) * wC).sum()
-                lh = (MSELoss(h[mask], th[mask]) * wC).sum()
+                lx = MSELoss(x[mask], tx[mask])
+                ly = MSELoss(y[mask], ty[mask])
+                lw = MSELoss(w[mask], tw[mask])
+                lh = MSELoss(h[mask], th[mask])
                 # lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 lconf = nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 

@@ -39,11 +39,11 @@ def main(opt):
     # Configure run
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'test2'
+        run_name = 'test3'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c60'
+        run_name = 'c60_fresh'
         train_path = '../train_images'
 
     # Initiate model
@@ -57,9 +57,9 @@ def main(opt):
     # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
 
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     if resume_training:
-        checkpoint = torch.load('checkpoints/test2.pt', map_location='cuda:0' if cuda else 'cpu')
+        checkpoint = torch.load('../c60_fresh.pt', map_location='cuda:0' if cuda else 'cpu')
 
         current = model.state_dict()
         # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
@@ -91,7 +91,7 @@ def main(opt):
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
     # y = 0.001 * exp(-0.00921 * x)  # 1e-4 @ 250, 1e-5 @ 500
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99082, last_epoch=start_epoch - 1)
+    # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99082, last_epoch=start_epoch - 1)
 
     modelinfo(model)
     t0, t1 = time.time(), time.time()
@@ -104,7 +104,9 @@ def main(opt):
         # Update scheduler
         # if epoch % 25 == 0:
         #     scheduler.last_epoch = -1  # for cosine annealing, restart every 25 epochs
-        scheduler.step()
+        # scheduler.step()
+        for g in optimizer.param_groups:
+            g['lr'] = 0.001 * (0.99082 ** epoch)
 
         ui = -1
         rloss = defaultdict(float)  # running loss
@@ -152,8 +154,9 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            # if i == 3:
-            #     return
+            if i == 1:
+                epoch = 6
+                break
 
         # Write epoch results
         with open('results.txt', 'a') as file:
