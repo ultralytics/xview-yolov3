@@ -43,7 +43,7 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_wC'
+        run_name = 'c60_e201_exp100'
         train_path = '../train_images'
 
     # Initiate model
