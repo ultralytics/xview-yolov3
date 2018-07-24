@@ -2,7 +2,6 @@ import argparse
 import time
 from sys import platform
 
-# from detect import detect
 from models import *
 from utils.datasets import *
 from utils.utils import *
@@ -15,17 +14,16 @@ from utils.utils import *
 targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=2, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=1, help='interval between saving model weights')
+parser.add_argument('-checkpoint_interval', type=int, default=0, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
 print(opt)
 
 
-# @profile
 def main(opt):
     os.makedirs('checkpoints', exist_ok=True)
     cuda = torch.cuda.is_available()
@@ -38,10 +36,10 @@ def main(opt):
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
 
-        # Get data configuration
+    # Configure run
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'c60_relu0_5'
+        run_name = 'test2'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
@@ -54,20 +52,26 @@ def main(opt):
     # Get dataloader
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
+    # Set optimizer
+    # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
+    # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+
     # reload saved optimizer state
     resume_training = True
     if resume_training:
-        state = model.state_dict()
-        pretrained_dict = torch.load('../c60.pt', map_location='cuda:0' if cuda else 'cpu')
-        # 1. filter out unnecessary keys
-        pretrained_dict = {k: v for k, v in pretrained_dict.items() if ((k in state) and (state[k].shape == v.shape))}
-        # 2. overwrite entries in the existing state dict
-        state.update(pretrained_dict)
-        # 3. load the new state dict
-        model.load_state_dict(state)
-        del state, pretrained_dict
+        checkpoint = torch.load('checkpoints/test2.pt', map_location='cuda:0' if cuda else 'cpu')
 
-        # # Transfer learning!
+        current = model.state_dict()
+        # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
+        saved = checkpoint['model']
+        # 1. filter out unnecessary keys
+        saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
+        # 2. overwrite entries in the existing state dict
+        current.update(saved)
+        # 3. load the new state dict
+        model.load_state_dict(current)
+
+        # # Transfer learning
         # for i, (name, p) in enumerate(model.named_parameters()):
         #     #name = name.replace('module_list.', '')
         #     #print('%4g %70s %9s %12g %20s %12g %12g' % (
@@ -75,35 +79,35 @@ def main(opt):
         #     if p.shape[0] != 650:  # not YOLO layer
         #         p.requires_grad = False
 
-    # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=.001)
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0005)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        start_epoch = checkpoint['epoch'] + 1
 
-    # x=[]
-    # for i in range(50):
-    #     if i % 25 == 0:
-    #         scheduler.last_epoch = -1
-    #     scheduler.step()
-    #     x.append(optimizer.param_groups[0]['lr'])
-    #
-    # import matplotlib.pyplot as plt
-    # plt.plot(x,'.')
+        del current, saved, checkpoint
+    else:
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        start_epoch = 0
+
+    # Set scheduler
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
+    # y = 0.001 * exp(-0.00921 * x)  # 1e-4 @ 250, 1e-5 @ 500
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99082, last_epoch=start_epoch - 1)
 
     modelinfo(model)
-    t0 = time.time()
-    t1 = time.time()
+    t0, t1 = time.time(), time.time()
     best_loss = float('inf')
     print('%10s' * 16 % (
-        'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'precision', 'recall', 'nGT', 'TP', 'FP', 'FN',
-        'time'))
+        'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
     for epoch in range(opt.epochs):
-        if epoch % 25 == 0:
-            scheduler.last_epoch = -1
+        epoch += start_epoch
+
+        # Update scheduler
+        # if epoch % 25 == 0:
+        #     scheduler.last_epoch = -1  # for cosine annealing, restart every 25 epochs
         scheduler.step()
 
-        rloss = defaultdict(float)  # running loss
         ui = -1
+        rloss = defaultdict(float)  # running loss
         metrics = torch.zeros((3, 60))
         for i, (imgs, targets) in enumerate(dataloader):
 
@@ -149,22 +153,22 @@ def main(opt):
                 print(s)
 
             # if i == 3:
-            #   torch.save(model.state_dict(), 'pretrained_bbox.pt')
-            #   print(time.time() - t0)
             #     return
 
+        # Write epoch results
         with open('results.txt', 'a') as file:
             file.write(s + '\n')
 
+        # Save if best epoch
         if (epoch >= opt.checkpoint_interval) & (rloss['loss'] < best_loss):
             best_loss = rloss['loss'] / rloss['nGT']
             opt.weights_path = '%s/%s.pt' % (opt.checkpoint_dir, run_name)  # best weight path
-            torch.save(model.state_dict(), opt.weights_path)
+            torch.save({'epoch': epoch, 'opt': opt, 'model': model.state_dict(), 'optimizer': optimizer.state_dict()},
+                       opt.weights_path)
 
-    # save final model
+    # Save final model
     dt = time.time() - t0
     print('Finished %g epochs in %.2fs (%.2fs/epoch)' % (epoch, dt, dt / (epoch + 1)))
-    # detect(opt)
 
 
 if __name__ == '__main__':
