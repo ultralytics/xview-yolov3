@@ -39,11 +39,11 @@ def main(opt):
     # Configure run
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_'
+        run_name = 'c60_e201_wC'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c60_fresh'
+        run_name = 'c60_e201_wC'
         train_path = '../train_images'
 
     # Initiate model
@@ -57,9 +57,9 @@ def main(opt):
     # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     if resume_training:
-        checkpoint = torch.load('../restart.pt')  # , map_location='cuda:0' if cuda else 'cpu')
+        checkpoint = torch.load('checkpoints/fresh9_5_e201.pt')  # , map_location='cuda:0' if cuda else 'cpu')
 
         current = model.state_dict()
         # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
@@ -115,7 +115,8 @@ def main(opt):
         # scheduler.step()
         for g in optimizer.param_groups:
             # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
-            g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
+            g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
+            # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 
         ui = -1
         rloss = defaultdict(float)  # running loss
