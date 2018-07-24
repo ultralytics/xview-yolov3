@@ -59,7 +59,7 @@ def main(opt):
     # reload saved optimizer state
     resume_training = False
     if resume_training:
-        checkpoint = torch.load('../c60_fresh.pt')  # , map_location='cuda:0' if cuda else 'cpu')
+        checkpoint = torch.load('../restart.pt')  # , map_location='cuda:0' if cuda else 'cpu')
 
         current = model.state_dict()
         # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
