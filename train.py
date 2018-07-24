@@ -120,7 +120,7 @@ def main(opt):
         ui = -1
         rloss = defaultdict(float)  # running loss
         metrics = torch.zeros((3, 60))
-        for i, (imgs, targets) in enumerate6(dataloader):
+        for i, (imgs, targets) in enumerate(dataloader):
 
             n = 4  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
