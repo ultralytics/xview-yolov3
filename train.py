@@ -163,8 +163,8 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            if i == 1:
-                return
+            # if i == 1:
+            #    return
 
         # Write epoch results
         with open('results.txt', 'a') as file:
