@@ -142,13 +142,11 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
-            weight = self.class_weights #* xview_feedback_weights(range(60)).cuda()
-            #weight /= weight.sum()
             MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
             # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=True)
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.class_weights, size_average=True)
 
             if requestPrecision:
                 gx = self.grid_x[:, :, 0:nG, 0:nG]
@@ -170,7 +168,7 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = sum([len(x) for x in targets])
             if nM > 0:
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
+                wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
                 wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])

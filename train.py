@@ -14,10 +14,10 @@ from utils.utils import *
 targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 35, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=0, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -125,7 +125,7 @@ def main(opt):
         metrics = torch.zeros((3, 60))
         for i, (imgs, targets) in enumerate(dataloader):
 
-            n = 4  # number of pictures at a time
+            n = 2  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
