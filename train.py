@@ -39,7 +39,7 @@ def main(opt):
     # Configure run
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_wC'
+        run_name = 'c60_e201_exp100_wC'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
@@ -115,6 +115,7 @@ def main(opt):
         # scheduler.step()
         for g in optimizer.param_groups:
             # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
+            # g['lr'] = 0.0005 * (0.9772 ** epoch)  # 1/10 th every 100 epochs
             g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
             # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 
@@ -172,8 +173,9 @@ def main(opt):
             file.write(s + '\n')
 
         # Save if best epoch
-        if (epoch >= opt.checkpoint_interval) & (rloss['loss'] < best_loss):
-            best_loss = rloss['loss'] / rloss['nGT']
+        loss_per_target = rloss['loss'] / rloss['nGT']
+        if (epoch >= opt.checkpoint_interval) & (loss_per_target < best_loss):
+            best_loss = loss_per_target
             opt.weights_path = '%s/%s.pt' % (opt.checkpoint_dir, run_name)  # best weight path
             torch.save({'epoch': epoch, 'opt': opt, 'model': model.state_dict(), 'optimizer': optimizer.state_dict()},
                        opt.weights_path)
