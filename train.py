@@ -64,7 +64,7 @@ def main(opt):
 
         current = model.state_dict()
         # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-        saved = checkpoint['model']
+        saved = checkpoint#['model']
         # 1. filter out unnecessary keys
         saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
