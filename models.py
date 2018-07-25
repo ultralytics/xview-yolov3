@@ -142,7 +142,7 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
-            weight = self.class_weight * xview_feedback_weights(range(60)).cuda()
+            weight = self.class_weights * xview_feedback_weights(range(60)).cuda()
             weight /= weight.sum()
             MSELoss = nn.MSELoss(size_average=False)
             # BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
