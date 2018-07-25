@@ -31,7 +31,7 @@ python3 detect.py -config_path 'cfg/c60.cfg' -weights_path 'checkpoints/fresh9.p
 
 
 # get xview training data
-wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1532486025&Signature=SuEPUV--8W2B8D13pd20swm2dx7k2L2HeHpHshRLl5LqwlnV0SQSsKr5uym6rdv8QpqVQSMVSWBm97BSrKD5mqjQq3AHTYkZrWFFFDCkWy1R1b9uDgLpT5-m4NDCQTheqy~p3A4jH1sMGTZP0Tfp4jl4WgdEenOZl4qC~HHXvt0RMOwu4s9rGhylHSbW4VWnaWkxuoZAPF9WOPxjCkGoRsxef1~4SICgNre0wWek8drne1xl2dR15QqUEcZd48Pax1KY7C6HIdTf0QnHJYZZErPhun695iCnH-0QAkPbtrx0BxxMKfRLdiME52ELL0oHVeMWCguqVxykd5I2ZIzGww__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
+wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1532553970&Signature=C-W3dFvU-ygEp2lsWRM~RJTFEKahLhFf1veTnsSUuhR0KPZUZP40ooXOJfiBuUg4rNG2rkIw~fthM0YURlivWcaz6dexRsA2VowIqISNyIEWm~0qu983Wog2LE41ZzXWGk8el2fkwDBa~bh9DAOYYhk7OKkfS7Xfzj3a1w1bZ1x7kkSBzc3YjnaKIdqBuAg-1lk~OVzBaGp8B3wBJbYGHf77~IESSu6Zd4-AcGDATjr~XpByqj1LxeDyl84-3~bUvsGqlBqnquvJVndvYYAfn4gFzDu0CNm3hsu9YQk5oCimCcbySDXQ3rnldJPLgTw8pqKzJUEGDuq7tx6fTLblvw__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
 tar -xvzf train_images.tgz
 sudo rm -rf train_images/._* train_images/659.tif train_images/769.tif
 

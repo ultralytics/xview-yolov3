@@ -14,10 +14,10 @@ from utils.utils import *
 targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=200, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=0, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -39,11 +39,11 @@ def main(opt):
     # Configure run
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_exp100_wC'
+        run_name = 'c60_e201_exp100_feedback'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_exp100_wCfeedback'
+        run_name = 'c60_e201_exp100_sizevar'
         train_path = '../train_images'
 
     # Initiate model
@@ -60,17 +60,18 @@ def main(opt):
     resume_training = True
     start_epoch = 0
     if resume_training:
-        checkpoint = torch.load('../fresh9_5_e201.pt')  # , map_location='cuda:0' if cuda else 'cpu')
+        checkpoint = torch.load('../restart.pt')
 
         current = model.state_dict()
         # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-        saved = checkpoint  # ['model']
+        saved = checkpoint['model']
         # 1. filter out unnecessary keys
         saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
         current.update(saved)
         # 3. load the new state dict
         model.load_state_dict(current)
+        model = model.to(device).train()
 
         # # Transfer learning
         # for i, (name, p) in enumerate(model.named_parameters()):
@@ -81,8 +82,8 @@ def main(opt):
         #         p.requires_grad = False
 
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
-        # optimizer.load_state_dict(checkpoint['optimizer'])
-        # start_epoch = checkpoint['epoch'] + 1
+        #optimizer.load_state_dict(checkpoint['optimizer'])
+        #start_epoch = checkpoint['epoch'] + 1
 
         del current, saved, checkpoint
     else:
@@ -93,13 +94,13 @@ def main(opt):
     # y = 0.001 * exp(-0.00921 * x)  # 1e-4 @ 250, 1e-5 @ 500
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99082, last_epoch=start_epoch - 1)
 
-    if cuda:
-        print('Running on %s\n%s' % (device.type, torch.cuda.get_device_properties(0) if cuda else ''))
-        if torch.cuda.device_count() > 1:
-            print('Using ', torch.cuda.device_count(), ' GPUs')
-            model = nn.DataParallel(model).to(device).train()
-        else:
-            model = model.to(device).train()
+    # if cuda:
+    #     print('Running on %s\n%s' % (device.type, torch.cuda.get_device_properties(0) if cuda else ''))
+    #     if torch.cuda.device_count() > 1:
+    #         print('Using ', torch.cuda.device_count(), ' GPUs')
+    #         model = nn.DataParallel(model).to(device).train()
+    #     else:
+    #         model = model.to(device).train()
 
     modelinfo(model)
     t0, t1 = time.time(), time.time()
