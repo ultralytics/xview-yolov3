@@ -165,7 +165,8 @@ class ListDataset():  # for training
             # img0 = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
 
             h, w, _ = img0.shape
-            padded_height = int(height * 4 / 3)  # 608 * 1.5 = 912
+            # padded_height = int(height * 4 / 3)  # 608 * 1.5 = 912
+            padded_height = int(height * 5 / 4)  # 608 * 1.5 = 912
             for j in range(8):
 
                 nL = 0
@@ -287,8 +288,10 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
 
     # Translation
     T = np.eye(3)
-    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] - height / 6  # x translation (pixels)
-    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] - height / 6  # y translation (pixels)
+    #T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] - height / 6  # x translation (pixels)
+    #T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] - height / 6  # y translation (pixels)
+    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] - height / 8  # x translation (pixels)
+    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] - height / 8  # y translation (pixels)
 
     # Shear
     S = np.eye(3)
