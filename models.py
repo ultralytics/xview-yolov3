@@ -168,8 +168,8 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = sum([len(x) for x in targets])
             if nM > 0:
-                wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # wC = self.class_weights[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
                 lx = MSELoss(x[mask], tx[mask])
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])

@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 35, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 32, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=0, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -43,7 +43,7 @@ def main(opt):
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_exp100_sizevar'
+        run_name = 'c60_e201_exp100_800'
         train_path = '../train_images'
 
     # Initiate model
@@ -60,7 +60,7 @@ def main(opt):
     resume_training = True
     start_epoch = 0
     if resume_training:
-        checkpoint = torch.load('../restart.pt')
+        checkpoint = torch.load('../fresh9_5_e201.pt')
 
         current = model.state_dict()
         # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
