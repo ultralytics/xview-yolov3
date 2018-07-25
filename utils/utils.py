@@ -520,7 +520,7 @@ def plotResults():
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('results.txt',
-              '/Users/glennjocher/Downloads/results (2).txt',
+              '/Users/glennjocher/Downloads/results (4).txt',
               '/Users/glennjocher/Downloads/results (3).txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
