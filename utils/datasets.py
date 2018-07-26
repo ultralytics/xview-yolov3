@@ -132,7 +132,7 @@ class ListDataset():  # for training
         labels_all = []
 
         # height = self.height
-        height = int(random.choice([19, 21, 23, 25, 27, 29, 31, 32]) * 32)
+        # height = int(random.choice([19, 21, 23, 25, 27, 29, 31, 32]) * 32)
         # print(height)
 
         for index, files_index in enumerate(range(ia, ib)):
