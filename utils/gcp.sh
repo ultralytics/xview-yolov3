@@ -21,7 +21,6 @@ sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo
 # mkdir yolo/checkpoints
 # cp c60.pt yolo/checkpoints/restart.pt
 # wget https://storage.googleapis.com/ultralytics/fresh9_5_e201.pt
-wget https://storage.googleapis.com/ultralytics/json.mat && mv json.mat yolo/json.mat
 # cp results.txt yolo/results.txt
 cd yolo
 python3 train.py -epochs 300 -img_size 608
