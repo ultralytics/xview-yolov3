@@ -11,24 +11,28 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8/',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/5.bmp',
                         help='path to images')
-    parser.add_argument('-output_folder', type=str, default='data/predictions', help='path to outputs')
+    parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
 else:  # gcp
-    parser.add_argument('-image_folder', type=str, default='../train_images3/', help='path to images')
-    parser.add_argument('-output_folder', type=str, default='../predictions', help='path to outputs')
+    # cp yolo/checkpoints/*.pt restart.pt && cd yolo && python3 detect.py -img_size 1024
+    parser.add_argument('-image_folder', type=str, default='../train_images/5.bmp', help='path to images')
+    parser.add_argument('-output_folder', type=str, default='../output', help='path to outputs')
     cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
+parser.add_argument('-nms_thres', type=float, default=0.5, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
+
+if cuda:
+    torch.cuda.empty_cache()
 
 
 # @profile
@@ -40,9 +44,15 @@ def detect(opt):
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # load model 1
+    if platform == 'darwin':
+        checkpoint = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
+        saved = checkpoint  # ['model']
+    else:
+        checkpoint = torch.load('../restart.pt', map_location='cuda:0' if cuda else 'cpu')
+        saved = checkpoint['model']
+
     model = Darknet(opt.config_path, opt.img_size, targets=targets_path)
     current = model.state_dict()
-    saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
     # 1. filter out unnecessary keys
     saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
@@ -50,20 +60,20 @@ def detect(opt):
     # 3. load the new state dict
     model.load_state_dict(current)
     model = model.to(device).eval()
-    del current, saved
+    del current, saved, checkpoint
 
-    # load model 2
-    model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path)
-    current = model2.state_dict()
-    saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-    # 1. filter out unnecessary keys
-    saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
-    # 2. overwrite entries in the existing state dict
-    current.update(saved)
-    # 3. load the new state dict
-    model2.load_state_dict(current)
-    model2 = model2.to(device).eval()
-    del current, saved
+    # # load model 2
+    # model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path)
+    # current = model2.state_dict()
+    # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
+    # # 1. filter out unnecessary keys
+    # saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
+    # # 2. overwrite entries in the existing state dict
+    # current.update(saved)
+    # # 3. load the new state dict
+    # model2.load_state_dict(current)
+    # model2 = model2.to(device).eval()
+    # del current, saved
 
     # Set dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
@@ -116,37 +126,37 @@ def detect(opt):
                         pred[:, 1] += y1
                         preds.append(pred.unsqueeze(0))
 
-                # backward scan
-                y2 = max(img.shape[1] - i * length, length)
-                y1 = y2 - length
-                x2 = max(img.shape[2] - j * length, length)
-                x1 = x2 - length
-                chip = img[:, y1:y2, x1:x2]
-
-                # plot
-                #import matplotlib.pyplot as plt
-                #plt.subplot(ni, nj, i * nj + j + 1).imshow(chip[1])
-                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
-
-                # Get detections
-                chip = torch.from_numpy(chip).unsqueeze(0).to(device)
-                with torch.no_grad():
-                    pred = model2(chip)
-                    pred = pred[pred[:, :, 4] > opt.conf_thres]
-
-                    # if (j < nj) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 2)]  # near left border
-                    # if (j > 0) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 606)]  # near right border
-                    # if (i < ni) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 2)]  # near top border
-                    # if (i > 0) & (len(pred) > 0):
-                    #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 606)]  # near bottom border
-
-                    if len(pred) > 0:
-                        pred[:, 0] += x1
-                        pred[:, 1] += y1
-                        preds.append(pred.unsqueeze(0))
+                # # backward scan
+                # y2 = max(img.shape[1] - i * length, length)
+                # y1 = y2 - length
+                # x2 = max(img.shape[2] - j * length, length)
+                # x1 = x2 - length
+                # chip = img[:, y1:y2, x1:x2]
+                #
+                # # plot
+                # #import matplotlib.pyplot as plt
+                # #plt.subplot(ni, nj, i * nj + j + 1).imshow(chip[1])
+                # # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                #
+                # # Get detections
+                # chip = torch.from_numpy(chip).unsqueeze(0).to(device)
+                # with torch.no_grad():
+                #     pred = model2(chip)
+                #     pred = pred[pred[:, :, 4] > opt.conf_thres]
+                #
+                #     # if (j < nj) & (len(pred) > 0):
+                #     #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 2)]  # near left border
+                #     # if (j > 0) & (len(pred) > 0):
+                #     #     pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 606)]  # near right border
+                #     # if (i < ni) & (len(pred) > 0):
+                #     #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 2)]  # near top border
+                #     # if (i > 0) & (len(pred) > 0):
+                #     #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 606)]  # near bottom border
+                #
+                #     if len(pred) > 0:
+                #         pred[:, 0] += x1
+                #         pred[:, 1] += y1
+                #         preds.append(pred.unsqueeze(0))
 
         if len(preds) > 0:
             detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
@@ -219,7 +229,7 @@ def detect(opt):
 
     if opt.plot_flag:
         from scoring import score
-        score.score('data/predictions/', '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+        score.score(opt.output_folder + '/', '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
 
 
 if __name__ == '__main__':

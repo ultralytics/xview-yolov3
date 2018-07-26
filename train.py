@@ -81,13 +81,13 @@ def main(opt):
         #     if p.shape[0] != 650:  # not YOLO layer
         #         p.requires_grad = False
 
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
         #optimizer.load_state_dict(checkpoint['optimizer'])
         #start_epoch = checkpoint['epoch'] + 1
 
         del current, saved, checkpoint
     else:
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
@@ -114,9 +114,9 @@ def main(opt):
         # if epoch % 25 == 0:
         #     scheduler.last_epoch = -1  # for cosine annealing, restart every 25 epochs
         # scheduler.step()
-        for g in optimizer.param_groups:
+        # for g in optimizer.param_groups:
             # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
-            g['lr'] = 0.0005 * (0.9772 ** epoch)  # 1/10 th every 100 epochs
+            # g['lr'] = 0.0005 * (0.9772 ** epoch)  # 1/10 th every 100 epochs
             # g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
             # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 
