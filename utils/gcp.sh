@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # restart
-cp yolo/checkpoints/*.pt restart.pt && cd yolo && python3 train.py -epochs 300 -img_size 1248
+cp yolo/checkpoints/*.pt restart.pt && cd yolo && python3 train.py -epochs 300 -img_size 1024
 
 # reattach screen
 # screen -r

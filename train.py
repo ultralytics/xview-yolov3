@@ -14,12 +14,10 @@ from utils.utils import *
 targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 32, help='size of each image dimension')
-parser.add_argument('-checkpoint_interval', type=int, default=0, help='interval between saving model weights')
-parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
+parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
 
@@ -38,33 +36,25 @@ def main(opt):
 
     # Configure run
     if platform == 'darwin':  # macos
-        # torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_exp100_feedback'
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
     else:
         torch.backends.cudnn.benchmark = True
-        run_name = 'c60_e201_exp100_800'
         train_path = '../train_images'
 
-    # Initiate model
+    # Initialize model
     model = Darknet(opt.config_path, opt.img_size, targets=targets_path)
 
     # Get dataloader
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
-    # Set optimizer
-    # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005*0, nesterov=True)
-    # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
-
     # reload saved optimizer state
-    resume_training = True
+    resume_training = False
     start_epoch = 0
     if resume_training:
-        checkpoint = torch.load('../restart.pt')
+        checkpoint = torch.load('checkpoint/latest.pt', map_location='cuda:0' if cuda else 'cpu')
 
         current = model.state_dict()
-        # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-        saved = checkpoint#['model']
+        saved = checkpoint['model']
         # 1. filter out unnecessary keys
         saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -81,13 +71,19 @@ def main(opt):
         #     if p.shape[0] != 650:  # not YOLO layer
         #         p.requires_grad = False
 
+        # Set optimizer
+        # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005 * 0, nesterov=True)
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
-        #optimizer.load_state_dict(checkpoint['optimizer'])
-        #start_epoch = checkpoint['epoch'] + 1
+        optimizer.load_state_dict(checkpoint['optimizer'])
+
+        start_epoch = checkpoint['epoch'] + 1
+        best_loss = checkpoint['best_loss']
 
         del current, saved, checkpoint
     else:
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
+        model = model.to(device).train()
+        best_loss = float('inf')
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
@@ -104,7 +100,6 @@ def main(opt):
 
     modelinfo(model)
     t0, t1 = time.time(), time.time()
-    best_loss = float('inf')
     print('%10s' * 16 % (
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
     for epoch in range(opt.epochs):
@@ -114,11 +109,12 @@ def main(opt):
         # if epoch % 25 == 0:
         #     scheduler.last_epoch = -1  # for cosine annealing, restart every 25 epochs
         # scheduler.step()
-        # for g in optimizer.param_groups:
-            # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
-            # g['lr'] = 0.0005 * (0.9772 ** epoch)  # 1/10 th every 100 epochs
-            # g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
-            # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
+        if epoch <= 100:
+            for g in optimizer.param_groups:
+                # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
+                g['lr'] = 0.001 * (0.9773 ** epoch)  # 1/10 th every 100 epochs
+                # g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
+                # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 
         ui = -1
         rloss = defaultdict(float)  # running loss
@@ -173,13 +169,22 @@ def main(opt):
         with open('results.txt', 'a') as file:
             file.write(s + '\n')
 
-        # Save if best epoch
+        # Save latest checkpoint
+        torch.save({'epoch': epoch,
+                    'best_loss': best_loss,
+                    'model': model.state_dict(),
+                    'optimizer': optimizer.state_dict()},
+                   'checkpoints/latest.pt')
+
+        # Save best checkpoint
         loss_per_target = rloss['loss'] / rloss['nGT']
-        if (epoch >= opt.checkpoint_interval) & (loss_per_target < best_loss):
+        if (epoch >= 0) & (loss_per_target < best_loss):
             best_loss = loss_per_target
-            opt.weights_path = '%s/%s.pt' % (opt.checkpoint_dir, run_name)  # best weight path
-            torch.save({'epoch': epoch, 'opt': opt, 'model': model.state_dict(), 'optimizer': optimizer.state_dict()},
-                       opt.weights_path)
+            torch.save({'epoch': epoch,
+                        'best_loss': best_loss,
+                        'model': model.state_dict(),
+                        'optimizer': optimizer.state_dict()},
+                       'checkpoints/best.pt')
 
     # Save final model
     dt = time.time() - t0

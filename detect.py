@@ -11,7 +11,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/5.bmp',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/1931.bmp',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -34,7 +34,6 @@ print(opt)
 if cuda:
     torch.cuda.empty_cache()
 
-
 # @profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
@@ -46,7 +45,7 @@ def detect(opt):
     # load model 1
     if platform == 'darwin':
         checkpoint = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-        saved = checkpoint  # ['model']
+        saved = checkpoint
     else:
         checkpoint = torch.load('../restart.pt', map_location='cuda:0' if cuda else 'cpu')
         saved = checkpoint['model']
