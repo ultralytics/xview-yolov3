@@ -21,7 +21,6 @@ else:  # gcp
     cuda = False
 
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-weights_path', type=str, default='checkpoints/fresh9_5_e201.pt', help='weights path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
@@ -40,18 +39,10 @@ def detect(opt):
     os.makedirs(opt.output_folder + '_img', exist_ok=True)
     device = torch.device('cuda:0' if cuda else 'cpu')
 
-    # Set up model
-    assert os.path.isfile(opt.weights_path), 'Weights file not found'
-    # if not os.path.isfile(opt.weights_path):
-    #     print('Network weights downloading. Please wait...\n')
-    #     os.system('wget -c https://storage.googleapis.com/ultralytics/xvw1.pt')
-    #     opt.weights_path = 'xvw1.pt'
-
     # load model 1
     model = Darknet(opt.config_path, opt.img_size, targets=targets_path)
     current = model.state_dict()
-    # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-    saved = torch.load('checkpoints/fresh9_5_e201.pt')
+    saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
     # 1. filter out unnecessary keys
     saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
@@ -64,8 +55,7 @@ def detect(opt):
     # load model 2
     model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path)
     current = model2.state_dict()
-    # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-    saved = torch.load('checkpoints/fresh9_5_e201.pt')
+    saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
     # 1. filter out unnecessary keys
     saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
@@ -159,7 +149,7 @@ def detect(opt):
                         preds.append(pred.unsqueeze(0))
 
         if len(preds) > 0:
-            detections = non_max_suppression2(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
+            detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, [])
             img_detections.extend(detections)
             imgs.extend(img_paths)
 
@@ -227,8 +217,9 @@ def detect(opt):
                 # Save generated image with detections
                 cv2.imwrite(results_img_path.replace('.bmp', '.jpg'), img)
 
-    from scoring import score
-    score.score('data/predictions/', '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+    if opt.plot_flag:
+        from scoring import score
+        score.score('data/predictions/', '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
 
 
 if __name__ == '__main__':
