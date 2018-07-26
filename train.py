@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=1, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 64, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 63, help='size of each image dimension')
 parser.add_argument('-checkpoint_interval', type=int, default=0, help='interval between saving model weights')
 parser.add_argument('-checkpoint_dir', type=str, default='checkpoints', help='directory for saving model checkpoints')
 opt = parser.parse_args()
@@ -53,7 +53,7 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # Set optimizer
-    # optimizer = torch.optim.SGD(model.parameters(), lr=.1, momentum=.98, weight_decay=0.0005, nesterov=True)
+    # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005*0, nesterov=True)
     # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
 
     # reload saved optimizer state
@@ -116,8 +116,8 @@ def main(opt):
         # scheduler.step()
         for g in optimizer.param_groups:
             # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
-            # g['lr'] = 0.0005 * (0.9772 ** epoch)  # 1/10 th every 100 epochs
-            g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
+            g['lr'] = 0.0005 * (0.9772 ** epoch)  # 1/10 th every 100 epochs
+            # g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
             # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 
         ui = -1
@@ -125,7 +125,7 @@ def main(opt):
         metrics = torch.zeros((3, 60))
         for i, (imgs, targets) in enumerate(dataloader):
 
-            n = 2  # number of pictures at a time
+            n = 4  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
