@@ -131,7 +131,7 @@ class ListDataset():  # for training
         img_all = []  # np.zeros((len(range(ia, ib)), self.height, self.height, 3), dtype=np.uint8)
         labels_all = []
 
-        # height = self.height
+        height = self.height
         # height = int(random.choice([19, 21, 23, 25, 27, 29, 31, 32]) * 32)
         # print(height)
 
