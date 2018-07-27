@@ -105,6 +105,8 @@ class ListDataset():  # for training
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img0 = cv2.imread(img_path)
+
+            img0 = np.concatenate((img0,cv2.cvtColor(img0, cv2.COLOR_BGR2HSV),cv2.cvtColor(img0, cv2.COLOR_BGR2YUV)),axis=2)
             if img0 is None:
                 continue
 
@@ -141,7 +143,7 @@ class ListDataset():  # for training
                         ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                         # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25) & (ar < 10)]
+                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25) & (ar < 20)]
                     else:
                         labels = np.array([], dtype=np.float32)
 
@@ -155,9 +157,9 @@ class ListDataset():  # for training
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                if random.random() > 0.9:
-                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.02, 0.02),
-                                                scale=(.9, 1.1), borderValue=[40.746, 49.697, 60.134])  # RGB
+                #if random.random() > 0.9:
+                #    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.02, 0.02),
+                #                                scale=(.9, 1.1), borderValue=[40.746, 49.697, 60.134])  # RGB
                 # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
@@ -196,8 +198,8 @@ class ListDataset():  # for training
         # Normalize
         img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        img_all -= self.rgb_mean
-        img_all /= self.rgb_std
+        #img_all -= self.rgb_mean
+        #img_all /= self.rgb_std
 
         return torch.from_numpy(img_all), labels_all
 
