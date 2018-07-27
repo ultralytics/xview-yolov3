@@ -54,7 +54,7 @@ class ImageFolder():  # for eval-only
         return self.nB  # number of batches
 
 
-class ListDataset_xview_crop():  # for training
+class ListDataset():  # for training
     def __init__(self, path, batch_size=1, img_size=608, targets_path=''):
         self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.nF = len(self.files)  # number of image files

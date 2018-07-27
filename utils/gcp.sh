@@ -9,7 +9,7 @@ mkdir drive
 google-drive-ocamlfuse drive
 
 
-sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608
+cd .. && sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608
 
 
 
