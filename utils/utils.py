@@ -153,7 +153,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     return inter_area / (b1_area + b2_area - inter_area + 1e-16)
 
 
-def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, requestPrecision):
+def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, anchor_grid_wh, requestPrecision):
     """
     returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
     """
@@ -185,9 +185,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
         # iou of targets-anchors (using wh only)
         box1 = t[:, 3:5] * nG
-
-        # box2 = anchor_grid_wh[:, gj, gi]
-        box2 = anchor_wh.unsqueeze(1).repeat(1, nTb, 1)
+        box2 = anchor_grid_wh[:, gj, gi]
         inter_area = torch.min(box1, box2).prod(2)
         iou_anch = inter_area / (gw * gh + box2.prod(2) - inter_area + 1e-16)
 
@@ -238,7 +236,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
-    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC
+    ap = 0
+    return tx, ty, tw, th, tconf == 1, tcls, TP, FP, FN, TC, ap
 
 
 # @profile
