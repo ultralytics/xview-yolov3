@@ -138,9 +138,10 @@ class ListDataset():  # for training
                         lw = labels[:, 3] - labels[:, 1]
                         lh = labels[:, 4] - labels[:, 2]
                         area = lw * lh
+                        ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                         # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25)]
+                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25) & (ar < 10)]
                     else:
                         labels = np.array([], dtype=np.float32)
 
@@ -155,7 +156,7 @@ class ListDataset():  # for training
 
                 # random affine
                 img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.05, 0.05),
-                                                scale=(.8, 1.2))
+                                            scale=(.8, 1.2))
 
                     # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                     # borderValue=[86.987, 107.586, 122.367])  # HSV
@@ -231,7 +232,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    a += np.random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    a += random.random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
@@ -243,8 +244,8 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
 
     # Shear
     S = np.eye(3)
-    S[0, 1] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
-    S[1, 0] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
+    S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
+    S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
     M = R @ T @ S
     imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR)
@@ -254,6 +255,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         if len(targets) > 0:
             n = targets.shape[0]
             points = targets[:, 1:5].copy()
+            area0 = (points[:, 2] - points[:, 0]) * (points[:, 3] - points[:, 1])
 
             # warp points
             xy = np.ones((n * 4, 3))
@@ -266,9 +268,13 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
             # reject warped points outside of image
-            # i = np.all((xy > 0) & (xy < img.shape[0]), 1)
             xy = np.clip(xy, 0, img.shape[0])
-            i = ((xy[:, 2] - xy[:, 0]) > 5) & ((xy[:, 3] - xy[:, 1]) > 5)  # width and height > 5 pixels
+            # i = ((xy[:, 2] - xy[:, 0]) > 4) & ((xy[:, 3] - xy[:, 1]) > 4)  # width and height > 5 pixels
+            w = xy[:, 2] - xy[:, 0]
+            h = xy[:, 3] - xy[:, 1]
+            area = w * h
+            ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
+            i = (w > 4) & (h > 4) & ((area / area0) > 0.2) & (ar < 10)
 
             targets = targets[i]
             targets[:, 1:5] = xy[i]
