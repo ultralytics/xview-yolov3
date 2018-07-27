@@ -520,7 +520,7 @@ def plotResults():
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('/Users/glennjocher/Downloads/results450.txt',
-              '/Users/glennjocher/Downloads/results (3).txt',
+              '/Users/glennjocher/Downloads/resultsCE_norelu_nobias.txt',
               '/Users/glennjocher/Downloads/results (4).txt',
               '/Users/glennjocher/Downloads/results (3).txt',
               '/Users/glennjocher/Downloads/results 2.txt'):
