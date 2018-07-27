@@ -142,7 +142,7 @@ class ListDataset():  # for training
                         ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                         # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.25) & (ar < 20)]
+                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.2) & (ar < 20)]
                     else:
                         labels = np.array([], dtype=np.float32)
 
@@ -156,9 +156,9 @@ class ListDataset():  # for training
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                #if random.random() > 0.9:
-                #    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.02, 0.02),
-                #                                scale=(.9, 1.1), borderValue=[40.746, 49.697, 60.134])  # RGB
+                if random.random() > 0.9:
+                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.02, 0.02),
+                                                scale=(.9, 1.1))  # RGB
                 # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
@@ -278,7 +278,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             h = xy[:, 3] - xy[:, 1]
             area = w * h
             ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
-            i = (w > 4) & (h > 4) & ((area / area0) > 0.2) & (ar < 10)
+            i = (w > 4) & (h > 4) & ((area / area0) > 0.2) & (ar < 20)
 
             targets = targets[i]
             targets[:, 1:5] = xy[i]

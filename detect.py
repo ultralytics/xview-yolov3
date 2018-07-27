@@ -11,7 +11,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/test_set/',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8/',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -26,7 +26,7 @@ parser.add_argument('-class_path', type=str, default='data/xview.names', help='p
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 51, help='size of each image dimension')
 parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
@@ -50,7 +50,7 @@ def detect(opt):
         checkpoint = torch.load('../restart.pt', map_location='cuda:0' if cuda else 'cpu')
         saved = checkpoint['model']
 
-    model = Darknet(opt.config_path, opt.img_size, targets=targets_path)
+    model = Darknet(opt.config_path, opt.img_size)
     current = model.state_dict()
     # 1. filter out unnecessary keys
     saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
