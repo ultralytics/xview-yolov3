@@ -52,7 +52,7 @@ def main(opt):
     start_epoch = 0
     best_loss = float('inf')
     if resume_training:
-        checkpoint = torch.load('checkpoint/latest.pt', map_location='cuda:0' if cuda else 'cpu')
+        checkpoint = torch.load('checkpoints/latest.pt', map_location='cuda:0' if cuda else 'cpu')
 
         current = model.state_dict()
         saved = checkpoint#['model']
