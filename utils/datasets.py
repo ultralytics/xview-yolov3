@@ -252,8 +252,8 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-   # M = R @ T @ S
-    M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
+    M = R @ T @ S
+    # M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
     imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR,
                               borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
 
