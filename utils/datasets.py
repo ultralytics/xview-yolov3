@@ -156,9 +156,9 @@ class ListDataset():  # for training
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                if random.random() > 0.9:
-                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.02, 0.02),
-                                                scale=(.9, 1.1))  # RGB
+                if random.random() > 0:
+                    img, labels = random_affine(img, targets=labels, degrees=(-20, 20), translate=(0.02, 0.02),
+                                                scale=(.8, 1.2))  # RGB
                 # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
