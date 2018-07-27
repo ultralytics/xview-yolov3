@@ -187,7 +187,7 @@ class YOLOLayer(nn.Module):
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.999
-            #FPe = torch.zeros(60)
+            FPe = torch.zeros(60)
             if i.sum() > 0:
                 FP_classes = torch.argmax(pred_cls[~mask][i], 1)
                 FPe = torch.from_numpy(np.bincount(FP_classes.numpy(), minlength=60)).float()
