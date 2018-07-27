@@ -162,11 +162,6 @@ class ListDataset():  # for training
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
                 # borderValue=[40.746, 49.697, 60.134])  # RGB
 
-                    # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
-                    # borderValue=[86.987, 107.586, 122.367])  # HSV
-                    # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
-                    # borderValue=[40.746, 49.697, 60.134])  # RGB
-
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
