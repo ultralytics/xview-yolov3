@@ -155,7 +155,7 @@ class ListDataset():  # for training
 
                 # random affine
                 img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.05, 0.05),
-                                                scale=(.9, 1.1))
+                                                scale=(.8, 1.2))
 
                     # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                     # borderValue=[86.987, 107.586, 122.367])  # HSV

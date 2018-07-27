@@ -177,7 +177,7 @@ def main(opt):
                    'checkpoints/latest.pt')
 
         # Save best checkpoint
-        loss_per_target = rloss['loss'] / rloss['nGT']
+        loss_per_target = (rloss['loss'] / rloss['nGT']).item()
         if (epoch >= 0) & (loss_per_target < best_loss):
             best_loss = loss_per_target
             torch.save({'epoch': epoch,
