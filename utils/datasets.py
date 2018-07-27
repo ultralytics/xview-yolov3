@@ -106,7 +106,8 @@ class ListDataset():  # for training
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img0 = cv2.imread(img_path)
 
-            img0 = np.concatenate((img0,cv2.cvtColor(img0, cv2.COLOR_BGR2HSV),cv2.cvtColor(img0, cv2.COLOR_BGR2YUV)),axis=2)
+            img0 = cv2.COLOR_BGR2YUV(img0)[:,:,0]
+
             if img0 is None:
                 continue
 

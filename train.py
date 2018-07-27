@@ -16,7 +16,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-config_path', type=str, default='cfg/c60_exp.cfg', help='cfg file path')
+parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
