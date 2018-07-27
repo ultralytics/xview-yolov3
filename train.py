@@ -48,13 +48,14 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     start_epoch = 0
+    best_loss = float('inf')
     if resume_training:
         checkpoint = torch.load('checkpoint/latest.pt', map_location='cuda:0' if cuda else 'cpu')
 
         current = model.state_dict()
-        saved = checkpoint['model']
+        saved = checkpoint#['model']
         # 1. filter out unnecessary keys
         saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
@@ -74,16 +75,15 @@ def main(opt):
         # Set optimizer
         # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005 * 0, nesterov=True)
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
-        optimizer.load_state_dict(checkpoint['optimizer'])
+        #optimizer.load_state_dict(checkpoint['optimizer'])
 
-        start_epoch = checkpoint['epoch'].item() + 1
-        best_loss = checkpoint['best_loss'].item()
+        #start_epoch = checkpoint['epoch'].item() + 1
+        #best_loss = checkpoint['best_loss'].item()
 
         del current, saved, checkpoint
     else:
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
         model = model.to(device).train()
-        best_loss = float('inf')
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
