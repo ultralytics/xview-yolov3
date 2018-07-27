@@ -73,7 +73,7 @@ def main(opt):
 
         # Set optimizer
         # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005 * 0, nesterov=True)
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0003)
         optimizer.load_state_dict(checkpoint['optimizer'])
 
         start_epoch = checkpoint['epoch'] + 1
@@ -81,7 +81,7 @@ def main(opt):
 
         del current, saved, checkpoint
     else:
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0003)
         model = model.to(device).train()
         best_loss = float('inf')
 
