@@ -96,14 +96,11 @@ class YOLOLayer(nn.Module):
 
         # Build anchor grids
         nG = int(self.img_dim / stride)
-        nB = 1  # batch_size set to 1
-        shape = [nB, nA, nG, nG]
-        self.grid_x = torch.arange(nG).repeat(nG, 1).repeat(nB * nA, 1, 1).view(shape).float()
-        self.grid_y = torch.arange(nG).repeat(nG, 1).t().repeat(nB * nA, 1, 1).view(shape).float()
+        self.grid_x = torch.arange(nG).repeat(nG, 1).view([1, 1, nG, nG]).float()
+        self.grid_y = torch.arange(nG).repeat(nG, 1).t().view([1, 1, nG, nG]).float()
         self.scaled_anchors = torch.FloatTensor([(a_w / stride, a_h / stride) for a_w, a_h in anchors])
-        self.anchor_w = self.scaled_anchors[:, 0:1].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_h = self.scaled_anchors[:, 1:2].repeat(nB, 1).repeat(1, 1, nG * nG).view(shape)
-        self.anchor_wh = torch.cat((self.anchor_w.unsqueeze(4), self.anchor_h.unsqueeze(4)), 4).squeeze(0)
+        self.anchor_w = self.scaled_anchors[:, 0:1].view((1, nA, 1, 1))
+        self.anchor_h = self.scaled_anchors[:, 1:2].view((1, nA, 1, 1))
 
     def forward(self, p, targets=None, requestPrecision=False):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
@@ -142,15 +139,16 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             if requestPrecision:
-                pred_boxes[..., 0] = x.data + self.grid_x - width / 2
-                pred_boxes[..., 1] = y.data + self.grid_y - height / 2
-                pred_boxes[..., 2] = x.data + self.grid_x + width / 2
-                pred_boxes[..., 3] = y.data + self.grid_y + height / 2
+                gx = self.grid_x[:, :, 0:nG, 0:nG]
+                gy = self.grid_y[:, :, 0:nG, 0:nG]
+                pred_boxes[..., 0] = x.data + gx - width / 2
+                pred_boxes[..., 1] = y.data + gy - height / 2
+                pred_boxes[..., 2] = x.data + gx + width / 2
+                pred_boxes[..., 3] = y.data + gy + height / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, ap = \
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
-                              self.anchor_wh, requestPrecision)
-
+                              requestPrecision)
             tcls = tcls[mask]
             if x.is_cuda:
                 tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
@@ -159,13 +157,12 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = FT([sum([len(x) for x in targets])])
             if nM > 0:
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
-                lx = 1 * MSELoss(x[mask], tx[mask])# * wC).sum()
-                ly = 1 * MSELoss(y[mask], ty[mask])# * wC).sum()
-                lw = 1 * MSELoss(w[mask], tw[mask])# * wC).sum()
-                lh = 1 * MSELoss(h[mask], th[mask])# * wC).sum()
-
+                # wC = weight[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
+                lx = 1 * MSELoss(x[mask], tx[mask])
+                ly = 1 * MSELoss(y[mask], ty[mask])
+                lw = 1 * MSELoss(w[mask], tw[mask])
+                lh = 1 * MSELoss(h[mask], th[mask])
 
                 lconf = BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
                 # lconf = nM * (BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float()) * wC).sum()
@@ -182,12 +179,12 @@ class YOLOLayer(nn.Module):
             i = F.sigmoid(pred_conf[~mask]) > 0.999
             FPe = torch.zeros(60)
             if i.sum() > 0:
-                FP_classes = torch.argmax(pred_cls[~mask][i],1)
+                FP_classes = torch.argmax(pred_cls[~mask][i], 1)
                 for c in FP_classes:
                     FPe[c] += 1
 
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
-                   ap, nGT, TP, FP, FPe, FN, TC
+                   nGT, TP, FP, FPe, FN, TC
 
         else:
             pred_boxes[..., 0] = x.data + self.grid_x
@@ -210,7 +207,7 @@ class Darknet(nn.Module):
         self.module_defs[0]['height'] = img_size
         self.hyperparams, self.module_list = create_modules(self.module_defs)
         self.img_size = img_size
-        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'AP', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC']
+        self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC']
 
     def forward(self, x, targets=None, requestPrecision=False):
         is_training = targets is not None
@@ -242,7 +239,7 @@ class Darknet(nn.Module):
         if is_training:
             self.losses['nGT'] /= 3
             self.losses['TC'] /= 3
-            metrics = torch.zeros((3,60))  # TP, FP, FN
+            metrics = torch.zeros((3, 60))  # TP, FP, FN
             metrics[1] = self.losses['FPe']
 
             ui = np.unique(self.losses['TC'])[1:]

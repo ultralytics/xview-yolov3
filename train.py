@@ -76,7 +76,7 @@ def main(opt):
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
         optimizer.load_state_dict(checkpoint['optimizer'])
 
-        start_epoch = checkpoint['epoch'] + 1
+        start_epoch = checkpoint['epoch'].item() + 1
         best_loss = checkpoint['best_loss'].item()
 
         del current, saved, checkpoint
