@@ -15,9 +15,7 @@ from utils.utils import xyxy2xywh
 class ImageFolder():  # for eval-only
     def __init__(self, path, batch_size=1, img_size=416):
         if os.path.isdir(path):
-            self.files = []
-            self.files.extend(sorted(glob.glob('%s/*.bmp' % path)))
-            self.files.extend(sorted(glob.glob('%s/*.tif' % path)))
+            self.files = sorted(glob.glob('%s/*.*' % path))
         elif os.path.isfile(path):
             self.files = [path]
 
@@ -31,16 +29,10 @@ class ImageFolder():  # for eval-only
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
         self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
 
-        # RGB normalization of YUV-equalized images clipped at 5
-        #self.rgb_mean = np.array([100.931, 90.863, 82.412], dtype=np.float32).reshape((3, 1, 1))
-        #self.rgb_std = np.array([52.022, 47.313, 44.845], dtype=np.float32).reshape((3, 1, 1))
-        #self.clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=3)
-
     def __iter__(self):
         self.count = -1
         return self
 
-    # @profile
     def __next__(self):
         self.count += 1
         if self.count == self.nB:
@@ -49,13 +41,6 @@ class ImageFolder():  # for eval-only
 
         # Add padding
         img = cv2.imread(img_path)  # BGR
-
-        # Y channel histogram equalization
-        #img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-        # equalize the histogram of the Y channel
-        #img_yuv[:, :, 0] = self.clahe.apply(img_yuv[:, :, 0])
-        # convert the YUV image back to RGB format
-        #img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
         # Normalize RGB
         img = img[:, :, ::-1].transpose(2, 0, 1)
@@ -69,8 +54,8 @@ class ImageFolder():  # for eval-only
         return self.nB  # number of batches
 
 
-class ListDataset():  # for training
-    def __init__(self, path, batch_size=1, img_size=608, targets_path=''):
+class ListDataset_xview_crop():  # for training
+    def __init__(self, path, batch_size=1, img_size=608):
         self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
@@ -78,7 +63,7 @@ class ListDataset():  # for training
         assert self.nB > 0, 'No images found in path %s' % path
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat(targets_path)
+        self.mat = scipy.io.loadmat('utils/targets_c60.mat')
         self.mat['id'] = self.mat['id'].squeeze()
 
         # RGB normalization values
@@ -169,10 +154,8 @@ class ListDataset():  # for training
 
                 # random affine
                 if random.random() > 0.9:
-                    img, labels = random_affine(img, height=self.height, targets=labels, degrees=(-10, 10),
-                                                translate=(0.05, 0.05),
-                                                scale=(.9, 1.1), shear=(0, 0),
-                                                borderValue=[40.746, 49.697, 60.134])  # RGB
+                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.05, 0.05),
+                                                scale=(.9, 1.1))
 
                     # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                     # borderValue=[86.987, 107.586, 122.367])  # HSV
@@ -241,15 +224,14 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2)
-                  , borderValue=(0, 0, 0)):
+def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    a += np.random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
@@ -261,12 +243,11 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
 
     # Shear
     S = np.eye(3)
-    S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
-    S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
+    S[0, 1] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
+    S[1, 0] = np.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
     M = R @ T @ S
-    imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
-                              borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
+    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR)
 
     # Return warped points also
     if targets is not None:
@@ -286,7 +267,7 @@ def random_affine(img, height=608, targets=None, degrees=(-10, 10), translate=(.
 
             # reject warped points outside of image
             # i = np.all((xy > 0) & (xy < img.shape[0]), 1)
-            xy = np.clip(xy, 0, height)
+            xy = np.clip(xy, 0, img.shape[0])
             i = ((xy[:, 2] - xy[:, 0]) > 5) & ((xy[:, 3] - xy[:, 1]) > 5)  # width and height > 5 pixels
 
             targets = targets[i]
