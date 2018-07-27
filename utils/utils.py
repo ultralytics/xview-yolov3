@@ -366,6 +366,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         # output[image_i] = a
     return output
 
+
 # @profile
 def non_max_suppression2(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model=None):
     prediction = prediction.cpu()
@@ -522,10 +523,10 @@ def plotResults():
     for f in ('/Users/glennjocher/Downloads/results450.txt',
               '/Users/glennjocher/Downloads/resultsCE_norelu_nobias.txt',
               '/Users/glennjocher/Downloads/results 2.txt',
-              '/Users/glennjocher/Downloads/results.txt'):
+              '/Users/glennjocher/Downloads/results 3.txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, 0:100], marker='.', label=f)
+            plt.plot(results[i, 0:30], marker='.', label=f)
             plt.title(s[i])
         plt.legend()
