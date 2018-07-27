@@ -203,8 +203,8 @@ class ListDataset():  # for training
 
                 # random affine
                 # if random.random() > 0.2:
-                img, labels = random_affine(img, height=height, targets=labels, degrees=(-20, 20),
-                                            translate=(.05, .05), scale=(.80, 1.20), shear=(-2, 2),
+                img, labels = random_affine(img, height=height, targets=labels, degrees=(-2, 2),
+                                            translate=(.05, .05), scale=(.980, 1.020), shear=(-2, 2),
                                             borderValue=[40.746, 49.697, 60.134])  # RGB
                 # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
