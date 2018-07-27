@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
 
@@ -109,10 +109,10 @@ def main(opt):
         # if epoch % 25 == 0:
         #     scheduler.last_epoch = -1  # for cosine annealing, restart every 25 epochs
         # scheduler.step()
-        if epoch <= 100:
-            for g in optimizer.param_groups:
+        # if epoch <= 100:
+            # for g in optimizer.param_groups:
                 # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
-                g['lr'] = 0.001 * (0.9773 ** epoch)  # 1/10 th every 100 epochs
+                # g['lr'] = 0.001 * (0.9773 ** epoch)  # 1/10 th every 100 epochs
                 # g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
                 # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 

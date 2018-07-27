@@ -3,14 +3,6 @@
 # restart
 cp yolo/checkpoints/*.pt restart.pt && cd yolo && python3 train.py -epochs 300 -img_size 1024
 
-# reattach screen
-# screen -r
-
-# detach from screen
-# ctrl + a + d
-
-cp yolo/checkpoints/c60.pt . && cp yolo/results.txt .
-
 # clone repo
 sudo rm -rf drive
 mkdir drive
@@ -23,7 +15,7 @@ sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo
 # wget https://storage.googleapis.com/ultralytics/fresh9_5_e201.pt
 # cp results.txt yolo/results.txt
 cd yolo
-python3 train.py -epochs 300 -img_size 1024
+python3 train.py -epochs 999 -img_size 800
 
 
 python3 detect.py -config_path 'cfg/c60.cfg' -weights_path 'checkpoints/fresh9.pt' -conf_thres 0.999
