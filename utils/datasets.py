@@ -104,7 +104,9 @@ class ListDataset():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp'
+            img0 = cv2.imread(img_path)
+            if img0 is None:
+                continue
 
             # load labels
             chip = img_path.rsplit('/')[-1]
@@ -117,7 +119,6 @@ class ListDataset():  # for training
                 lh0 = labels0[:, 4] - labels0[:, 2]
                 area0 = lw0 * lh0
 
-            img0 = cv2.imread(img_path)
             h, w, _ = img0.shape
             for j in range(8):
 
@@ -153,8 +154,7 @@ class ListDataset():  # for training
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                if random.random() > 0.9:
-                    img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.05, 0.05),
+                img, labels = random_affine(img, targets=labels, degrees=(-10, 10), translate=(0.05, 0.05),
                                                 scale=(.9, 1.1))
 
                     # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped

@@ -77,7 +77,7 @@ def main(opt):
         optimizer.load_state_dict(checkpoint['optimizer'])
 
         start_epoch = checkpoint['epoch'] + 1
-        best_loss = checkpoint['best_loss']
+        best_loss = checkpoint['best_loss'].item()
 
         del current, saved, checkpoint
     else:
