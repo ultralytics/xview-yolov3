@@ -55,7 +55,7 @@ class ImageFolder():  # for eval-only
 
 
 class ListDataset_xview_crop():  # for training
-    def __init__(self, path, batch_size=1, img_size=608):
+    def __init__(self, path, batch_size=1, img_size=608, targets_path=''):
         self.files = sorted(glob.glob('%s/*.bmp' % path))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
@@ -63,7 +63,7 @@ class ListDataset_xview_crop():  # for training
         assert self.nB > 0, 'No images found in path %s' % path
         self.height = img_size
         # load targets
-        self.mat = scipy.io.loadmat('utils/targets_c60.mat')
+        self.mat = scipy.io.loadmat(targets_path)
         self.mat['id'] = self.mat['id'].squeeze()
 
         # RGB normalization values
