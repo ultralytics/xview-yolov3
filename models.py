@@ -190,9 +190,9 @@ class YOLOLayer(nn.Module):
             FPe = torch.zeros(60)
             if i.sum() > 0:
                 FP_classes = torch.argmax(pred_cls[~mask][i], 1)
-                FPe = torch.from_numpy(np.bincount(FP_classes.numpy(), minlength=60)).float()
-                #for c in FP_classes:
-                #    FPe[c] += 1
+                # FPe = torch.from_numpy(np.bincount(FP_classes.numpy(), minlength=60)).float()
+                for c in FP_classes:
+                    FPe[c] += 1
 
             return loss, loss.item(), lx.item(), ly.item(), lw.item(), lh.item(), lconf.item(), lcls.item(), \
                    nGT, TP, FP, FPe, FN, TC
