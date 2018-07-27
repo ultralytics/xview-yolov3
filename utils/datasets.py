@@ -156,7 +156,11 @@ class ListDataset():  # for training
 
                 # random affine
                 img, labels = random_affine(img, targets=labels, degrees=(-20, 20), translate=(0.02, 0.02),
-                                            scale=(.8, 1.2))
+                                            scale=(.8, 1.2), borderValue=[40.746, 49.697, 60.134])  # RGB
+                # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
+                # borderValue=[86.987, 107.586, 122.367])  # HSV
+                # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
+                # borderValue=[40.746, 49.697, 60.134])  # RGB
 
                     # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                     # borderValue=[86.987, 107.586, 122.367])  # HSV
@@ -225,7 +229,8 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2)):
+def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2),
+                  borderValue=(0, 0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
 
@@ -247,8 +252,10 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-    M = R @ T @ S
-    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR)
+   # M = R @ T @ S
+    M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
+    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR,
+                              borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
 
     # Return warped points also
     if targets is not None:

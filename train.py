@@ -125,7 +125,7 @@ def main(opt):
             for j in range(int(len(imgs) / n)):
                 targets_j = targets[j * n:j * n + n]
                 nGT = sum([len(x) for x in targets_j])
-                if nGT < 1:
+                if nGT < 10:
                     continue
 
                 loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True)
@@ -177,7 +177,7 @@ def main(opt):
                    'checkpoints/latest.pt')
 
         # Save best checkpoint
-        loss_per_target = (rloss['loss'] / rloss['nGT']).item()
+        loss_per_target = rloss['loss'] / rloss['nGT']
         if (epoch >= 0) & (loss_per_target < best_loss):
             best_loss = loss_per_target
             torch.save({'epoch': epoch,
