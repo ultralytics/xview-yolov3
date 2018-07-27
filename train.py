@@ -42,7 +42,7 @@ def main(opt):
         train_path = '../train_images'
 
     # Initialize model
-    model = Darknet(opt.config_path, opt.img_size, targets=targets_path)
+    model = Darknet(opt.config_path, opt.img_size)
 
     # Get dataloader
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
