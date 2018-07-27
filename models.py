@@ -144,8 +144,10 @@ class YOLOLayer(nn.Module):
         if targets is not None:
             MSELoss = nn.MSELoss(size_average=False)
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
+            BCELoss = nn.BCELoss(size_average=False)
             # BCEWithLogitsLoss1_reduceFalse = nn.BCEWithLogitsLoss(reduce=False)
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
+            BCELoss0 = nn.BCELoss(size_average=False)
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=self.class_weights, size_average=True)
 
             if requestPrecision:
@@ -174,7 +176,8 @@ class YOLOLayer(nn.Module):
                 ly = MSELoss(y[mask], ty[mask])
                 lw = MSELoss(w[mask], tw[mask])
                 lh = MSELoss(h[mask], th[mask])
-                lconf = 1.0 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                # lconf = 1.5 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                lconf = 1.0 * BCELoss(F.sigmoid(pred_conf[mask]), mask[mask].float())
                 # lconf = 1.25 * nM * (BCEWithLogitsLoss1_reduceFalse(pred_conf[mask], mask[mask].float()) * wC).sum()
 
                 lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * nM * 0.1
@@ -182,7 +185,8 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf, nM = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), 1
 
-            lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            #lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            lconf += nM * BCELoss0(F.sigmoid(pred_conf[~mask]), mask[~mask].float())
             loss = lx + ly + lw + lh + lconf + lcls
 
             i = F.sigmoid(pred_conf[~mask]) > 0.999
@@ -258,13 +262,8 @@ class Darknet(nn.Module):
                 j = self.losses['TC'] == float(i)
                 metrics[0, i] = (self.losses['TP'][j] > 0).sum().float()  # TP
                 metrics[1, i] = (self.losses['FP'][j] > 0).sum().float()  # FP
+                metrics[1, i] += (self.losses['FP'][j] > 0).sum().float()  # FP
                 metrics[2, i] = (self.losses['FN'][j] == 3).sum().float()  # FN
-
-                # print('%20s: prec %g, rec %g' %
-                #      (xview_class2name(i),TP / (TP + FP + 1e-16), TP / (TP + FN + 1e-16)))
-
-                # self.losses['precision'] += (TP / (TP + FP + 1e-16)) / len(ui)
-                # self.losses['recall'] += (TP / (TP + FN + 1e-16)) / len(ui)
 
             self.losses['TP'] = metrics[0].sum()
             self.losses['FP'] = metrics[1].sum()
