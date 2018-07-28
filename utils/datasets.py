@@ -104,7 +104,7 @@ class ListDataset():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            img0 = cv2.imread(img_path)
+            img00 = cv2.imread(img_path)
 
             # if img0 is None:
             #    continue
@@ -114,11 +114,19 @@ class ListDataset():  # for training
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels0 = self.mat['targets'][i]
 
-            img0, labels0 = random_affine(img0, targets=labels0, degrees=(-20, 20), translate=(0.01, 0.01),
-                                          scale=(.8, 1.2))  # RGB
+            img0, labels0, M = random_affine(img00, targets=labels0, degrees=(-45, 45), translate=(0.01, 0.01),
+                                             scale=(.8, 1.2))  # RGB
+
+            # Pick 100 random points
+            r = np.ones((1000, 3))
+            border = self.height / 2 + 1
+            r[:, :2] = np.random.rand(1000, 2) * (np.array(img00.shape)[[1,0]] - border * 2) + border
+            r = (r @ M.T)[:, :2]
+            r = r[np.all(r > border, 1) & np.all(r < img0.shape[0] - border, 1)]
 
             # import matplotlib.pyplot as plt
             # plt.imshow(img0[:, :, ::-1])
+            # plt.plot(r[:, 0], r[:, 1], '.')
             # plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
 
             nL0 = len(labels0)
@@ -130,12 +138,20 @@ class ListDataset():  # for training
             h, w, _ = img0.shape
             for j in range(8):
 
+                r = np.ones((100, 3))
+                r[:, :2] = np.random.rand(100, 2) * (np.array(img00.shape)[[1, 0]] - border * 2) + border
+                r = (r @ M.T)[:, :2]
+                r = r[np.all(r > border, 1) & np.all(r < img0.shape[0] - border, 1)]
+
                 nL = 0
                 counter = 0
-                while (counter < 60) & (nL == 0):
+                while (counter < 50) & (nL == 0):
                     counter += 1
-                    padx = int(random.random() * (w - self.height))
-                    pady = int(random.random() * (h - self.height))
+                    # padx = int(random.random() * (w - self.height))
+                    # pady = int(random.random() * (h - self.height))
+
+                    padx = int(r[counter, 0] - self.height/2)
+                    pady = int(r[counter, 1] - self.height/2)
 
                     if nL0 > 0:
                         labels = labels0.copy()
@@ -167,9 +183,9 @@ class ListDataset():  # for training
                 # borderValue=[40.746, 49.697, 60.134])  # RGB
 
                 # plot
-                #import matplotlib.pyplot as plt
-                #plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
-                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                # import matplotlib.pyplot as plt
+                # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
@@ -235,7 +251,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
     border = 500
-    height = max(img.shape[0],img.shape[1]) + border * 2
+    height = max(img.shape[0], img.shape[1]) + border * 2
 
     # Rotation and Scale
     R = np.eye(3)
@@ -255,7 +271,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-     #M = R @ T @ S
+    # M = R @ T @ S
     M = S @ T @ R  # ORDER IS IMPORTANT HERE!!
     imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
                               borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
@@ -279,7 +295,6 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
 
             # reject warped points outside of image
             xy = np.clip(xy, 0, height)
-            # i = ((xy[:, 2] - xy[:, 0]) > 4) & ((xy[:, 3] - xy[:, 1]) > 4)  # width and height > 5 pixels
             w = xy[:, 2] - xy[:, 0]
             h = xy[:, 3] - xy[:, 1]
             area = w * h
@@ -289,7 +304,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             targets = targets[i]
             targets[:, 1:5] = xy[i]
 
-        return imw, targets
+        return imw, targets, M
     else:
         return imw
 
