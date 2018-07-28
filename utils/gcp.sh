@@ -8,7 +8,7 @@ sudo rm -rf drive
 mkdir drive
 google-drive-ocamlfuse drive
 
-cp fresh9_5_e201.pt yolo/checkpoints/latest.pt
+cp fresh9_5_e201.pt latest.pt
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608
 
 
