@@ -117,9 +117,9 @@ class ListDataset():  # for training
             img0, labels0 = random_affine(img0, targets=labels0, degrees=(-20, 20), translate=(0.05, 0.05),
                                           scale=(.8, 1.2))  # RGB
 
-            import matplotlib.pyplot as plt
-            plt.imshow(img0[:, :, ::-1])
-            plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
+            #import matplotlib.pyplot as plt
+            #plt.imshow(img0[:, :, ::-1])
+            #plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
 
             nL0 = len(labels0)
             if nL0 > 0:
