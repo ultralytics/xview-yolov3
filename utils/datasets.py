@@ -114,7 +114,7 @@ class ListDataset():  # for training
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels0 = self.mat['targets'][i]
 
-            img0, labels0, M = random_affine(img00, targets=labels0, degrees=(-45, 45), translate=(0.01, 0.01),
+            img0, labels0, M = random_affine(img00, targets=labels0, degrees=(-179, -179), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
 
             # Pick 100 random points
@@ -256,7 +256,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    # a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
