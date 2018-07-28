@@ -106,13 +106,20 @@ class ListDataset():  # for training
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img0 = cv2.imread(img_path)
 
-            if img0 is None:
-                continue
+            # if img0 is None:
+            #    continue
 
             # load labels
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels0 = self.mat['targets'][i]
+
+            img0, labels0 = random_affine(img0, targets=labels0, degrees=(-189, 189), translate=(0.05, 0.05),
+                                          scale=(.8, 1.2))  # RGB
+
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img0[:, :, ::-1])
+            # plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
 
             nL0 = len(labels0)
             if nL0 > 0:
@@ -125,7 +132,7 @@ class ListDataset():  # for training
 
                 nL = 0
                 counter = 0
-                while (counter < 10) & (nL == 0):
+                while (counter < 30) & (nL == 0):
                     counter += 1
                     padx = int(random.random() * (w - self.height))
                     pady = int(random.random() * (h - self.height))
@@ -142,7 +149,7 @@ class ListDataset():  # for training
                         ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                         # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.2) & (ar < 20)]
+                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.2) & (ar < 15)]
                     else:
                         labels = np.array([], dtype=np.float32)
 
@@ -156,9 +163,9 @@ class ListDataset():  # for training
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 # random affine
-                if random.random() > 0:
-                    img, labels = random_affine(img, targets=labels, degrees=(-20, 20), translate=(0.02, 0.02),
-                                                scale=(.8, 1.2))  # RGB
+                # if random.random() > 0:
+                #     img, labels = random_affine(img, targets=labels, degrees=(-20, 20), translate=(0.02, 0.02),
+                #                                 scale=(.8, 1.2))  # RGB
                 # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
                 # borderValue=[86.987, 107.586, 122.367])  # HSV
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
@@ -234,24 +241,24 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    # a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
 
     # Translation
     T = np.eye(3)
-    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0]  # x translation (pixels)
-    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1]  # y translation (pixels)
+    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] + 500  # x translation (pixels)
+    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] + 500  # y translation (pixels)
 
     # Shear
     S = np.eye(3)
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-    M = R @ T @ S
-    # M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
-    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1], img.shape[0]), flags=cv2.INTER_LINEAR,
+    # M = R @ T @ S
+    M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
+    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1] + 1000, img.shape[0] + 1000), flags=cv2.INTER_LINEAR,
                               borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
 
     # Return warped points also
@@ -278,7 +285,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             h = xy[:, 3] - xy[:, 1]
             area = w * h
             ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
-            i = (w > 4) & (h > 4) & ((area / area0) > 0.2) & (ar < 20)
+            i = (w > 4) & (h > 4) & ((area / area0) > 0.2) & (ar < 15)
 
             targets = targets[i]
             targets[:, 1:5] = xy[i]

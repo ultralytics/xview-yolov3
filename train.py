@@ -48,7 +48,7 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = False
+    resume_training = True
     start_epoch = 0
     best_loss = float('inf')
     if resume_training:
