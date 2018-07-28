@@ -16,7 +16,7 @@ if platform == 'darwin':  # macos
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
 else:  # gcp
-    # cp yolo/checkpoints/*.pt restart.pt && cd yolo && python3 detect.py -img_size 1024
+    # cp yolo/checkpoints/latest.pt . && cd yolo && python3 detect.py -img_size 1632
     parser.add_argument('-image_folder', type=str, default='../train_images/5.bmp', help='path to images')
     parser.add_argument('-output_folder', type=str, default='../output', help='path to outputs')
     cuda = False

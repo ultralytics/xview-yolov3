@@ -117,9 +117,9 @@ class ListDataset():  # for training
             img0, labels0 = random_affine(img0, targets=labels0, degrees=(-189, 189), translate=(0.05, 0.05),
                                           scale=(.8, 1.2))  # RGB
 
-            # import matplotlib.pyplot as plt
-            # plt.imshow(img0[:, :, ::-1])
-            # plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
+            import matplotlib.pyplot as plt
+            plt.imshow(img0[:, :, ::-1])
+            plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
 
             nL0 = len(labels0)
             if nL0 > 0:
@@ -132,7 +132,7 @@ class ListDataset():  # for training
 
                 nL = 0
                 counter = 0
-                while (counter < 30) & (nL == 0):
+                while (counter < 60) & (nL == 0):
                     counter += 1
                     padx = int(random.random() * (w - self.height))
                     pady = int(random.random() * (h - self.height))
@@ -157,11 +157,6 @@ class ListDataset():  # for training
 
                 img = img0[pady:pady + self.height, padx:padx + self.height]
 
-                # plot
-                # import matplotlib.pyplot as plt
-                # plt.subplot(4, 4, j + 1).imshow(img[:, :, ::-1])
-                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
-
                 # random affine
                 # if random.random() > 0:
                 #     img, labels = random_affine(img, targets=labels, degrees=(-20, 20), translate=(0.02, 0.02),
@@ -171,8 +166,10 @@ class ListDataset():  # for training
                 # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
                 # borderValue=[40.746, 49.697, 60.134])  # RGB
 
-                # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
-                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                # plot
+                #import matplotlib.pyplot as plt
+                #plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
+                #plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
@@ -237,6 +234,8 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
                   borderValue=(0, 0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
+    border = 500
+    height = max(img.shape[0],img.shape[1]) + border * 2
 
     # Rotation and Scale
     R = np.eye(3)
@@ -248,17 +247,18 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
 
     # Translation
     T = np.eye(3)
-    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] + 500  # x translation (pixels)
-    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] + 500  # y translation (pixels)
+    T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] + border  # x translation (pixels)
+    T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] + border  # y translation (pixels)
+    print(T[0, 2],T[1, 2])
 
     # Shear
     S = np.eye(3)
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-    # M = R @ T @ S
-    M = T @ R @ S  # ORDER IS IMPORTANT HERE!!
-    imw = cv2.warpPerspective(img, M, dsize=(img.shape[1] + 1000, img.shape[0] + 1000), flags=cv2.INTER_LINEAR,
+     #M = R @ T @ S
+    M = S @ T @ R  # ORDER IS IMPORTANT HERE!!
+    imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
                               borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
 
     # Return warped points also
@@ -279,7 +279,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
 
             # reject warped points outside of image
-            xy = np.clip(xy, 0, img.shape[0])
+            xy = np.clip(xy, 0, height)
             # i = ((xy[:, 2] - xy[:, 0]) > 4) & ((xy[:, 3] - xy[:, 1]) > 4)  # width and height > 5 pixels
             w = xy[:, 2] - xy[:, 0]
             h = xy[:, 3] - xy[:, 1]
