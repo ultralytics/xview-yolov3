@@ -114,12 +114,12 @@ class ListDataset():  # for training
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels0 = self.mat['targets'][i]
 
-            img0, labels0 = random_affine(img0, targets=labels0, degrees=(-20, 20), translate=(0.05, 0.05),
+            img0, labels0 = random_affine(img0, targets=labels0, degrees=(-20, 20), translate=(0.01, 0.01),
                                           scale=(.8, 1.2))  # RGB
 
-            #import matplotlib.pyplot as plt
-            #plt.imshow(img0[:, :, ::-1])
-            #plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img0[:, :, ::-1])
+            # plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
 
             nL0 = len(labels0)
             if nL0 > 0:
@@ -249,7 +249,6 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     T = np.eye(3)
     T[0, 2] = (random.random() * 2 - 1) * translate[0] * img.shape[0] + border  # x translation (pixels)
     T[1, 2] = (random.random() * 2 - 1) * translate[1] * img.shape[1] + border  # y translation (pixels)
-    print(T[0, 2],T[1, 2])
 
     # Shear
     S = np.eye(3)
