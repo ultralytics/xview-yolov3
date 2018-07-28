@@ -138,8 +138,8 @@ class ListDataset():  # for training
             h, w, _ = img0.shape
             for j in range(8):
 
-                r = np.ones((50, 3))
-                r[:, :2] = np.random.rand(50, 2) * (np.array(img00.shape)[[1, 0]] - border * 2) + border
+                r = np.ones((100, 3))
+                r[:, :2] = np.random.rand(100, 2) * (np.array(img00.shape)[[1, 0]] - border * 2) + border
                 r = (r @ M.T)[:, :2]
                 r = r[np.all(r > border, 1) & np.all(r < img0.shape[0] - border, 1)]
 
