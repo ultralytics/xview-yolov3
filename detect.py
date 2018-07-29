@@ -21,7 +21,7 @@ else:  # gcp
     parser.add_argument('-output_folder', type=str, default='../output', help='path to outputs')
     cuda = False
 
-parser.add_argument('-config_path', type=str, default='cfg/c60.cfg', help='cfg file path')
+parser.add_argument('-cfg', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
@@ -33,6 +33,7 @@ print(opt)
 
 if cuda:
     torch.cuda.empty_cache()
+
 
 # @profile
 def detect(opt):
@@ -50,7 +51,7 @@ def detect(opt):
         checkpoint = torch.load('../restart.pt', map_location='cuda:0' if cuda else 'cpu')
         saved = checkpoint['model']
 
-    model = Darknet(opt.config_path, opt.img_size)
+    model = Darknet(opt.cfg, opt.img_size)
     current = model.state_dict()
     # 1. filter out unnecessary keys
     saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
@@ -62,7 +63,7 @@ def detect(opt):
     del current, saved, checkpoint
 
     # # load model 2
-    # model2 = Darknet(opt.config_path, opt.img_size, targets=targets_path)
+    # model2 = Darknet(opt.cfg, opt.img_size, targets=targets_path)
     # current = model2.state_dict()
     # saved = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
     # # 1. filter out unnecessary keys
@@ -95,7 +96,7 @@ def detect(opt):
             print('row %g/%g: ' % (i, ni), end='')
 
             # for j in range(nj):  # single scan
-            for j in range(nj): # for j in range(nj if i==0 else nj - 1):
+            for j in range(nj):  # for j in range(nj if i==0 else nj - 1):
                 print('%g ' % j, end='', flush=True)
 
                 # forward scan
