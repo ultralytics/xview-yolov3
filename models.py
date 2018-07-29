@@ -92,7 +92,7 @@ class YOLOLayer(nn.Module):
         elif anchor_idxs[0] == nA:  # 3
             stride = 16
         else:
-            stride = 8
+            stride = 4
 
         # Build anchor grids
         nG = int(self.img_dim / stride)
