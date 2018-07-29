@@ -145,7 +145,7 @@ class ListDataset():  # for training
                 r = (r @ M.T)[:, :2]
                 r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
 
-                counter = 0
+                padx, pady, counter = 0, 0, 0
                 labels = np.array([], dtype=np.float32)
                 while (counter < len(r)) & (len(labels) == 0):
                     padx = int(r[counter, 0] - height / 2)
@@ -191,11 +191,11 @@ class ListDataset():  # for training
                     # remap xview classes 11-94 to 0-61
                     # labels[:, 0] = xview_classes2indices(labels[:, 0])
 
-                # random lr flip
-                if random.random() > 0.5:
-                    img = np.fliplr(img)
-                    if nL > 0:
-                        labels[:, 1] = 1 - labels[:, 1]
+                # # random lr flip
+                # if random.random() > 0.5:
+                #     img = np.fliplr(img)
+                #     if nL > 0:
+                #         labels[:, 1] = 1 - labels[:, 1]
 
                 # random ud flip
                 if random.random() > 0.5:
