@@ -104,7 +104,7 @@ class ListDataset():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            img00 = cv2.imread(img_path)
+            img_orig = cv2.imread(img_path)
 
             # if img0 is None:
             #    continue
@@ -114,15 +114,8 @@ class ListDataset():  # for training
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels0 = self.mat['targets'][i]
 
-            img0, labels0, M = random_affine(img00, targets=labels0, degrees=(-179, -179), translate=(0.01, 0.01),
+            img0, labels0, M = random_affine(img_orig, targets=labels0, degrees=(-179, -179), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
-
-            # Pick 100 random points
-            r = np.ones((1000, 3))
-            border = self.height / 2 + 1
-            r[:, :2] = np.random.rand(1000, 2) * (np.array(img00.shape)[[1,0]] - border * 2) + border
-            r = (r @ M.T)[:, :2]
-            r = r[np.all(r > border, 1) & np.all(r < img0.shape[0] - border, 1)]
 
             # import matplotlib.pyplot as plt
             # plt.imshow(img0[:, :, ::-1])
@@ -136,8 +129,10 @@ class ListDataset():  # for training
                 area0 = lw0 * lh0
 
             h, w, _ = img0.shape
+            border = self.height / 2 + 1
             for j in range(8):
 
+                # Pick 100 random points inside image
                 r = np.ones((100, 3))
                 r[:, :2] = np.random.rand(100, 2) * (np.array(img00.shape)[[1, 0]] - border * 2) + border
                 r = (r @ M.T)[:, :2]
@@ -145,7 +140,7 @@ class ListDataset():  # for training
 
                 nL = 0
                 counter = 0
-                while (counter < 50) & (nL == 0):
+                while (counter < len(r)) & (nL == 0):
                     counter += 1
                     # padx = int(random.random() * (w - self.height))
                     # pady = int(random.random() * (h - self.height))
