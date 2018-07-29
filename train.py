@@ -18,6 +18,7 @@ parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('-resume', default=False, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
 
@@ -49,10 +50,9 @@ def main(opt):
     dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
-    resume_training = False
     start_epoch = 0
     best_loss = float('inf')
-    if resume_training:
+    if opt.resume:
         checkpoint = torch.load('checkpoints/latest.pt', map_location='cuda:0' if cuda else 'cpu')
 
         # current = model.state_dict()
