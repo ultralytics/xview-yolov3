@@ -100,14 +100,14 @@ class ListDataset():  # for training
         ia = self.count * self.batch_size
         ib = min((self.count + 1) * self.batch_size, self.nF)
 
-        img_all = []  # np.zeros((len(range(ia, ib)), self.height, self.height, 3), dtype=np.uint8)
+        height = self.height
+        # height = random.choice([15, 17, 19, 21]) * 32
+
+        img_all = []
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img_orig = cv2.imread(img_path)
-
-            # if img0 is None:
-            #    continue
 
             # load labels
             chip = img_path.rsplit('/')[-1]
@@ -124,7 +124,7 @@ class ListDataset():  # for training
                 area0 = lw0 * lh0
 
             h, w, _ = img0.shape
-            border = self.height / 2 + 1
+            border = height / 2 + 1
             for j in range(8):
 
                 # Pick 100 random points inside image
@@ -136,17 +136,17 @@ class ListDataset():  # for training
                 nL = 0
                 counter = 0
                 while (counter < len(r)) & (nL == 0):
-                    # padx = int(random.random() * (w - self.height))
-                    # pady = int(random.random() * (h - self.height))
+                    # padx = int(random.random() * (w - height))
+                    # pady = int(random.random() * (h - height))
 
-                    padx = int(r[counter, 0] - self.height/2)
-                    pady = int(r[counter, 1] - self.height/2)
+                    padx = int(r[counter, 0] - height / 2)
+                    pady = int(r[counter, 1] - height / 2)
 
                     if nL0 > 0:
                         labels = labels0.copy()
                         labels[:, [1, 3]] -= padx
                         labels[:, [2, 4]] -= pady
-                        labels[:, 1:5] = np.clip(labels[:, 1:5], 0, self.height)
+                        labels[:, 1:5] = np.clip(labels[:, 1:5], 0, height)
 
                         lw = labels[:, 3] - labels[:, 1]
                         lh = labels[:, 4] - labels[:, 2]
@@ -161,7 +161,7 @@ class ListDataset():  # for training
 
                     nL = len(labels)
 
-                img = img0[pady:pady + self.height, padx:padx + self.height]
+                img = img0[pady:pady + height, padx:padx + height]
 
                 # random affine
                 # if random.random() > 0:
@@ -180,7 +180,7 @@ class ListDataset():  # for training
                 nL = len(labels)
                 if nL > 0:
                     # convert labels to xywh
-                    labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / self.height
+                    labels[:, 1:5] = xyxy2xywh(labels[:, 1:5].copy()) / height
                     # remap xview classes 11-94 to 0-61
                     # labels[:, 0] = xview_classes2indices(labels[:, 0])
 

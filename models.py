@@ -92,7 +92,7 @@ class YOLOLayer(nn.Module):
         elif anchor_idxs[0] == nA:  # 3
             stride = 16
         else:
-            stride = 4
+            stride = 8
 
         # Build anchor grids
         nG = int(self.img_dim / stride)
@@ -139,8 +139,8 @@ class YOLOLayer(nn.Module):
         # Training
         if targets is not None:
             if requestPrecision:
-                gx = self.grid_x[:, :, 0:nG, 0:nG]
-                gy = self.grid_y[:, :, 0:nG, 0:nG]
+                gx = self.grid_x[:, :, :nG, :nG]
+                gy = self.grid_y[:, :, :nG, :nG]
                 pred_boxes[..., 0] = x.data + gx - width / 2
                 pred_boxes[..., 1] = y.data + gy - height / 2
                 pred_boxes[..., 2] = x.data + gx + width / 2

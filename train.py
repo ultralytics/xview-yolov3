@@ -16,7 +16,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-cfg', type=str, default='cfg/c60_exp1.cfg', help='cfg file path')
+parser.add_argument('-cfg', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 opt = parser.parse_args()
 print(opt)
@@ -53,16 +53,18 @@ def main(opt):
     start_epoch = 0
     best_loss = float('inf')
     if resume_training:
-        checkpoint = torch.load('../latest.pt', map_location='cuda:0' if cuda else 'cpu')
+        checkpoint = torch.load('checkpoints/latest.pt', map_location='cuda:0' if cuda else 'cpu')
 
-        current = model.state_dict()
-        saved = checkpoint#['model']
+        # current = model.state_dict()
+        # saved = checkpoint['model']
         # 1. filter out unnecessary keys
-        saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
+        # saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
         # 2. overwrite entries in the existing state dict
-        current.update(saved)
+        # current.update(saved)
         # 3. load the new state dict
-        model.load_state_dict(current)
+        # model.load_state_dict(current)
+
+        model.load_state_dict(checkpoint['model'])
         model = model.to(device).train()
 
         # # Transfer learning
@@ -76,12 +78,12 @@ def main(opt):
         # Set optimizer
         # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005 * 0, nesterov=True)
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
-        #optimizer.load_state_dict(checkpoint['optimizer'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
-        #start_epoch = checkpoint['epoch'].item() + 1
-        #best_loss = checkpoint['best_loss'].item()
+        start_epoch = checkpoint['epoch'].item() + 1
+        best_loss = checkpoint['best_loss'].item()
 
-        del current, saved, checkpoint
+        del checkpoint  # current, saved
     else:
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
         model = model.to(device).train()
@@ -111,11 +113,11 @@ def main(opt):
         #     scheduler.last_epoch = -1  # for cosine annealing, restart every 25 epochs
         # scheduler.step()
         # if epoch <= 100:
-            # for g in optimizer.param_groups:
-                # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
-                # g['lr'] = 0.001 * (0.9773 ** epoch)  # 1/10 th every 100 epochs
-                # g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
-                # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
+        # for g in optimizer.param_groups:
+        # g['lr'] = 0.0005 * (0.992 ** epoch)  # 1/10 th every 250 epochs
+        # g['lr'] = 0.001 * (0.9773 ** epoch)  # 1/10 th every 100 epochs
+        # g['lr'] = 0.0005 * (0.955 ** epoch)  # 1/10 th every 50 epochs
+        # g['lr'] = 0.0005 * (0.926 ** epoch)  # 1/10 th every 30 epochs
 
         ui = -1
         rloss = defaultdict(float)  # running loss
