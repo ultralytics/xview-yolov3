@@ -117,11 +117,6 @@ class ListDataset():  # for training
             img0, labels0, M = random_affine(img_orig, targets=labels0, degrees=(-179, -179), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
 
-            # import matplotlib.pyplot as plt
-            # plt.imshow(img0[:, :, ::-1])
-            # plt.plot(r[:, 0], r[:, 1], '.')
-            # plt.plot(labels0[:, [1, 3, 3, 1, 1]].T, labels0[:, [2, 2, 4, 4, 2]].T, '.-')
-
             nL0 = len(labels0)
             if nL0 > 0:
                 lw0 = labels0[:, 3] - labels0[:, 1]
@@ -160,7 +155,7 @@ class ListDataset():  # for training
                         ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                         # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & ((area / area0) > 0.2) & (ar < 15)]
+                        labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
                     else:
                         labels = np.array([], dtype=np.float32)
 
@@ -294,7 +289,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             h = xy[:, 3] - xy[:, 1]
             area = w * h
             ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
-            i = (w > 4) & (h > 4) & ((area / area0) > 0.2) & (ar < 15)
+            i = (w > 4) & (h > 4) & (area / area0 > 0.2) & (ar < 15)
 
             targets = targets[i]
             targets[:, 1:5] = xy[i]
