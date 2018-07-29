@@ -16,9 +16,9 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-cfg', type=str, default='cfg/c60_exp1.cfg', help='cfg file path')
+parser.add_argument('-cfg', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-resume', default=False, help='resume training flag')
+parser.add_argument('-resume', default=True, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
 
@@ -80,8 +80,8 @@ def main(opt):
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
         optimizer.load_state_dict(checkpoint['optimizer'])
 
-        start_epoch = checkpoint['epoch'].item() + 1
-        best_loss = checkpoint['best_loss'].item()
+        start_epoch = checkpoint['epoch'] + 1
+        best_loss = checkpoint['best_loss']
 
         del checkpoint  # current, saved
     else:
