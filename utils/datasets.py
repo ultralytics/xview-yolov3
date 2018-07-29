@@ -145,18 +145,18 @@ class ListDataset():  # for training
                 r = (r @ M.T)[:, :2]
                 r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
 
-                padx, pady, counter = 0, 0, 0
+                pad_x, pad_y, counter = 0, 0, 0
                 labels = np.array([], dtype=np.float32)
                 while (counter < len(r)) & (len(labels) == 0):
-                    padx = int(r[counter, 0] - height / 2)
-                    pady = int(r[counter, 1] - height / 2)
+                    pad_x = int(r[counter, 0] - height / 2)
+                    pad_y = int(r[counter, 1] - height / 2)
 
                     if nL1 == 0:
                         break
 
                     labels = labels1.copy()
-                    labels[:, [1, 3]] -= padx
-                    labels[:, [2, 4]] -= pady
+                    labels[:, [1, 3]] -= pad_x
+                    labels[:, [2, 4]] -= pad_y
                     labels[:, 1:5] = np.clip(labels[:, 1:5], 0, height)
 
                     lw = labels[:, 3] - labels[:, 1]
@@ -168,7 +168,7 @@ class ListDataset():  # for training
                     labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
                     counter += 1
 
-                img = img1[pady:pady + height, padx:padx + height]
+                img = img1[pad_y:pad_y + height, pad_x:pad_x + height]
 
                 # random affine
                 # if random.random() > 0:
