@@ -136,7 +136,6 @@ class ListDataset():  # for training
                 nL = 0
                 counter = 0
                 while (counter < len(r)) & (nL == 0):
-                    counter += 1
                     # padx = int(random.random() * (w - self.height))
                     # pady = int(random.random() * (h - self.height))
 
@@ -156,6 +155,7 @@ class ListDataset():  # for training
 
                         # objects must have width and height > 4 pixels
                         labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
+                        counter += 1
                     else:
                         labels = np.array([], dtype=np.float32)
 
