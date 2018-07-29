@@ -66,6 +66,8 @@ class ListDataset():  # for training
         self.mat = scipy.io.loadmat(targets_path)
         self.mat['id'] = self.mat['id'].squeeze()
 
+        self.clahe = cv2.createCLAHE(tileGridSize=(16, 16), clipLimit=2)
+
         # RGB normalization values
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
         self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
@@ -108,6 +110,16 @@ class ListDataset():  # for training
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img_orig = cv2.imread(img_path)
+
+            # import matplotlib.pyplot as plt
+            # plt.subplot(1, 2, 1).imshow(img_orig[:, :, ::-1])
+
+            # img_hsv = cv2.cvtColor(img_orig, cv2.COLOR_BGR2HSV)
+            # # equalize the histogram of the Y channel
+            # img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
+            # # convert the YUV image back to RGB format
+            # img_orig = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+            # # plt.subplot(1, 2, 2).imshow(img_orig[:, :, ::-1])
 
             # load labels
             chip = img_path.rsplit('/')[-1]
@@ -326,7 +338,7 @@ def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_yu
     files = sorted(glob.glob('%s/*.bmp' % p))
     nF = len(files)
     stats = np.zeros((nF, 6))
-    # clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=5)
+    # clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=2)
     for i, f in enumerate(files):
         print('%g/%g' % (i, len(files)))
         img = cv2.imread(f)
