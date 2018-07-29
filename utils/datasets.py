@@ -134,7 +134,7 @@ class ListDataset():  # for training
 
                 # Pick 100 random points inside image
                 r = np.ones((100, 3))
-                r[:, :2] = np.random.rand(100, 2) * (np.array(img00.shape)[[1, 0]] - border * 2) + border
+                r[:, :2] = np.random.rand(100, 2) * (np.array(img_orig.shape)[[1, 0]] - border * 2) + border
                 r = (r @ M.T)[:, :2]
                 r = r[np.all(r > border, 1) & np.all(r < img0.shape[0] - border, 1)]
 
