@@ -109,71 +109,66 @@ class ListDataset():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            img_orig = cv2.imread(img_path)
+            img0 = cv2.imread(img_path)
+            if img0 is None:
+                continue
 
             # import matplotlib.pyplot as plt
-            # plt.subplot(1, 2, 1).imshow(img_orig[:, :, ::-1])
+            # plt.subplot(1, 2, 1).imshow(img0[:, :, ::-1])
 
-            # img_hsv = cv2.cvtColor(img_orig, cv2.COLOR_BGR2HSV)
+            # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
             # # equalize the histogram of the Y channel
             # img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
             # # convert the YUV image back to RGB format
-            # img_orig = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
-            # # plt.subplot(1, 2, 2).imshow(img_orig[:, :, ::-1])
+            # img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+            # # plt.subplot(1, 2, 2).imshow(img0[:, :, ::-1])
 
             # load labels
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
-            labels0 = self.mat['targets'][i]
+            labels1 = self.mat['targets'][i]
 
-            img0, labels0, M = random_affine(img_orig, targets=labels0, degrees=(-179, -179), translate=(0.01, 0.01),
+            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-179, -179), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
 
-            nL0 = len(labels0)
-            if nL0 > 0:
-                lw0 = labels0[:, 3] - labels0[:, 1]
-                lh0 = labels0[:, 4] - labels0[:, 2]
-                area0 = lw0 * lh0
+            nL1 = len(labels1)
+            if nL1 > 0:
+                area0 = (labels1[:, 3] - labels1[:, 1]) * (labels1[:, 4] - labels1[:, 2])
 
-            h, w, _ = img0.shape
+            h, w, _ = img1.shape
             border = height / 2 + 1
             for j in range(8):
 
                 # Pick 100 random points inside image
                 r = np.ones((100, 3))
-                r[:, :2] = np.random.rand(100, 2) * (np.array(img_orig.shape)[[1, 0]] - border * 2) + border
+                r[:, :2] = np.random.rand(100, 2) * (np.array(img0.shape)[[1, 0]] - border * 2) + border
                 r = (r @ M.T)[:, :2]
-                r = r[np.all(r > border, 1) & np.all(r < img0.shape[0] - border, 1)]
+                r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
 
-                nL = 0
                 counter = 0
-                while (counter < len(r)) & (nL == 0):
-                    # padx = int(random.random() * (w - height))
-                    # pady = int(random.random() * (h - height))
-
+                labels = np.array([], dtype=np.float32)
+                while (counter < len(r)) & (len(labels) == 0):
                     padx = int(r[counter, 0] - height / 2)
                     pady = int(r[counter, 1] - height / 2)
 
-                    if nL0 > 0:
-                        labels = labels0.copy()
-                        labels[:, [1, 3]] -= padx
-                        labels[:, [2, 4]] -= pady
-                        labels[:, 1:5] = np.clip(labels[:, 1:5], 0, height)
+                    if nL1 == 0:
+                        break
 
-                        lw = labels[:, 3] - labels[:, 1]
-                        lh = labels[:, 4] - labels[:, 2]
-                        area = lw * lh
-                        ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
+                    labels = labels1.copy()
+                    labels[:, [1, 3]] -= padx
+                    labels[:, [2, 4]] -= pady
+                    labels[:, 1:5] = np.clip(labels[:, 1:5], 0, height)
 
-                        # objects must have width and height > 4 pixels
-                        labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
-                        counter += 1
-                    else:
-                        labels = np.array([], dtype=np.float32)
+                    lw = labels[:, 3] - labels[:, 1]
+                    lh = labels[:, 4] - labels[:, 2]
+                    area = lw * lh
+                    ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
-                    nL = len(labels)
+                    # objects must have width and height > 4 pixels
+                    labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
+                    counter += 1
 
-                img = img0[pady:pady + height, padx:padx + height]
+                img = img1[pady:pady + height, padx:padx + height]
 
                 # random affine
                 # if random.random() > 0:

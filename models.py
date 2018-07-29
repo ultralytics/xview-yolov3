@@ -92,7 +92,7 @@ class YOLOLayer(nn.Module):
         elif anchor_idxs[0] == nA:  # 3
             stride = 16
         else:
-            stride = 4
+            stride = 8
 
         # Build anchor grids
         nG = int(self.img_dim / stride)
@@ -124,10 +124,10 @@ class YOLOLayer(nn.Module):
         p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
 
         # Get outputs
-        x = F.sigmoid(p[..., 0])  # Center x
-        y = F.sigmoid(p[..., 1])  # Center y
-        w = F.sigmoid(p[..., 2])  # Width
-        h = F.sigmoid(p[..., 3])  # Height
+        x = torch.sigmoid(p[..., 0])  # Center x
+        y = torch.sigmoid(p[..., 1])  # Center y
+        w = torch.sigmoid(p[..., 2])  # Width
+        h = torch.sigmoid(p[..., 3])  # Height
         width = ((w.data * 2) ** 2) * self.anchor_w
         height = ((h.data * 2) ** 2) * self.anchor_h
 
@@ -173,7 +173,7 @@ class YOLOLayer(nn.Module):
             lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
 
             loss = lx + ly + lw + lh + lconf + lcls
-            i = F.sigmoid(pred_conf[~mask]) > 0.999
+            i = torch.sigmoid(pred_conf[~mask]) > 0.999
             FPe = torch.zeros(60)
             if i.sum() > 0:
                 FP_classes = torch.argmax(pred_cls[~mask][i], 1)
@@ -191,7 +191,7 @@ class YOLOLayer(nn.Module):
 
             # If not in training phase return predictions
             output = torch.cat((pred_boxes.view(bs, -1, 4) * stride,
-                                F.sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, self.nC)), -1)
+                                torch.sigmoid(pred_conf.view(bs, -1, 1)), pred_cls.view(bs, -1, self.nC)), -1)
             return output.data
 
 
