@@ -86,13 +86,14 @@ def main(opt):
         del checkpoint  # current, saved
     else:
         #model = model.to(device).train()
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
+        # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
     # y = 0.001 * exp(-0.00921 * x)  # 1e-4 @ 250, 1e-5 @ 500
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99082, last_epoch=start_epoch - 1)
 
+    modelinfo(model)
     if cuda:
         print('Running on %s\n%s' % (device.type, torch.cuda.get_device_properties(0) if cuda else ''))
         if torch.cuda.device_count() > 1:
@@ -101,7 +102,8 @@ def main(opt):
         else:
             model = model.to(device).train()
 
-    modelinfo(model)
+    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
+
     t0, t1 = time.time(), time.time()
     print('%10s' * 16 % (
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
