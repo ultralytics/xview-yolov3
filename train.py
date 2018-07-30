@@ -16,7 +16,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-cfg', type=str, default='cfg/c60_a9.cfg', help='cfg file path')
+parser.add_argument('-cfg', type=str, default='cfg/c60.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-resume', default=False, help='resume training flag')
 opt = parser.parse_args()
@@ -65,7 +65,7 @@ def main(opt):
         # model.load_state_dict(current)
 
         model.load_state_dict(checkpoint['model'])
-        #model = model.to(device).train()
+        model.to(device).train()
 
         # # Transfer learning
         # for i, (name, p) in enumerate(model.named_parameters()):
@@ -84,25 +84,24 @@ def main(opt):
         best_loss = checkpoint['best_loss']
 
         del checkpoint  # current, saved
-    #else:
-        #model = model.to(device).train()
-        # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
+    else:
+        model.to(device).train()
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
     # y = 0.001 * exp(-0.00921 * x)  # 1e-4 @ 250, 1e-5 @ 500
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99082, last_epoch=start_epoch - 1)
 
+    # if cuda:
+    #     print('Running on %s\n%s' % (device.type, torch.cuda.get_device_properties(0) if cuda else ''))
+    #     if torch.cuda.device_count() > 1:
+    #         print('Using ', torch.cuda.device_count(), ' GPUs')
+    #         model = nn.DataParallel(model).to(device).train()
+    #     else:
+    #         model = model.to(device).train()
+
     modelinfo(model)
-    if cuda:
-        print('Running on %s\n%s' % (device.type, torch.cuda.get_device_properties(0) if cuda else ''))
-        if torch.cuda.device_count() > 1:
-            print('Using ', torch.cuda.device_count(), ' GPUs')
-            model = nn.DataParallel(model)
-
-    model = model.to(device).train()
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
-
     t0, t1 = time.time(), time.time()
     print('%10s' * 16 % (
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
