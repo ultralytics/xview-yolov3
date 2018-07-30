@@ -84,7 +84,7 @@ def main(opt):
         best_loss = checkpoint['best_loss']
 
         del checkpoint  # current, saved
-    else:
+    #else:
         #model = model.to(device).train()
         # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
 
