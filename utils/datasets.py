@@ -113,9 +113,6 @@ class ListDataset():  # for training
             if img0 is None:
                 continue
 
-            # import matplotlib.pyplot as plt
-            # plt.subplot(1, 2, 1).imshow(img0[:, :, ::-1])
-
             # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
             # equalize the histogram of the Y channel
             # img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
@@ -130,6 +127,9 @@ class ListDataset():  # for training
 
             img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-179, 179), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
+
+            # import matplotlib.pyplot as plt
+            # plt.subplot(1, 2, 1).imshow(img1[:, :, ::-1])
 
             nL1 = len(labels1)
             if nL1 > 0:
@@ -256,7 +256,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
-    R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[0] / 2, img.shape[1] / 2), scale=s)
+    R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[1] / 2, img.shape[0] / 2), scale=s)
 
     # Translation
     T = np.eye(3)
@@ -268,7 +268,6 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     S[0, 1] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # x shear (deg)
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
-    # M = R @ T @ S
     M = S @ T @ R  # ORDER IS IMPORTANT HERE!!
     imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
                               borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
