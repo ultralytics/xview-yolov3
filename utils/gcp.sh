@@ -9,7 +9,7 @@ mkdir drive
 google-drive-ocamlfuse drive
 
 cp fresh9_5_e201.pt latest.pt
-sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608 -cfg cfg/c60_a9.cfg
+sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608 -cfg cfg/c60_a90.cfg
 
 
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo
