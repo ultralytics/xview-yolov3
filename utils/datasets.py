@@ -117,18 +117,18 @@ class ListDataset():  # for training
             # plt.subplot(1, 2, 1).imshow(img0[:, :, ::-1])
 
             # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
-            # # equalize the histogram of the Y channel
+            # equalize the histogram of the Y channel
             # img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
-            # # convert the YUV image back to RGB format
-            # img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
-            # # plt.subplot(1, 2, 2).imshow(img0[:, :, ::-1])
+            # convert the YUV image back to RGB format
+            # img0 = img_hsv #cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+            # plt.subplot(1, 2, 2).imshow(img0[:, :, ::-1])
 
             # load labels
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
             labels1 = self.mat['targets'][i]
 
-            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-179, -179), translate=(0.01, 0.01),
+            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-179, 179), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
 
             nL1 = len(labels1)
