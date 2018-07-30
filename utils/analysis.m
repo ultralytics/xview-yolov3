@@ -3,7 +3,8 @@
 clc; clear; close all
 load json_data.mat
 
-% make_small_chips()
+make_small_chips()
+return
 
 chip_id = zeros(numel(chips),1);  % 1-847
 chip_number = zeros(numel(chips),1);  % 5-2619
@@ -40,9 +41,6 @@ fig; histogram(n,linspace(0,300,301))
 a=sortrows([n, uchip_number],-1);
 i=find(a(:,1)<2);
 %fprintf('rm -rf %g.bmp\n',a(i,2))
-
-
-
 
 % Target box width and height
 w = coords(:,3) - coords(:,1);
@@ -88,24 +86,25 @@ anchor_boxes = vpa(C(:)',4)  % anchor boxes
 wh = single([image_w, image_h]);
 targets = single([classes(:), coords]);
 id = single(chip_number);  numel(id)
-save('targets_c6.mat','wh','targets','id','class_mu','class_sigma','class_cov')
+% save('targets_c6.mat','wh','targets','id','class_mu','class_sigma','class_cov')
 
 
 function [] = make_small_chips()
 clc; close; clear
-load('targets_60c.mat')
+load('targets_c60.mat')
 path_a = '/Users/glennjocher/downloads/DATA/xview/';
 
-rmdir([path_a 'classes'],'s')
-for i=0:59
-    mkdir(sprintf([path_a 'classes/%g'],i))
-end
+% rmdir([path_a 'classes'],'s')
+% for i=0:59
+%     mkdir(sprintf([path_a 'classes/%g'],i))
+% end
 
 uid = unique(id)';
 class_count = zeros(1,60);
 f_count = 0;  % file count
 c_count = 0;  % chip count
-length = 90;
+length = 16;  % with padding
+lengh_inner = 40;  % core size
 X = zeros(650000,length,length,3, 'uint8');
 Y = zeros(1,650000,'uint8');
 border = 8;  % extra area around object of interest (for augmentation)
@@ -114,12 +113,11 @@ for i = uid
     fprintf('%g/847\n',f_count)
     target_idx = find(id==i)';
     img = imread(sprintf([path_a 'train_images/%g.bmp'],i));
-    %fig; imshow(img)
 
-    % fig(4,4)
+    %fig(4,4)
     for j = target_idx
         t = targets(j,:); %#ok<*NODEF>
-        class = xview_classes2indices(t(1));
+        class = t(1);
         x1=t(2)+1;  y1=t(3)+1;  x2=t(4)+1;  y2=t(5)+1;
         class_count(class+1) = class_count(class+1) + 1;
         w = x2-x1;  h = y2-y1;
@@ -127,7 +125,7 @@ for i = uid
         image_wh = wh(j,:);
         
         % make chip a square
-        l = round((max(w,h)*1.1 + 4) * length/64); if mod(l,2)~=0; l = l + 1; end  % normal
+        l = round((max(w,h)*1.1 + 4) * length/lengh_inner); if mod(l,2)~=0; l = l + 1; end  % normal
         x1 = max(xc-l/2,1); x2 = min(xc+l/2, image_wh(1)); 
         y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
         img1 = img(int16(y1:y2),int16(x1:x2),:);
@@ -138,7 +136,11 @@ for i = uid
         X(c_count,:,:,:) = img2;
 
         % imwrite(img2,sprintf([path_a 'classes/%g/%g.bmp'],class,class_count(class+1)));
-        % sca; imshow(img2); axis equal ij; title(class)
+        % sca; imshow(img2); axis equal ij; title([num2str(class) ' - ' xview_names(class)])
+        
+        if mod(c_count,16)==0
+            ''
+        end
     end
 end
 %rgb_mean = [60.134, 49.697, 40.746];
@@ -151,7 +153,7 @@ X = permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch stand
 Y = Y(1:c_count);
 
 X = permute(X,[4,3,2,1]);  % for hd5y only (reads in backwards permuted)
-save('-v7.3','class_chips64+26','X','Y')
+save('-v7.3','class_chips40+16','X','Y')
 
 % 32 + 14 = 46
 % 40 + 16 = 56
@@ -249,7 +251,7 @@ i8 = ~any(classes(:) == [75, 82],2);
 %i9 = any(classes(:) == [40, 41, 42, 44, 45, 47, 49, 50, 51, 52],2);  % group 5 boats
 %i9 = any(classes(:) == [53, 54, 55, 56, 57, 59, 61, 62, 63, 64, 65, 66],2);  % group 6 docks
 
-valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8 & i9;
+valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
 coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
 end      
 
