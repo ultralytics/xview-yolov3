@@ -3,8 +3,8 @@
 clc; clear; close all
 load json_data.mat
 
-make_small_chips()
-return
+% make_small_chips()
+% return
 
 chip_id = zeros(numel(chips),1);  % 1-847
 chip_number = zeros(numel(chips),1);  % 5-2619
@@ -63,7 +63,7 @@ vpa(n(:)')
 %vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 9);
+C = fcn_kmeans([w h], 90);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -263,6 +263,7 @@ rng('default'); % For reproducibility
 
 % opts = statset('Display','iter');
 %[idx,C, sumd] = kmedoids(X,n,'Distance','cityblock','Options',opts);
+X = [X; X(:,[2, 1])];
 [idx,C, sumd] = kmeans(X,n,'MaxIter',400,'OnlinePhase','on');
 %sumd
 
