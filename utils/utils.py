@@ -203,13 +203,13 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.10]
+            i = i[iou_anch_best[i] > 0.30]
             if len(i) == 0:
                 continue
 
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
-            if iou_anch_best < 0.10:
+            if iou_anch_best < 0.30:
                 continue
             i = 0
 
@@ -524,10 +524,11 @@ def plotResults():
               '/Users/glennjocher/Downloads/results650.txt',
               '/Users/glennjocher/Downloads/results_360_broken.txt',
               '/Users/glennjocher/Downloads/results.txt',
-              '/Users/glennjocher/Downloads/results (1).txt'):
+              '/Users/glennjocher/Downloads/results (1).txt',
+              '/Users/glennjocher/Downloads/results (2).txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, 0:200], marker='.', label=f)
+            plt.plot(results[i, 0:100], marker='.', label=f)
             plt.title(s[i])
         plt.legend()

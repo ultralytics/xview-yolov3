@@ -6,6 +6,8 @@ sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && 
 # Resume
 cd yolo && python3 train.py -epochs 999 -img_size 608 -resume 1
 
+# Detect
+python3 detect.py
 
 # get xview training data
 wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1532553970&Signature=C-W3dFvU-ygEp2lsWRM~RJTFEKahLhFf1veTnsSUuhR0KPZUZP40ooXOJfiBuUg4rNG2rkIw~fthM0YURlivWcaz6dexRsA2VowIqISNyIEWm~0qu983Wog2LE41ZzXWGk8el2fkwDBa~bh9DAOYYhk7OKkfS7Xfzj3a1w1bZ1x7kkSBzc3YjnaKIdqBuAg-1lk~OVzBaGp8B3wBJbYGHf77~IESSu6Zd4-AcGDATjr~XpByqj1LxeDyl84-3~bUvsGqlBqnquvJVndvYYAfn4gFzDu0CNm3hsu9YQk5oCimCcbySDXQ3rnldJPLgTw8pqKzJUEGDuq7tx6fTLblvw__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'

@@ -45,22 +45,24 @@ def detect(opt):
 
     # load model 1
     if platform == 'darwin':
-        checkpoint = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cuda:0' if cuda else 'cpu')
-        saved = checkpoint
+        checkpoint = torch.load('checkpoints/latest.pt', map_location='cuda:0' if cuda else 'cpu')
+        # saved = checkpoint
     else:
-        checkpoint = torch.load('../restart.pt', map_location='cuda:0' if cuda else 'cpu')
-        saved = checkpoint['model']
+        checkpoint = torch.load('checkpoints/latest.pt', map_location='cuda:0' if cuda else 'cpu')
+        # saved = checkpoint['model']
 
     model = Darknet(opt.cfg, opt.img_size)
-    current = model.state_dict()
-    # 1. filter out unnecessary keys
-    saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
-    # 2. overwrite entries in the existing state dict
-    current.update(saved)
-    # 3. load the new state dict
-    model.load_state_dict(current)
+    model.load_state_dict(checkpoint['model'])
+    # current = model.state_dict()
+    # # 1. filter out unnecessary keys
+    # saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
+    # # 2. overwrite entries in the existing state dict
+    # current.update(saved)
+    # # 3. load the new state dict
+    # model.load_state_dict(current)
     model = model.to(device).eval()
-    del current, saved, checkpoint
+    # del current, saved, checkpoint
+    del checkpoint
 
     # # load model 2
     # model2 = Darknet(opt.cfg, opt.img_size, targets=targets_path)
@@ -169,7 +171,7 @@ def detect(opt):
     # Bounding-box colors
     color_list = [[random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)] for _ in range(len(classes))]
 
-    if (len(img_detections) == 0) | (img_detections[0] is None):
+    if (len(img_detections) == 0):  # | (img_detections[0] is None):
         return
 
     # Iterate through images and save plot of detections
