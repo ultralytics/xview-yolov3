@@ -1,5 +1,4 @@
 % 659.bmp and 769.bmp are bad pictures, delete
-
 clc; clear; close all
 load json_data.mat
 
@@ -103,21 +102,25 @@ uid = unique(id)';
 class_count = zeros(1,60);
 f_count = 0;  % file count
 c_count = 0;  % chip count
-length = 16;  % with padding
-lengh_inner = 40;  % core size
-X = zeros(650000,length,length,3, 'uint8');
-Y = zeros(1,650000,'uint8');
-border = 8;  % extra area around object of interest (for augmentation)
+length = 128;  % combined inner + padding
+lengh_inner = 64;  % core size
+X = zeros(150000,length,length,3, 'uint8');
+Y = zeros(1,150000,'uint8');
 for i = uid
     f_count = f_count+1;
     fprintf('%g/847\n',f_count)
     target_idx = find(id==i)';
-    img = imread(sprintf([path_a 'train_images/%g.bmp'],i));
+    img = imread(sprintf([path_a 'train_images/%g.tif'],i));
 
     %fig(4,4)
     for j = target_idx
         t = targets(j,:); %#ok<*NODEF>
         class = t(1);
+        
+        if any(class == [5, 48]) && rand>0.1  % skip 90% of buildings and cars
+            continue
+        end
+        
         x1=t(2)+1;  y1=t(3)+1;  x2=t(4)+1;  y2=t(5)+1;
         class_count(class+1) = class_count(class+1) + 1;
         w = x2-x1;  h = y2-y1;
@@ -125,11 +128,13 @@ for i = uid
         image_wh = wh(j,:);
         
         % make chip a square
-        l = round((max(w,h)*1.1 + 4) * length/lengh_inner); if mod(l,2)~=0; l = l + 1; end  % normal
-        x1 = max(xc-l/2,1); x2 = min(xc+l/2, image_wh(1)); 
-        y1 = max(yc-l/2,1); y2 = min(yc+l/2, image_wh(2));
-        img1 = img(int16(y1:y2),int16(x1:x2),:);
-        img2 = imresize(img1,[length length], 'bicubic');
+        l = round((max(w,h)*1.0 + 2) * length/lengh_inner) / 2;  % normal
+        
+        lx = floor(min(min(xc-1, l), image_wh(1)-xc));
+        ly = floor(min(min(yc-1, l), image_wh(2)-yc));
+        
+        img1 = img(round(yc-ly):round(yc+ly), round(xc-lx):round(xc+lx), :);
+        img2 = imresize(img1,[length length], 'bilinear');
         
         c_count = c_count + 1;
         Y(c_count) = class;
@@ -138,22 +143,18 @@ for i = uid
         % imwrite(img2,sprintf([path_a 'classes/%g/%g.bmp'],class,class_count(class+1)));
         % sca; imshow(img2); axis equal ij; title([num2str(class) ' - ' xview_names(class)])
         
-        if mod(c_count,16)==0
-            ''
-        end
+        %if mod(c_count,16)==0
+        %    ''
+        %end
     end
 end
-%rgb_mean = [60.134, 49.697, 40.746];
-%rgb_std = [29.99, 24.498, 22.046];
-%for i=1:3
-%   X(:,:,:,i) =  (X(:,:,:,i)-rgb_mean(i)) / rgb_std(i);
-%end
 
-X = permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
+% X = permute(X(1:c_count,:,:,:),[1 4 2 3]); %#ok<*NASGU> permute to pytorch standards
+X = X(1:c_count,:,:,:);
 Y = Y(1:c_count);
 
 X = permute(X,[4,3,2,1]);  % for hd5y only (reads in backwards permuted)
-save('-v7.3','class_chips40+16','X','Y')
+save('-v7.3','class_chips64+64_tight','X','Y')
 
 % 32 + 14 = 46
 % 40 + 16 = 56
@@ -268,15 +269,14 @@ X = [X; X(:,[2, 1])];
 %sumd
 
 
-fig;
+ha=fig;
 for i = 1:numel(unique(idx))
-    plot(X(idx==i,1),X(idx==i,2),'.','MarkerSize',1)
+    plot(X(idx==i,1),X(idx==i,2),'.','MarkerSize',4)
 end
 
-plot(C(:,1),C(:,2),'co','MarkerSize',7,'LineWidth',1.5)
-legend('Cluster 1','Cluster 2','Medoids','Location','NW');
-title('Cluster Assignments and Medoids');
-hold off
+plot(C(:,1),C(:,2),'k.','MarkerSize',15)
+title('Cluster Assignments and Means');
+ha.XLim=[0 700]; ha.YLim=[0 700];
 end
 
 

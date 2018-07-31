@@ -242,7 +242,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
 
 # @profile
-def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model=None):
+def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model=None, device='cpu'):
     prediction = prediction.cpu()
 
     """
@@ -295,7 +295,10 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             continue
 
         # Start secondary classification of each chip
-        # class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model)
+        class_prob2, class_pred2 = secondary_class_detection(x, y, w, h, img.copy(), model, device)
+        # for i in range(len(class_prob2)):
+        #     if class_prob2[i] > class_prob[i]:
+        #         class_pred[i] = class_pred2[i]
 
         # From (center x, center y, width, height) to (x1, y1, x2, y2)
         box_corner = pred.new(nP, 4)
@@ -467,52 +470,96 @@ def non_max_suppression2(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, im
     return output
 
 
-def secondary_class_detection(x, y, w, h, img, model):
-    cuda = torch.cuda.is_available()
-    device = torch.device('cuda:0' if cuda else 'cpu')
-
+def secondary_class_detection(x, y, w, h, img, model, device):
     # 1. create 48-pixel squares from each chip
     img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2
+    height = 64
 
-    l = np.round(np.maximum(w, h) * 1.1 + 4)
-    x1 = np.maximum(x - l / 2, 1).astype(np.uint16)
-    x2 = np.minimum(x + l / 2, img.shape[1]).astype(np.uint16)
-    y1 = np.maximum(y - l / 2, 1).astype(np.uint16)
-    y2 = np.minimum(y + l / 2, img.shape[0]).astype(np.uint16)
+
+
+    l = np.round(np.maximum(w, h) + 2) / 2
+    x1 = np.maximum(x - l, 1).astype(np.uint16)
+    x2 = np.minimum(x + l, img.shape[1]).astype(np.uint16)
+    y1 = np.maximum(y - l, 1).astype(np.uint16)
+    y2 = np.minimum(y + l, img.shape[0]).astype(np.uint16)
 
     n = len(x)
     images = []
     for i in range(n):
-        images.append(cv2.resize(img[y1[i]:y2[i], x1[i]:x2[i]], (48, 48), interpolation=cv2.INTER_LINEAR))
+        images.append(cv2.resize(img[y1[i]:y2[i], x1[i]:x2[i]], (height, height), interpolation=cv2.INTER_LINEAR))
 
-    # plot
+    # # plot
     # images_numpy = images.copy()
     # import matplotlib.pyplot as plt
     # rgb_mean = [60.134, 49.697, 40.746]
     # rgb_std = [29.99, 24.498, 22.046]
     # for i in range(16):
-    #     im = images_numpy[i + 190].copy()
+    #     im = images_numpy[i + 1].copy()
     #     for j in range(3):
     #         im[:, :, j] *= rgb_std[j]
     #         im[:, :, j] += rgb_mean[j]
     #
     #     im /= 255
-    #    plt.subplot(4, 4, i + 1).imshow(im)
+    #     plt.subplot(4, 4, i + 1).imshow(im)
 
     images = np.stack(images).transpose([0, 3, 1, 2])  # cv2 to pytorch
     images = np.ascontiguousarray(images)
     images = torch.from_numpy(images).to(device)
 
     with torch.no_grad():
-
         classes = []
-        for i in range(int(n / 1000) + 1):
+        nB = int(n / 1000) + 1  # number of batches
+        for i in range(nB):
             j0 = int(i * 1000)
             j1 = int(min(j0 + 1000, n))
-            classes.append(model(images[j0:j1]).cpu())
+            im = images[j0:j1]
+            classes.append(model(im).cpu())
 
         classes = torch.cat(classes, 0)
     return torch.max(F.softmax(classes, 1), 1)
+
+
+def createChips():
+    import scipy.io
+    import numpy as np
+    import cv2
+    import h5py
+
+    mat = scipy.io.loadmat('utils/targets_c60.mat')
+    unique_images = np.unique(mat['id'])
+
+    height = 64
+    full_height = 128
+    X, Y = [], []
+    counter = 0
+    for i in unique_images:
+        counter += 1
+        print(counter)
+        img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images/%g.tif' % i)
+
+        for j in np.nonzero(mat['id'] == i)[0]:
+            c, x1, y1, x2, y2 = mat['targets'][j]
+            x, y, w, h = (x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1
+            if ((c == 48) | (c == 5)) & (random.random() > 0.1):
+                continue
+
+            l = np.round(np.maximum(w, h) + 2) / 2 * full_height / height
+            x1 = np.maximum(x - l, 1).astype(np.uint16)
+            x2 = np.minimum(x + l, img.shape[1]).astype(np.uint16)
+            y1 = np.maximum(y - l, 1).astype(np.uint16)
+            y2 = np.minimum(y + l, img.shape[0]).astype(np.uint16)
+            img2 = cv2.resize(img[y1:y2, x1:x2], (full_height, full_height), interpolation=cv2.INTER_LINEAR)
+
+            X.append(img2.reshape(1, full_height, full_height, 3))
+            Y.append(c)
+
+    X = np.concatenate(X)[:, :, :, ::-1]
+    X = torch.from_numpy(np.ascontiguousarray(X))
+    Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
+
+    with h5py.File('class_chips64+64_tight.h5') as hf:
+        hf.create_dataset('X', data=X)
+        hf.create_dataset('Y', data=Y)
 
 
 def plotResults():
@@ -521,11 +568,13 @@ def plotResults():
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in (
-              '/Users/glennjocher/Downloads/results650.txt',
-              '/Users/glennjocher/Downloads/results_360_broken.txt',
-              '/Users/glennjocher/Downloads/results.txt',
-              '/Users/glennjocher/Downloads/results (1).txt',
-              '/Users/glennjocher/Downloads/results (2).txt'):
+            '/Users/glennjocher/Downloads/results650.txt',
+            '/Users/glennjocher/Downloads/results95.txt',
+            '/Users/glennjocher/Downloads/results_360_broken.txt',
+            '/Users/glennjocher/Downloads/results.txt',
+            '/Users/glennjocher/Downloads/results (1).txt',
+            '/Users/glennjocher/Downloads/results (2).txt',
+            '/Users/glennjocher/Downloads/results (3).txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
