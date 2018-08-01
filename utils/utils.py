@@ -203,13 +203,13 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.01]
+            i = i[iou_anch_best[i] > 0.20]
             if len(i) == 0:
                 continue
 
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
-            if iou_anch_best < 0.01:
+            if iou_anch_best < 0.20:
                 continue
             i = 0
 
@@ -295,7 +295,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             continue
 
         # Start secondary classification of each chip
-        class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model, device)
+        # class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model, device)
         # for i in range(len(class_prob2)):
         #     if class_prob2[i] > class_prob[i]:
         #         class_pred[i] = class_pred2[i]
@@ -495,15 +495,13 @@ def plotResults():
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
     for f in ('results.txt',
             '/Users/glennjocher/Downloads/results650.txt',
-            '/Users/glennjocher/Downloads/results95.txt',
+            '/Users/glennjocher/Downloads/results142.txt',
             '/Users/glennjocher/Downloads/results_360_broken.txt',
             '/Users/glennjocher/Downloads/results.txt',
-            '/Users/glennjocher/Downloads/results (1).txt',
-            '/Users/glennjocher/Downloads/results (2).txt',
-            '/Users/glennjocher/Downloads/results (4).txt'):
+            '/Users/glennjocher/Downloads/results (1).txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, 0:200], marker='.', label=f)
+            plt.plot(results[i, 0:300], marker='.', label=f)
             plt.title(s[i])
-         #plt.legend()
+        plt.legend()
