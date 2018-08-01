@@ -114,7 +114,7 @@ class YOLOLayer(nn.Module):
         BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
         BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
         MSELoss = nn.MSELoss(size_average=False)
-        CrossEntropyLoss = nn.CrossEntropyLoss(size_average=True)
+        CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=True)
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
