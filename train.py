@@ -18,7 +18,7 @@ parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
-parser.add_argument('-resume', default=False, help='resume training flag')
+parser.add_argument('-resume', default=True, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
 
@@ -53,7 +53,7 @@ def main(opt):
     start_epoch = 0
     best_loss = float('inf')
     if opt.resume:
-        checkpoint = torch.load('checkpoints/latest.pt', map_location='cuda:0' if cuda else 'cpu')
+        checkpoint = torch.load('checkpoints/latest.pt', map_location='cpu')
 
         # current = model.state_dict()
         # saved = checkpoint['model']
@@ -77,7 +77,8 @@ def main(opt):
 
         # Set optimizer
         # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005 * 0, nesterov=True)
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
+        # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
+        optimizer = torch.optim.Adam(model.parameters())
         optimizer.load_state_dict(checkpoint['optimizer'])
 
         start_epoch = checkpoint['epoch'] + 1
