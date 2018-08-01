@@ -5,3 +5,4 @@ opencv-python
 torch
 matplotlib
 tqdm
+h5py

@@ -11,7 +11,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -41,12 +41,12 @@ def detect(opt):
 
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
-    checkpoint = torch.load('checkpoints/latest.pt', map_location='cpu')
+    checkpoint = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cpu')
     # model.load_state_dict(checkpoint) #['model'])
     # del checkpoint
 
     current = model.state_dict()
-    saved = checkpoint['model']
+    saved = checkpoint#['model']
     # 1. filter out unnecessary keys
     saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
@@ -59,7 +59,7 @@ def detect(opt):
     # Load model 2
     try:
         model2 = ConvNetb()
-        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_4layer3.pt', map_location='cpu')
+        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_4layer4.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
         del checkpoint

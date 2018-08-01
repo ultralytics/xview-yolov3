@@ -146,12 +146,13 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 2] = x.data + gx + width / 2
                 pred_boxes[..., 3] = y.data + gy + height / 2
 
-            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC = \
+            tx, ty, tw, th, mask, tcls, TP, FP, FN, TC, good_anchors = \
                 build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
                               requestPrecision)
             tcls = tcls[mask]
             if x.is_cuda:
                 tx, ty, tw, th, mask, tcls = tx.cuda(), ty.cuda(), tw.cuda(), th.cuda(), mask.cuda(), tcls.cuda()
+                good_anchors = good_anchors.cuda()
 
             # Mask outputs to ignore non-existing objects (but keep confidence predictions)
             nM = mask.sum().float()
@@ -170,7 +171,8 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            # lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
+            lconf += nM * BCEWithLogitsLoss0(pred_conf[~good_anchors], good_anchors[~good_anchors].float())
 
             loss = lx + ly + lw + lh + lconf + lcls
             i = torch.sigmoid(pred_conf[~mask]) > 0.999
