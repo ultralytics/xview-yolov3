@@ -38,7 +38,7 @@ def main(opt):
     # Configure run
     if platform == 'darwin':  # macos
         # torch.backends.cudnn.benchmark = True
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images_reduced'
+        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
     else:
         torch.backends.cudnn.benchmark = True
         train_path = '../train_images'
