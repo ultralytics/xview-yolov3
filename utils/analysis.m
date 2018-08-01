@@ -52,9 +52,10 @@ weights = 1./n(:)';  weights=weights/sum(weights);
 vpa(n(:)')
 
 % image weights (1395 does not exist, remove it)
-%image_weights = accumarray(chip_id,weights(xview_classes2indices(classes)),[1 847]);
+image_weights = accumarray(chip_id,weights(xview_classes2indices(classes)+1),[847, 1]);
 %i=uchips_numeric ~= 1395; 
-%image_weights = image_weights(i)./sum(image_weights(i));
+image_weights = image_weights./sum(image_weights);
+image_numbers = uchips_numeric;
 %fig; bar(uchips_numeric(i), image_weights)
 
 %a=class_stats(:,[7 9]); 
@@ -62,7 +63,7 @@ vpa(n(:)')
 %vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
-C = fcn_kmeans([w h], 90);
+C = fcn_kmeans([w h], 30);
 [~, i] = sort(C(:,1).*C(:,2));
 C = C(i,:)';
 
@@ -83,9 +84,10 @@ hsv_std = stat_means(10:12)  % dataset RGB std mean
 anchor_boxes = vpa(C(:)',4)  % anchor boxes
 
 wh = single([image_w, image_h]);
+classes = xview_classes2indices(classes);
 targets = single([classes(:), coords]);
 id = single(chip_number);  numel(id)
-% save('targets_c6.mat','wh','targets','id','class_mu','class_sigma','class_cov')
+save('targets_c60_.mat','wh','targets','id','class_mu','class_sigma','class_cov','image_weights','image_numbers')
 
 
 function [] = make_small_chips()

@@ -9,7 +9,7 @@ import scipy.io
 import torch
 
 # from torch.utils.data import Dataset
-from utils.utils import xyxy2xywh
+from utils.utils import xyxy2xywh, xview_class_weights
 
 
 class ImageFolder():  # for eval-only
@@ -65,6 +65,7 @@ class ListDataset():  # for training
         # load targets
         self.mat = scipy.io.loadmat(targets_path)
         self.mat['id'] = self.mat['id'].squeeze()
+        self.class_weights = xview_class_weights(range(60)).numpy()
 
         self.clahe = cv2.createCLAHE(tileGridSize=(16, 16), clipLimit=2)
 
@@ -89,8 +90,9 @@ class ListDataset():  # for training
 
     def __iter__(self):
         self.count = -1
-        self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
-        # self.shuffled_vector = np.random.choice(self.nF, self.nF, p=self.mat['image_weights'].ravel())
+        # self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
+        self.shuffled_vector = np.random.choice(self.mat['image_numbers'].ravel(), self.nF,
+                                                p=self.mat['image_weights'].ravel())
         return self
 
     # @profile
@@ -108,7 +110,8 @@ class ListDataset():  # for training
         img_all = []
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
-            img_path = self.files[self.shuffled_vector[files_index]]  # BGR
+            # img_path = self.files[self.shuffled_vector[files_index]]  # BGR
+            img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/%g.bmp' % self.shuffled_vector[files_index]
             img0 = cv2.imread(img_path)
             if img0 is None:
                 continue
@@ -122,38 +125,48 @@ class ListDataset():  # for training
 
             # load labels
             chip = img_path.rsplit('/')[-1]
-            i = (self.mat['id'] == float(chip.replace('.bmp', ''))).nonzero()[0]
+            i = (self.mat['id'] == float(chip.replace('.tif', '').replace('.bmp', ''))).nonzero()[0]
             labels1 = self.mat['targets'][i]
 
             img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-179, 179), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
+            nL1 = len(labels1)
+            border = height / 2 + 1
 
             # import matplotlib.pyplot as plt
             # plt.subplot(1, 2, 1).imshow(img1[:, :, ::-1])
 
-            nL1 = len(labels1)
+            # Pick 100 random points inside image
+            r = np.ones((100, 3))
+            r[:, :2] = np.random.rand(100, 2) * (np.array(img0.shape)[[1, 0]] - border * 2) + border
+            r = (r @ M.T)[:, :2]
+            r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
+
+            if nL1 > 0:
+                weights = []
+                for k in range(len(r)):
+                    x = (labels1[:, 1] + labels1[:, 3]) / 2
+                    y = (labels1[:, 2] + labels1[:, 4]) / 2
+                    c = labels1[(abs(r[k, 0] - x) < height / 2) & (abs(r[k, 1] - y) < height / 2), 0]
+                    if len(c) == 0:
+                        weights.append(1e-16)
+                    else:
+                        weights.append(self.class_weights[c.astype(np.int8)].sum())
+
+                weights = np.array(weights)
+                weights /= weights.sum()
+                r = r[np.random.choice(len(r), size=8, p=weights, replace=False)]
+
             if nL1 > 0:
                 area0 = (labels1[:, 3] - labels1[:, 1]) * (labels1[:, 4] - labels1[:, 2])
 
             h, w, _ = img1.shape
-            border = height / 2 + 1
             for j in range(8):
-
-                # Pick 100 random points inside image
-                r = np.ones((100, 3))
-                r[:, :2] = np.random.rand(100, 2) * (np.array(img0.shape)[[1, 0]] - border * 2) + border
-                r = (r @ M.T)[:, :2]
-                r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
-
-                pad_x, pad_y, counter = 0, 0, 0
                 labels = np.array([], dtype=np.float32)
-                while (counter < len(r)) & (len(labels) == 0):
-                    pad_x = int(r[counter, 0] - height / 2)
-                    pad_y = int(r[counter, 1] - height / 2)
 
-                    if nL1 == 0:
-                        break
-
+                pad_x = int(r[j, 0] - height / 2)
+                pad_y = int(r[j, 1] - height / 2)
+                if nL1 > 0:
                     labels = labels1.copy()
                     labels[:, [1, 3]] -= pad_x
                     labels[:, [2, 4]] -= pad_y
@@ -166,18 +179,30 @@ class ListDataset():  # for training
 
                     # objects must have width and height > 4 pixels
                     labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
-                    counter += 1
+
+                # pad_x, pad_y, counter = 0, 0, 0
+                # while (counter < len(r)) & (len(labels) == 0):
+                #     pad_x = int(r[counter, 0] - height / 2)
+                #     pad_y = int(r[counter, 1] - height / 2)
+                #
+                #     if nL1 == 0:
+                #         break
+                #
+                #     labels = labels1.copy()
+                #     labels[:, [1, 3]] -= pad_x
+                #     labels[:, [2, 4]] -= pad_y
+                #     labels[:, 1:5] = np.clip(labels[:, 1:5], 0, height)
+                #
+                #     lw = labels[:, 3] - labels[:, 1]
+                #     lh = labels[:, 4] - labels[:, 2]
+                #     area = lw * lh
+                #     ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
+                #
+                #     # objects must have width and height > 4 pixels
+                #     labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
+                #     counter += 1
 
                 img = img1[pad_y:pad_y + height, pad_x:pad_x + height]
-
-                # random affine
-                # if random.random() > 0:
-                #     img, labels = random_affine(img, targets=labels, degrees=(-20, 20), translate=(0.02, 0.02),
-                #                                 scale=(.8, 1.2))  # RGB
-                # borderValue = [37.538, 40.035, 45.068])  # YUV 3-clipped
-                # borderValue=[86.987, 107.586, 122.367])  # HSV
-                # borderValue=[82.412, 90.863, 100.931]) # YUV 5-clipped
-                # borderValue=[40.746, 49.697, 60.134])  # RGB
 
                 # plot
                 # import matplotlib.pyplot as plt
@@ -191,11 +216,11 @@ class ListDataset():  # for training
                     # remap xview classes 11-94 to 0-61
                     # labels[:, 0] = xview_classes2indices(labels[:, 0])
 
-                # # random lr flip
-                # if random.random() > 0.5:
-                #     img = np.fliplr(img)
-                #     if nL > 0:
-                #         labels[:, 1] = 1 - labels[:, 1]
+                # random lr flip
+                if random.random() > 0.5:
+                    img = np.fliplr(img)
+                    if nL > 0:
+                        labels[:, 1] = 1 - labels[:, 1]
 
                 # random ud flip
                 if random.random() > 0.5:
@@ -271,6 +296,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     M = S @ T @ R  # ORDER IS IMPORTANT HERE!!
     imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
                               borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
+    # borderValue = [40.746, 49.697, 60.134])  # RGB
 
     # Return warped points also
     if targets is not None:
@@ -305,7 +331,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         return imw
 
 
-def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images'):
+def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_bmp'):
     import glob
     import cv2
     import os

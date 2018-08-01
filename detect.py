@@ -59,7 +59,7 @@ def detect(opt):
     # Load model 2
     try:
         model2 = ConvNetb()
-        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_4layer.pt', map_location='cpu')
+        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_4layer3.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
         del checkpoint
@@ -263,4 +263,7 @@ class ConvNetb(nn.Module):
 
 
 if __name__ == '__main__':
+    torch.cuda.empty_cache()
     detect(opt)
+    torch.cuda.empty_cache()
+
