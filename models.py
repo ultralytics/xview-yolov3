@@ -170,7 +170,6 @@ class YOLOLayer(nn.Module):
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
-            # lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
             lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
 
             loss = lx + ly + lw + lh + lconf + lcls
