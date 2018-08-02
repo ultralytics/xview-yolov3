@@ -11,7 +11,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -46,7 +46,7 @@ def detect(opt):
     # del checkpoint
 
     current = model.state_dict()
-    saved = checkpoint#['model']
+    saved = checkpoint['model']
     # 1. filter out unnecessary keys
     saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
     # 2. overwrite entries in the existing state dict
@@ -59,7 +59,7 @@ def detect(opt):
     # Load model 2
     try:
         model2 = ConvNetb()
-        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_4layer4.pt', map_location='cpu')
+        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_5layer.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
         del checkpoint
@@ -242,20 +242,20 @@ class ConvNetb(nn.Module):
             nn.Conv2d(n * 4, n * 8, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(n * 8),
             nn.ReLU())
-        # self.layer5 = nn.Sequential(
-        #     nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1),
-        #     nn.BatchNorm2d(n * 16),
-        #     nn.ReLU())
+        self.layer5 = nn.Sequential(
+            nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(n * 16),
+            nn.ReLU())
         # self.fc = nn.Linear(65536, num_classes)  # 64 pixels, 3 layer, 64 filters
         # self.fc = nn.Linear(32768, num_classes)  # 64 pixels, 3 layer, 32 filters
-        self.fc = nn.Linear(32768, num_classes)  # 64 pixels, 4 layer, 64 filters
+        self.fc = nn.Linear(int(32768/2), num_classes)  # 64 pixels, 4 layer, 64 filters
 
     def forward(self, x):  # x.size() = [512, 1, 28, 28]
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        # x = self.layer5(x)
+        x = self.layer5(x)
         x = x.reshape(x.size(0), -1)
         # x, _, _ = normalize(x,1)
         x = self.fc(x)
