@@ -203,7 +203,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.05]
+            i = i[iou_anch_best[i] > 0.10]
             if len(i) == 0:
                 continue
 
@@ -211,7 +211,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             if len(t.shape) == 1:
                 t = t.view(1, 5)
         else:
-            if iou_anch_best < 0.05:
+            if iou_anch_best < 0.10:
                 continue
             i = 0
 
