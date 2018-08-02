@@ -451,6 +451,7 @@ def createChips():
     import numpy as np
     import cv2
     import h5py
+    from sys import platform
 
     mat = scipy.io.loadmat('utils/targets_c60.mat')
     unique_images = np.unique(mat['id'])
@@ -462,7 +463,11 @@ def createChips():
     for i in unique_images:
         counter += 1
         print(counter)
-        img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images/%g.tif' % i)
+
+        if platform == 'darwin':  # macos
+            img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images/%g.bmp' % i)
+        else: # gcp
+            img = cv2.imread('../train_images/%g.bmp' % i)
 
         for j in np.nonzero(mat['id'] == i)[0]:
             c, x1, y1, x2, y2 = mat['targets'][j]
@@ -495,14 +500,13 @@ def plotResults():
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
-    for f in ('results.txt',
+    for f in (
               '/Users/glennjocher/Downloads/results650.txt',
               '/Users/glennjocher/Downloads/results.txt',
-              '/Users/glennjocher/Downloads/results_010.txt',
               '/Users/glennjocher/Downloads/results (1).txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, 0:200], marker='.', label=f)
+            plt.plot(results[i, 0:], marker='.', label=f)
             plt.title(s[i])
         plt.legend()
