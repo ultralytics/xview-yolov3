@@ -164,7 +164,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     tw = torch.zeros(nB, nA, nG, nG)
     th = torch.zeros(nB, nA, nG, nG)
     tconf = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
-    good_anchors = torch.ByteTensor(nB, nA, nG, nG).fill_(0)
     tcls = torch.ByteTensor(nB, nA, nG, nG, nC).fill_(0)  # nC = number of classes
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
@@ -193,7 +192,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
         # Select best iou_pred and anchor
         iou_anch_best, a = iou_anch.max(0)  # best anchor [0-2] for each target
-        good_anchors[b, a, gj, gi] = iou_anch_best > 0.5
 
         # Two targets can not claim the same anchor
         if nTb > 1:
@@ -205,13 +203,13 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             # print(((np.sort(first_unique) - np.sort(first_unique2)) ** 2).sum())
             i = iou_order[first_unique]
             # best anchor must share significant commonality (iou) with target
-            i = i[iou_anch_best[i] > 0.05]
+            i = i[iou_anch_best[i] > 0.10]
             if len(i) == 0:
                 continue
 
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
         else:
-            if iou_anch_best < 0.05:
+            if iou_anch_best < 0.10:
                 continue
             i = 0
 
@@ -227,7 +225,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         # One-hot encoding of label
         tcls[b, a, gj, gi, tc] = 1
         tconf[b, a, gj, gi] = 1
-        good_anchors[b, a, gj, gi] = 1
 
         if requestPrecision:
             # predicted classes and confidence
@@ -240,7 +237,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             FP[b, i] = (pconf > 0.99) & (TP[b, i] == 0)  # coordinates or class are wrong
             FN[b, i] = pconf <= 0.99  # confidence score is too low (set to zero)
 
-    return tx, ty, tw, th, tconf, tcls, TP, FP, FN, TC, good_anchors
+    return tx, ty, tw, th, tconf, tcls, TP, FP, FN, TC
 
 
 # @profile
