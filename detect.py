@@ -256,6 +256,7 @@ class ConvNetb(nn.Module):
             nn.ReLU())
         self.fc = nn.Linear(int(32768/4), num_classes)  # 64 pixels, 4 layer, 64 filters
 
+
     def forward(self, x):  # x.size() = [512, 1, 28, 28]
         x = self.layer1(x)
         x = self.layer2(x)
