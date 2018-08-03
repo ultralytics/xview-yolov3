@@ -273,7 +273,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         class_prob, class_pred = torch.max(F.softmax(pred[:, 5:], 1), 1)
 
         # Start secondary classification of each chip
-        # class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model, device)
+        class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model, device)
         # for i in range(len(class_prob2)):
         #     if class_prob2[i] > class_prob[i]:
         #         class_pred[i] = class_pred2[i]
@@ -398,7 +398,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         # output[image_i] = a
     return output
 
-
+# @profile
 def secondary_class_detection(x, y, w, h, img, model, device):
     # 1. create 48-pixel squares from each chip
     img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2
@@ -503,6 +503,6 @@ def plotResults():
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, 0:200], marker='.', label=f)
+            plt.plot(results[i, 0:650], marker='.', label=f)
             plt.title(s[i])
         plt.legend()

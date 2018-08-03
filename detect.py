@@ -31,6 +31,7 @@ parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted
 opt = parser.parse_args()
 print(opt)
 
+
 # @profile
 def detect(opt):
     os.system('rm -rf ' + opt.output_folder)
@@ -59,7 +60,8 @@ def detect(opt):
     # Load model 2
     try:
         model2 = ConvNetb()
-        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_6layer.pt', map_location='cpu')
+        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_6layerLeaky.pt',
+                                map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
         del checkpoint
@@ -227,32 +229,32 @@ class ConvNetb(nn.Module):
         super(ConvNetb, self).__init__()
         n = 64  # initial convolution size
         self.layer1 = nn.Sequential(
-            nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(n),
-            nn.ReLU())
+            nn.LeakyReLU())
         self.layer2 = nn.Sequential(
-            nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 2),
-            nn.ReLU())
+            nn.LeakyReLU())
         self.layer3 = nn.Sequential(
-            nn.Conv2d(n * 2, n * 4, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(n * 2, n * 4, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 4),
-            nn.ReLU())
+            nn.LeakyReLU())
         self.layer4 = nn.Sequential(
-            nn.Conv2d(n * 4, n * 8, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(n * 4, n * 8, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 8),
-            nn.ReLU())
+            nn.LeakyReLU())
         self.layer5 = nn.Sequential(
-            nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 16),
-            nn.ReLU())
+            nn.LeakyReLU())
         self.layer6 = nn.Sequential(
-            nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 32),
-            nn.ReLU())
+            nn.LeakyReLU())
         # self.fc = nn.Linear(65536, num_classes)  # 64 pixels, 3 layer, 64 filters
         # self.fc = nn.Linear(32768, num_classes)  # 64 pixels, 3 layer, 32 filters
-        self.fc = nn.Linear(int(32768/4), num_classes)  # 64 pixels, 4 layer, 64 filters
+        self.fc = nn.Linear(int(32768 / 4), num_classes)  # 64 pixels, 4 layer, 64 filters
 
     def forward(self, x):  # x.size() = [512, 1, 28, 28]
         x = self.layer1(x)
@@ -271,4 +273,3 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     detect(opt)
     torch.cuda.empty_cache()
-
