@@ -163,7 +163,7 @@ def detect(opt):
     # Bounding-box colors
     color_list = [[random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)] for _ in range(len(classes))]
 
-    if (len(img_detections) == 0):  # | (img_detections[0] is None):
+    if len(img_detections) == 0:
         return
 
     # Iterate through images and save plot of detections
