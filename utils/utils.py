@@ -398,6 +398,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         # output[image_i] = a
     return output
 
+
 # @profile
 def secondary_class_detection(x, y, w, h, img, model, device):
     # 1. create 48-pixel squares from each chip
@@ -473,13 +474,17 @@ def createChips():
             if ((c == 48) | (c == 5)) & (random.random() > 0.1):  # keep only 10% of buildings and cars
                 continue
 
-            l = np.round(np.maximum(w, h)*1.3 + 2) / 2 * (full_height / height)  # relaxed bounding
-            # l = np.round(np.maximum(w, h) + 2) / 2 * (full_height / height)  # tight bounding
+            # l = np.round(np.maximum(w, h)*1.2 + 2) / 2 * (full_height / height)  # relaxed bounding
+            # # l = np.round(np.maximum(w, h) + 2) / 2 * (full_height / height)  # tight bounding
+            # lx, ly = l, l
 
-            x1 = np.maximum(x - l, 1).astype(np.uint16)
-            x2 = np.minimum(x + l, img.shape[1]).astype(np.uint16)
-            y1 = np.maximum(y - l, 1).astype(np.uint16)
-            y2 = np.minimum(y + l, img.shape[0]).astype(np.uint16)
+            lx = np.round(w * 1.2 + 2) / 2 * (full_height / height)  # relaxed bounding
+            ly = np.round(h * 1.2 + 2) / 2 * (full_height / height)  # relaxed bounding
+
+            x1 = np.maximum(x - lx, 1).astype(np.uint16)
+            x2 = np.minimum(x + lx, img.shape[1]).astype(np.uint16)
+            y1 = np.maximum(y - ly, 1).astype(np.uint16)
+            y2 = np.minimum(y + ly, img.shape[0]).astype(np.uint16)
 
             img2 = cv2.resize(img[y1:y2, x1:x2], (full_height, full_height), interpolation=cv2.INTER_LINEAR)
 
@@ -490,7 +495,6 @@ def createChips():
         # import matplotlib.pyplot as plt
         # for j in range(36):
         #     plt.subplot(6, 6, j + 1).imshow(X[-36 + j][0, 32:-32, 32:-32, ::-1])
-
 
     X = np.concatenate(X)[:, :, :, ::-1]
     X = torch.from_numpy(np.ascontiguousarray(X))
