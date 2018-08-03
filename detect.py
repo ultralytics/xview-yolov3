@@ -31,7 +31,6 @@ parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted
 opt = parser.parse_args()
 print(opt)
 
-# @profile
 def detect(opt):
     if opt.plot_flag:
         os.system('rm -rf ' + opt.output_folder + '_img')
