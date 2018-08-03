@@ -187,7 +187,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         box1 = t[:, 3:5] * nG
         # box2 = anchor_grid_wh[:, gj, gi]
         box2 = anchor_wh.unsqueeze(1).repeat(1, nTb, 1)
-        inter_area = torch.min(box1, box2).prod(2)
+        inter_area = torch.min(box1.cpu(), box2).prod(2)
         iou_anch = inter_area / (gw * gh + box2.prod(2) - inter_area + 1e-16)
 
         # Select best iou_pred and anchor
@@ -207,7 +207,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             if len(i) == 0:
                 continue
 
-            a, gj, gi, t = a[i].cuda(), gj[i].cuda(), gi[i].cuda(), t[i].cuda()
+            a, gj, gi, t = a[i], gj[i], gi[i], t[i]
             if len(t.shape) == 1:
                 t = t.view(1, 5)
         else:
@@ -218,7 +218,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
 
         # Coordinates
-        tx[b, a, gj, gi] = gx.cuda() - gi.float().cuda()
+        tx[b, a, gj, gi] = gx - gi.float()
         ty[b, a, gj, gi] = gy - gj.float()
         # Width and height
         tw[b, a, gj, gi] = torch.sqrt(gw / anchor_wh[a, 0]) / 2
