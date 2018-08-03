@@ -496,7 +496,7 @@ def createChips():
     X = torch.from_numpy(np.ascontiguousarray(X))
     Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
 
-    with h5py.File('class_chips64+64_tight.h5') as hf:
+    with h5py.File('class_chips64+64_relaxed.h5') as hf:
         hf.create_dataset('X', data=X)
         hf.create_dataset('Y', data=Y)
 
