@@ -187,7 +187,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         box1 = t[:, 3:5] * nG
         # box2 = anchor_grid_wh[:, gj, gi]
         box2 = anchor_wh.unsqueeze(1).repeat(1, nTb, 1)
-        inter_area = torch.min(box1, box2).prod(2)
+        inter_area = torch.min(box1.cpu(), box2.cpu()).prod(2)
         iou_anch = inter_area / (gw * gh + box2.prod(2) - inter_area + 1e-16)
 
         # Select best iou_pred and anchor
