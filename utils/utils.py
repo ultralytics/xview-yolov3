@@ -478,8 +478,8 @@ def createChips():
             # # l = np.round(np.maximum(w, h) + 2) / 2 * (full_height / height)  # tight bounding
             # lx, ly = l, l
 
-            lx = np.round(w * 1.2 + 2) / 2 * (full_height / height)  # medium bounding, aspect ratio not maintained
-            ly = np.round(h * 1.2 + 2) / 2 * (full_height / height)
+            lx = np.round(w * 1.0 + 2) / 2 * (full_height / height)  # medium bounding, aspect ratio not maintained
+            ly = np.round(h * 1.0 + 2) / 2 * (full_height / height)
 
             x1 = np.maximum(x - lx, 1).astype(np.uint16)
             x2 = np.minimum(x + lx, img.shape[1]).astype(np.uint16)
@@ -500,7 +500,7 @@ def createChips():
     X = torch.from_numpy(np.ascontiguousarray(X))
     Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
 
-    with h5py.File('class_chips64+64_relaxed.h5') as hf:
+    with h5py.File('chips_0pad_fitted.h5') as hf:
         hf.create_dataset('X', data=X)
         hf.create_dataset('Y', data=Y)
 
