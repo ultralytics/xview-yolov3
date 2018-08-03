@@ -65,6 +65,9 @@ def main(opt):
         # model.load_state_dict(current)
 
         model.load_state_dict(checkpoint['model'])
+        if torch.cuda.device_count() > 1:
+            print('Using ', torch.cuda.device_count(), ' GPUs')
+            model = nn.DataParallel(model)
         model.to(device).train()
 
         # # Transfer learning
@@ -86,6 +89,10 @@ def main(opt):
 
         del checkpoint  # current, saved
     else:
+        if torch.cuda.device_count() > 1:
+            print('Using ', torch.cuda.device_count(), ' GPUs')
+            model = nn.DataParallel(model)
+
         model.to(device).train()
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
 
@@ -93,14 +100,6 @@ def main(opt):
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
     # y = 0.001 * exp(-0.00921 * x)  # 1e-4 @ 250, 1e-5 @ 500
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99082, last_epoch=start_epoch - 1)
-
-    # if cuda:
-    #     print('Running on %s\n%s' % (device.type, torch.cuda.get_device_properties(0) if cuda else ''))
-    #     if torch.cuda.device_count() > 1:
-    #         print('Using ', torch.cuda.device_count(), ' GPUs')
-    #         model = nn.DataParallel(model).to(device).train()
-    #     else:
-    #         model = model.to(device).train()
 
     modelinfo(model)
     t0, t1 = time.time(), time.time()

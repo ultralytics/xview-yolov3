@@ -31,18 +31,17 @@ parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted
 opt = parser.parse_args()
 print(opt)
 
-
-# @profile
 def detect(opt):
+    if opt.plot_flag:
+        os.system('rm -rf ' + opt.output_folder + '_img')
+        os.makedirs(opt.output_folder + '_img', exist_ok=True)
     os.system('rm -rf ' + opt.output_folder)
-    os.system('rm -rf ' + opt.output_folder + '_img')
     os.makedirs(opt.output_folder, exist_ok=True)
-    os.makedirs(opt.output_folder + '_img', exist_ok=True)
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
-    checkpoint = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cpu')
+    checkpoint = torch.load('checkpoints/latest.pt', map_location='cpu')
     # model.load_state_dict(checkpoint) #['model'])
     # del checkpoint
 
@@ -60,8 +59,11 @@ def detect(opt):
     # Load model 2
     try:
         model2 = ConvNetb()
-        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_6layerLeaky.pt',
-                                map_location='cpu')
+        if platform == 'darwin':  # macos
+            checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_6layer.pt',
+                                    map_location='cpu')
+        else:
+            checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
         del checkpoint
@@ -161,7 +163,7 @@ def detect(opt):
     # Bounding-box colors
     color_list = [[random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)] for _ in range(len(classes))]
 
-    if (len(img_detections) == 0):  # | (img_detections[0] is None):
+    if len(img_detections) == 0:
         return
 
     # Iterate through images and save plot of detections
@@ -229,32 +231,31 @@ class ConvNetb(nn.Module):
         super(ConvNetb, self).__init__()
         n = 64  # initial convolution size
         self.layer1 = nn.Sequential(
-            nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(n),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer2 = nn.Sequential(
-            nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(n * 2),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer3 = nn.Sequential(
-            nn.Conv2d(n * 2, n * 4, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.Conv2d(n * 2, n * 4, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(n * 4),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer4 = nn.Sequential(
-            nn.Conv2d(n * 4, n * 8, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.Conv2d(n * 4, n * 8, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(n * 8),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer5 = nn.Sequential(
-            nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(n * 16),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer6 = nn.Sequential(
-            nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1, bias=False),
+            nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(n * 32),
-            nn.LeakyReLU())
-        # self.fc = nn.Linear(65536, num_classes)  # 64 pixels, 3 layer, 64 filters
-        # self.fc = nn.Linear(32768, num_classes)  # 64 pixels, 3 layer, 32 filters
-        self.fc = nn.Linear(int(32768 / 4), num_classes)  # 64 pixels, 4 layer, 64 filters
+            nn.ReLU())
+        self.fc = nn.Linear(int(32768/4), num_classes)  # 64 pixels, 4 layer, 64 filters
+
 
     def forward(self, x):  # x.size() = [512, 1, 28, 28]
         x = self.layer1(x)
@@ -264,7 +265,6 @@ class ConvNetb(nn.Module):
         x = self.layer5(x)
         x = self.layer6(x)
         x = x.reshape(x.size(0), -1)
-        # x, _, _ = normalize(x,1)
         x = self.fc(x)
         return x
 
@@ -273,3 +273,4 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     detect(opt)
     torch.cuda.empty_cache()
+

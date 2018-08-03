@@ -451,6 +451,7 @@ def createChips():
     import numpy as np
     import cv2
     import h5py
+    from sys import platform
 
     mat = scipy.io.loadmat('utils/targets_c60.mat')
     unique_images = np.unique(mat['id'])
@@ -458,19 +459,23 @@ def createChips():
     height = 64
     full_height = 128
     X, Y = [], []
-    counter = 0
-    for i in unique_images:
-        counter += 1
+    for counter, i in enumerate(unique_images):
         print(counter)
-        img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images/%g.tif' % i)
+
+        if platform == 'darwin':  # macos
+            img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images/%g.bmp' % i)
+        else:  # gcp
+            img = cv2.imread('../train_images/%g.bmp' % i)
 
         for j in np.nonzero(mat['id'] == i)[0]:
             c, x1, y1, x2, y2 = mat['targets'][j]
             x, y, w, h = (x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1
-            if ((c == 48) | (c == 5)) & (random.random() > 0.1):
+            if ((c == 48) | (c == 5)) & (random.random() > 0.1):  # keep only 10% of buildings and cars
                 continue
 
-            l = np.round(np.maximum(w, h) + 2) / 2 * (full_height / height)
+            l = np.round(np.maximum(w, h)*1.3 + 2) / 2 * (full_height / height)  # relaxed bounding
+            # l = np.round(np.maximum(w, h) + 2) / 2 * (full_height / height)  # tight bounding
+
             x1 = np.maximum(x - l, 1).astype(np.uint16)
             x2 = np.minimum(x + l, img.shape[1]).astype(np.uint16)
             y1 = np.maximum(y - l, 1).astype(np.uint16)
@@ -478,14 +483,20 @@ def createChips():
 
             img2 = cv2.resize(img[y1:y2, x1:x2], (full_height, full_height), interpolation=cv2.INTER_LINEAR)
 
-            X.append(img2.reshape(1, full_height, full_height, 3))
+            X.append(img2[np.newaxis])
             Y.append(c)
+
+        # plot
+        # import matplotlib.pyplot as plt
+        # for j in range(36):
+        #     plt.subplot(6, 6, j + 1).imshow(X[-36 + j][0, 32:-32, 32:-32, ::-1])
+
 
     X = np.concatenate(X)[:, :, :, ::-1]
     X = torch.from_numpy(np.ascontiguousarray(X))
     Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
 
-    with h5py.File('class_chips64+64_tight.h5') as hf:
+    with h5py.File('class_chips64+64_relaxed.h5') as hf:
         hf.create_dataset('X', data=X)
         hf.create_dataset('Y', data=Y)
 
@@ -495,11 +506,10 @@ def plotResults():
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
     s = ['x', 'y', 'w', 'h', 'conf', 'cls', 'loss', 'prec', 'recall']
-    for f in ('results.txt',
-              '/Users/glennjocher/Downloads/results650.txt',
-              '/Users/glennjocher/Downloads/results.txt',
-              '/Users/glennjocher/Downloads/results_010.txt',
-              '/Users/glennjocher/Downloads/results (1).txt'):
+    for f in (
+            '/Users/glennjocher/Downloads/results650.txt',
+            '/Users/glennjocher/Downloads/results.txt',
+            '/Users/glennjocher/Downloads/results (1).txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)

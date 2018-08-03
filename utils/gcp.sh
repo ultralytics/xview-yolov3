@@ -2,17 +2,21 @@
 
 # Start
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608
+sudo rm -rf mnist && git clone https://github.com/ultralytics/mnist && cd mnist && python3 train_xview_classes.py
+
 
 # Resume
 cd yolo && python3 train.py -epochs 999 -img_size 608 -resume 1
 
 # Detect
-cd yolo && python3 detect.py -cfg 'cfg/c60_a30.cfg'
+gsutil cp gs://ultralytics/fresh9_5_e201.pt yolo/checkpoints
+gsutil cp gs://ultralytics/6layer_submit.pt yolo/checkpoints/classifier.pt
+cd yolo && python3 detect2.py
 
 # get xview training data
-wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1532553970&Signature=C-W3dFvU-ygEp2lsWRM~RJTFEKahLhFf1veTnsSUuhR0KPZUZP40ooXOJfiBuUg4rNG2rkIw~fthM0YURlivWcaz6dexRsA2VowIqISNyIEWm~0qu983Wog2LE41ZzXWGk8el2fkwDBa~bh9DAOYYhk7OKkfS7Xfzj3a1w1bZ1x7kkSBzc3YjnaKIdqBuAg-1lk~OVzBaGp8B3wBJbYGHf77~IESSu6Zd4-AcGDATjr~XpByqj1LxeDyl84-3~bUvsGqlBqnquvJVndvYYAfn4gFzDu0CNm3hsu9YQk5oCimCcbySDXQ3rnldJPLgTw8pqKzJUEGDuq7tx6fTLblvw__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
+wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1533331306&Signature=BPSqQT6vJLeTr30vbQtjuAhbCEASZM0X8bIfyxZkvnzslN~n6QFpPEpgXnAuHCL72ZxFf6LxlymzH7L58KG1SnTtWejodh5Swm2IAeM3MTvP2vbOnFuoQMiIK1WJ4jhdSWZkekl0Gxbhq0p0vLJDW~qzCILG0OxEx7FZWwUe7za0o9JFrEZwwUIwNrpp~iPAxPG-UAowOPa-TLqLMPPqgQCUlTNhp~cE6uBBiKhovvSGZzIwNtct-hkm3AdsDpj1Vk2TOK3g7QzU4mdLn0I~9LOEygQR5i96DZFW7xg367n8rWxM7T6lM~YsOehKGhQ~xIohY5upawv6MCu62b1bWQ__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
 tar -xvzf train_images.tgz
-sudo rm -rf train_images/._* train_images/659.tif train_images/769.tif
+sudo rm -rf train_images/._* #train_images/659.tif train_images/769.tif
 
 # convert all .tif to .bmp
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo
