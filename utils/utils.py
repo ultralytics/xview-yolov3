@@ -474,12 +474,11 @@ def createChips():
             if ((c == 48) | (c == 5)) & (random.random() > 0.1):  # keep only 10% of buildings and cars
                 continue
 
-            # l = np.round(np.maximum(w, h)*1.2 + 2) / 2 * (full_height / height)  # relaxed bounding
-            # # l = np.round(np.maximum(w, h) + 2) / 2 * (full_height / height)  # tight bounding
-            # lx, ly = l, l
+            l = np.round(np.maximum(w, h)*1.2 + 2) / 2 * (full_height / height)  # square
+            lx, ly = l, l
 
-            lx = np.round(w * 1.4 + 2) / 2 * (full_height / height)  # medium bounding, aspect ratio not maintained
-            ly = np.round(h * 1.4 + 2) / 2 * (full_height / height)
+            # lx = np.round(w * 1.4 + 2) / 2 * (full_height / height)  # fitted
+            # ly = np.round(h * 1.4 + 2) / 2 * (full_height / height)
 
             x1 = np.maximum(x - lx, 1).astype(np.uint16)
             x2 = np.minimum(x + lx, img.shape[1]).astype(np.uint16)
@@ -500,7 +499,7 @@ def createChips():
     X = torch.from_numpy(np.ascontiguousarray(X))
     Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
 
-    with h5py.File('chips_40pad_fitted.h5') as hf:
+    with h5py.File('chips_20pad_square.h5') as hf:
         hf.create_dataset('X', data=X)
         hf.create_dataset('Y', data=Y)
 
