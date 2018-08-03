@@ -41,7 +41,7 @@ def detect(opt):
 
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
-    checkpoint = torch.load('checkpoints/fresh9_5_e201.pt', map_location='cpu')
+    checkpoint = torch.load('checkpoints/latest.pt', map_location='cpu')
     # model.load_state_dict(checkpoint) #['model'])
     # del checkpoint
 
@@ -59,7 +59,11 @@ def detect(opt):
     # Load model 2
     try:
         model2 = ConvNetb()
-        checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_6layer.pt', map_location='cpu')
+        if platform == 'darwin':  # macos
+            checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_6layer.pt',
+                                    map_location='cpu')
+        else:
+            checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
         del checkpoint
@@ -250,8 +254,6 @@ class ConvNetb(nn.Module):
             nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(n * 32),
             nn.ReLU())
-        # self.fc = nn.Linear(65536, num_classes)  # 64 pixels, 3 layer, 64 filters
-        # self.fc = nn.Linear(32768, num_classes)  # 64 pixels, 3 layer, 32 filters
         self.fc = nn.Linear(int(32768/4), num_classes)  # 64 pixels, 4 layer, 64 filters
 
     def forward(self, x):  # x.size() = [512, 1, 28, 28]
@@ -262,7 +264,6 @@ class ConvNetb(nn.Module):
         x = self.layer5(x)
         x = self.layer6(x)
         x = x.reshape(x.size(0), -1)
-        # x, _, _ = normalize(x,1)
         x = self.fc(x)
         return x
 
