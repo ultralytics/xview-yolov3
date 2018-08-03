@@ -92,7 +92,6 @@ def main(opt):
         if torch.cuda.device_count() > 1:
             print('Using ', torch.cuda.device_count(), ' GPUs')
             model = nn.DataParallel(model)
-
         model.to(device).train()
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
 
