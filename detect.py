@@ -33,10 +33,11 @@ print(opt)
 
 # @profile
 def detect(opt):
+    if opt.plot_flag:
+        os.system('rm -rf ' + opt.output_folder + '_img')
+        os.makedirs(opt.output_folder + '_img', exist_ok=True)
     os.system('rm -rf ' + opt.output_folder)
-    os.system('rm -rf ' + opt.output_folder + '_img')
     os.makedirs(opt.output_folder, exist_ok=True)
-    os.makedirs(opt.output_folder + '_img', exist_ok=True)
     device = torch.device('cuda:0' if cuda else 'cpu')
 
     # Load model 1
