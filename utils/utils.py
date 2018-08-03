@@ -207,7 +207,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             if len(i) == 0:
                 continue
 
-            a, gj, gi, t = a[i], gj[i].cpu(), gi[i].cpu(), t[i]
+            a, gj, gi, t = a[i], gj[i].cuda(), gi[i].cuda(), t[i].cuda()
             if len(t.shape) == 1:
                 t = t.view(1, 5)
         else:
