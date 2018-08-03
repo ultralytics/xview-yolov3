@@ -478,8 +478,8 @@ def createChips():
             # # l = np.round(np.maximum(w, h) + 2) / 2 * (full_height / height)  # tight bounding
             # lx, ly = l, l
 
-            lx = np.round(w * 1.2 + 2) / 2 * (full_height / height)  # relaxed bounding
-            ly = np.round(h * 1.2 + 2) / 2 * (full_height / height)  # relaxed bounding
+            lx = np.round(w * 1.2 + 2) / 2 * (full_height / height)  # medium bounding, aspect ratio not maintained
+            ly = np.round(h * 1.2 + 2) / 2 * (full_height / height)
 
             x1 = np.maximum(x - lx, 1).astype(np.uint16)
             x2 = np.minimum(x + lx, img.shape[1]).astype(np.uint16)
