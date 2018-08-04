@@ -243,7 +243,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
 
 # @profile
-def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model=None, device='cpu'):
+def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device='cpu'):
     prediction = prediction.cpu()
 
     """
@@ -270,13 +270,14 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         # for c in range(60):
         # shape_likelihood[:, c] = multivariate_normal.pdf(x, mean=mat['class_mu'][c, :2], cov=mat['class_cov'][c, :2, :2])
 
-        class_prob, class_pred = torch.max(F.softmax(pred[:, 5:], 1), 1)
-
-        # Start secondary classification of each chip
-        class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model, device)
-        # for i in range(len(class_prob2)):
-        #     if class_prob2[i] > class_prob[i]:
-        #         class_pred[i] = class_pred2[i]
+        if model2 is None:
+            class_prob, class_pred = torch.max(F.softmax(pred[:, 5:], 1), 1)
+        else:
+            # Start secondary classification of each chip
+            class_prob, class_pred = secondary_class_detection(x, y, w, h, img.copy(), model2, device)
+            # for i in range(len(class_prob2)):
+            #     if class_prob2[i] > class_prob[i]:
+            #         class_pred[i] = class_pred2[i]
 
         # Gather bbox priors
         srl = 3  # sigma rejection level
@@ -474,7 +475,7 @@ def createChips():
             if ((c == 48) | (c == 5)) & (random.random() > 0.1):  # keep only 10% of buildings and cars
                 continue
 
-            l = np.round(np.maximum(w, h)*1.2 + 2) / 2 * (full_height / height)  # square
+            l = np.round(np.maximum(w, h) * 1.2 + 2) / 2 * (full_height / height)  # square
             lx, ly = l, l
 
             # lx = np.round(w * 1.4 + 2) / 2 * (full_height / height)  # fitted

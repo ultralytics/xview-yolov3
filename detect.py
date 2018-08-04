@@ -22,6 +22,7 @@ else:  # gcp
     cuda = False
 
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30.cfg', help='cfg file path')
+parser.add_argument('-secondary_classifier', default=False)
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
@@ -58,17 +59,17 @@ def detect(opt):
     model.to(device).eval()
 
     # Load model 2
-    try:
+    if opt.secondary_classifier:
         model2 = ConvNetb()
         if platform == 'darwin':  # macos
-            checkpoint = torch.load('../mnist/best64_6layer.pt', map_location='cpu')
+            checkpoint = torch.load('../mnist/6leaky681_stripped.pt', map_location='cpu')
         else:
             checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
         del checkpoint
-    except:
-        model2 = []
+    else:
+        model2 = None
 
     # Set Dataloader
     classes = load_classes(opt.class_path)  # Extracts class labels from file
