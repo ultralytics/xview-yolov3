@@ -135,7 +135,8 @@ class ListDataset():  # for training
             border = height / 2 + 1
 
             # import matplotlib.pyplot as plt
-            # plt.subplot(1, 2, 1).imshow(img1[:, :, ::-1])
+            # plt.imshow(img1[:, :, ::-1])
+            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # Pick 100 random points inside image
             r = np.ones((100, 3))
@@ -205,7 +206,6 @@ class ListDataset():  # for training
 
                 img = img1[pad_y:pad_y + height, pad_x:pad_x + height]
 
-                # plot
                 # import matplotlib.pyplot as plt
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
                 # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
@@ -315,6 +315,15 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             x = xy[:, [0, 2, 4, 6]]
             y = xy[:, [1, 3, 5, 7]]
             xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
+
+            # apply angle-based reduction
+            radians = a * math.pi / 180
+            reduction = max(abs(math.sin(radians)), abs(math.cos(radians))) ** 0.5
+            x = (xy[:, 2] + xy[:, 0]) / 2
+            y = (xy[:, 3] + xy[:, 1]) / 2
+            w = (xy[:, 2] - xy[:, 0]) * reduction
+            h = (xy[:, 3] - xy[:, 1]) * reduction
+            xy = np.concatenate((x - w / 2, y - h / 2, x + w / 2, y + h / 2)).reshape(4, n).T
 
             # reject warped points outside of image
             xy = np.clip(xy, 0, height)
