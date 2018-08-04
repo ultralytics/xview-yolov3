@@ -11,7 +11,7 @@ cd yolo && python3 train.py -epochs 999 -img_size 608 -resume 1
 
 # Detect
 gsutil cp gs://ultralytics/fresh9_5_e201.pt yolo/checkpoints
-gsutil cp gs://ultralytics/6layer_submit.pt yolo/checkpoints/classifier.pt
+gsutil cp gs://ultralytics/6leaky681_stripped.pt yolo/checkpoints/classifier.pt
 cd yolo && python3 detect.py
 
 # get xview training data

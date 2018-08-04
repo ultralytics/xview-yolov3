@@ -61,8 +61,7 @@ def detect(opt):
     try:
         model2 = ConvNetb()
         if platform == 'darwin':  # macos
-            checkpoint = torch.load('/Users/glennjocher/Documents/PyCharmProjects/mnist/best64_6layer.pt',
-                                    map_location='cpu')
+            checkpoint = torch.load('../mnist/best64_6layer.pt', map_location='cpu')
         else:
             checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
