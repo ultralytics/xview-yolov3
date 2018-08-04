@@ -3,7 +3,7 @@
 # Start
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3  # from utils import utils; utils.createChips()
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608
-sudo rm -rf mnist && git clone https://github.com/ultralytics/mnist && cd mnist && python3 train_xview_classes.py -name 'chips_10pad_square'
+sudo rm -rf mnist && git clone https://github.com/ultralytics/mnist && cd mnist && python3 train_xview_classes.py -name 'chips_20pad_square'
 
 
 # Resume
@@ -15,7 +15,7 @@ gsutil cp gs://ultralytics/6layer_submit.pt yolo/checkpoints/classifier.pt
 cd yolo && python3 detect2.py
 
 # get xview training data
-wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1533331306&Signature=BPSqQT6vJLeTr30vbQtjuAhbCEASZM0X8bIfyxZkvnzslN~n6QFpPEpgXnAuHCL72ZxFf6LxlymzH7L58KG1SnTtWejodh5Swm2IAeM3MTvP2vbOnFuoQMiIK1WJ4jhdSWZkekl0Gxbhq0p0vLJDW~qzCILG0OxEx7FZWwUe7za0o9JFrEZwwUIwNrpp~iPAxPG-UAowOPa-TLqLMPPqgQCUlTNhp~cE6uBBiKhovvSGZzIwNtct-hkm3AdsDpj1Vk2TOK3g7QzU4mdLn0I~9LOEygQR5i96DZFW7xg367n8rWxM7T6lM~YsOehKGhQ~xIohY5upawv6MCu62b1bWQ__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
+wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1533363111&Signature=oDeseDqRFNm0QS9RXrmy7VSnLzdpTQfx4Q~GFxyx~KCVay8l7JGcToOBp~GYMayA2-fy7pmjUphKJHghxfGt1Pyf566WkOq8b-OzbPbV99dEljQ23Gkwn7ndd0nULW3-mz2FDyPnrEM-LDlfUEC-npknbJc8S~~1I5LeJ48q51ZSlHOJn4bQUFfFzllPHd1YBomYm645KMS-yG185werTV0taJUqLvdRkqDWFzWfuNvEpXtCnUOdsS8DSAT9SqP81qUz81qAjHC2Wq-fRj2gYhpnqBixm3Y4Ng~O58QXCrhujkVgaXCrkFgc3cmAHdtC8qmegN50PBiSJAIsZxIwJg__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
 tar -xvzf train_images.tgz
 sudo rm -rf train_images/._* #train_images/659.tif train_images/769.tif
 
