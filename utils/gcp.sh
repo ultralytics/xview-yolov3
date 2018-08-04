@@ -12,7 +12,7 @@ cd yolo && python3 train.py -epochs 999 -img_size 608 -resume 1
 # Detect
 gsutil cp gs://ultralytics/fresh9_5_e201.pt yolo/checkpoints
 gsutil cp gs://ultralytics/6leaky681_stripped.pt yolo/checkpoints/classifier.pt
-cd yolo && python3 detect.py
+cd yolo && python3 detect.py -secondary_classifier 1
 
 # get xview training data
 wget -O train_images.tgz 'https://d307kc0mrhucc3.cloudfront.net/train_images.tgz?Expires=1533363111&Signature=oDeseDqRFNm0QS9RXrmy7VSnLzdpTQfx4Q~GFxyx~KCVay8l7JGcToOBp~GYMayA2-fy7pmjUphKJHghxfGt1Pyf566WkOq8b-OzbPbV99dEljQ23Gkwn7ndd0nULW3-mz2FDyPnrEM-LDlfUEC-npknbJc8S~~1I5LeJ48q51ZSlHOJn4bQUFfFzllPHd1YBomYm645KMS-yG185werTV0taJUqLvdRkqDWFzWfuNvEpXtCnUOdsS8DSAT9SqP81qUz81qAjHC2Wq-fRj2gYhpnqBixm3Y4Ng~O58QXCrhujkVgaXCrkFgc3cmAHdtC8qmegN50PBiSJAIsZxIwJg__&Key-Pair-Id=APKAIKGDJB5C3XUL2DXQ'
