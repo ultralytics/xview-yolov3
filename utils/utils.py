@@ -475,7 +475,7 @@ def createChips():
             if ((c == 48) | (c == 5)) & (random.random() > 0.1):  # keep only 10% of buildings and cars
                 continue
 
-            l = np.round(np.maximum(w, h) * 1.2 + 2) / 2 * (full_height / height)  # square
+            l = np.round(np.maximum(w, h) * 1.1 + 2) / 2 * (full_height / height)  # square
             lx, ly = l, l
 
             # lx = np.round(w * 1.4 + 2) / 2 * (full_height / height)  # fitted
@@ -500,7 +500,7 @@ def createChips():
     X = torch.from_numpy(np.ascontiguousarray(X))
     Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
 
-    with h5py.File('chips_20pad_square.h5') as hf:
+    with h5py.File('chips_10pad_square.h5') as hf:
         hf.create_dataset('X', data=X)
         hf.create_dataset('Y', data=Y)
 
