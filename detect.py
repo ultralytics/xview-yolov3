@@ -11,7 +11,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images100',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -61,7 +61,7 @@ def detect(opt):
     try:
         model2 = ConvNetb()
         if platform == 'darwin':  # macos
-            checkpoint = torch.load('../mnist/best64_6layer.pt', map_location='cpu')
+            checkpoint = torch.load('../mnist/6leaky681_stripped.pt', map_location='cpu')
         else:
             checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
         model2.load_state_dict(checkpoint['model'])
