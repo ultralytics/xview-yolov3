@@ -174,7 +174,9 @@ def main(opt):
                         'optimizer': optimizer.state_dict()},
                        'checkpoints/best.pt')
 
-        class_weights = class_weights * 0.8 + metrics[4]/metrics[4].sum() * 0.2
+        print(class_weights)
+        class_weights = class_weights * 0.2 + metrics[4]/metrics[4].sum() * 0.8
+        print(class_weights)
 
         # Save latest checkpoint
         torch.save({'epoch': epoch,
