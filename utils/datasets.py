@@ -68,7 +68,7 @@ class ListDataset():  # for training
         self.mat['id'] = self.mat['id'].squeeze()
         self.class_weights = xview_class_weights(range(60)).numpy()
 
-        self.clahe = cv2.createCLAHE(tileGridSize=(16, 16), clipLimit=2)
+        self.clahe = cv2.createCLAHE(clipLimit=2)
 
         # RGB normalization values
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
@@ -117,26 +117,40 @@ class ListDataset():  # for training
             if img0 is None:
                 continue
 
-            # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
+            augment_hsv = True
+            if augment_hsv:
+                # SV augmentation by 50%
+                fraction = 0.50
+                img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV).astype(np.float32)
+                S = img_hsv[:, :, 1]
+                V = img_hsv[:, :, 2]
+
+                S *= (random.random() * 2 - 1) * fraction + 1
+                img_hsv[:, :, 1] = np.clip(S, a_min=0, a_max=255)
+
+                V *= (random.random() * 2 - 1) * fraction + 1
+                img_hsv[:, :, 2] = np.clip(V, a_min=0, a_max=255)
+
+                img0 = cv2.cvtColor(img_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+
             # equalize the histogram of the Y channel
-            # img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
-            # convert the YUV image back to RGB format
-            # img0 = img_hsv #cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
-            # plt.subplot(1, 2, 2).imshow(img0[:, :, ::-1])
+            img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
+            img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
+            img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
 
             # load labels
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.tif', '').replace('.bmp', ''))).nonzero()[0]
             labels1 = self.mat['targets'][i]
 
-            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-179, 179), translate=(0.01, 0.01),
+            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
             nL1 = len(labels1)
             border = height / 2 + 1
 
-            # import matplotlib.pyplot as plt
-            # plt.imshow(img1[:, :, ::-1])
-            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
+            import matplotlib.pyplot as plt
+            plt.imshow(img1[:, :, ::-1])
+            plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # Pick 100 random points inside image
             r = np.ones((100, 3))
@@ -240,8 +254,8 @@ class ListDataset():  # for training
         # Normalize
         img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        img_all -= self.rgb_mean
-        img_all /= self.rgb_std
+        # img_all -= self.rgb_mean
+        # img_all /= self.rgb_std
 
         return torch.from_numpy(img_all), labels_all
 
@@ -269,7 +283,7 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-2, 2),
+def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-5, 5),
                   borderValue=(0, 0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
@@ -279,7 +293,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # Rotation and Scale
     R = np.eye(3)
     a = random.random() * (degrees[1] - degrees[0]) + degrees[0]
-    # a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
+    a += random.choice([-180, -90, 0, 90])  # random 90deg rotations added to small rotations
 
     s = random.random() * (scale[1] - scale[0]) + scale[0]
     R[:2] = cv2.getRotationMatrix2D(angle=a, center=(img.shape[1] / 2, img.shape[0] / 2), scale=s)
