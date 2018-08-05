@@ -161,30 +161,36 @@ def main(opt):
             # if i == 3:
             #    return
 
-        print(class_weights)
-        class_weights = class_weights * 0.01 + (1 / metrics[3]) / (1 / metrics[3]).sum() * 0.99
+        # Update dynamic class weights
+        new_weights = metrics[3]
+        new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
+        new_weights /= new_weights.sum()
+        class_weights = class_weights * 0.9 + new_weights * 0.1
         print(class_weights)
 
         # Write epoch results
         with open('results.txt', 'a') as file:
             file.write(s + '\n')
 
-        # Save best checkpoint
+        # Update best loss
         loss_per_target = rloss['loss'] / rloss['nGT']
-        if (epoch >= 0) & (loss_per_target < best_loss):
+        if loss_per_target < best_loss:
             best_loss = loss_per_target
-            torch.save({'epoch': epoch,
-                        'best_loss': best_loss,
-                        'model': model.state_dict(),
-                        'optimizer': optimizer.state_dict()},
-                       'checkpoints/best.pt')
 
         # Save latest checkpoint
-        torch.save({'epoch': epoch,
-                    'best_loss': best_loss,
-                    'model': model.state_dict(),
-                    'optimizer': optimizer.state_dict()},
-                   'checkpoints/latest.pt')
+        checkpoint = {'epoch': epoch,
+                      'best_loss': best_loss,
+                      'model': model.state_dict(),
+                      'optimizer': optimizer.state_dict()}
+        torch.save(checkpoint, 'checkpoints/latest.pt')
+
+        # Save best checkpoint
+        if best_loss == loss_per_target:
+            os.system('cp checkpoints/latest.pt checkpoints/best.pt')
+
+        # Save backup checkpoint
+        if (epoch > 0) & (epoch % 100 == 0):
+            os.system('cp checkpoints/latest.pt checkpoints/backup' + str(epoch) + '.pt')
 
     # Save final model
     dt = time.time() - t0
