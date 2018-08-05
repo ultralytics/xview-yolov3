@@ -84,7 +84,8 @@ def main(opt):
             print('Using ', torch.cuda.device_count(), ' GPUs')
             model = nn.DataParallel(model)
         model.to(device).train()
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001,
+                                     weight_decay=0.0005)
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
@@ -157,7 +158,7 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            #if i == 1:
+            # if i == 1:
             #    return
 
         # Update dynamic class weights
