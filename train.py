@@ -160,6 +160,10 @@ def main(opt):
             # if i == 3:
             #    return
 
+        print(class_weights)
+        class_weights = class_weights * 0.01 + metrics[3]/metrics[3].sum() * 0.99
+        print(class_weights)
+
         # Write epoch results
         with open('results.txt', 'a') as file:
             file.write(s + '\n')
@@ -173,10 +177,6 @@ def main(opt):
                         'model': model.state_dict(),
                         'optimizer': optimizer.state_dict()},
                        'checkpoints/best.pt')
-
-        print(class_weights)
-        class_weights = class_weights * 0.01 + metrics[4]/metrics[4].sum() * 0.99
-        print(class_weights)
 
         # Save latest checkpoint
         torch.save({'epoch': epoch,
