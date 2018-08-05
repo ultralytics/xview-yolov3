@@ -166,7 +166,7 @@ def main(opt):
         new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
         new_weights /= new_weights.sum()
         class_weights = class_weights * 0.9 + new_weights * 0.1
-        print(class_weights)
+        print(1/class_weights)
 
         # Write epoch results
         with open('results.txt', 'a') as file:
