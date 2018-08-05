@@ -143,7 +143,7 @@ class ListDataset():  # for training
             i = (self.mat['id'] == float(chip.replace('.tif', '').replace('.bmp', ''))).nonzero()[0]
             labels1 = self.mat['targets'][i]
 
-            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01),
+            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-22.5, 22.5), translate=(0.01, 0.01),
                                              scale=(.8, 1.2))  # RGB
             nL1 = len(labels1)
             border = height / 2 + 1
