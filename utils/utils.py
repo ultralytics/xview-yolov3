@@ -268,14 +268,12 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                 break
 
             close = (np.abs(a[i, 0] - a[i + 1:, 0]) < radius) & (np.abs(a[i, 1] - a[i + 1:, 1]) < radius)
-            close = close.nonzero()
+            close = close
 
             if len(close) > 0:
                 close = close + i + 1
                 iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4), x1y1x2y2=False)
-                print(iou)
                 bad = close[iou > thresh]
-
                 if len(bad) > 0:
                     mask = torch.ones(len(a)).type(torch.ByteTensor)
                     mask[bad] = 0
@@ -475,7 +473,7 @@ def createChips():
             if ((c == 48) | (c == 5)) & (random.random() > 0.1):  # keep only 10% of buildings and cars
                 continue
 
-            l = np.round(np.maximum(w, h) * 1.1 + 2) / 2 * (full_height / height)  # square
+            l = np.round(np.maximum(w, h) * 1.0 + 2) / 2 * (full_height / height)  # square
             lx, ly = l, l
 
             # lx = np.round(w * 1.4 + 2) / 2 * (full_height / height)  # fitted
@@ -500,7 +498,7 @@ def createChips():
     X = torch.from_numpy(np.ascontiguousarray(X))
     Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
 
-    with h5py.File('chips_10pad_square.h5') as hf:
+    with h5py.File('chips_0pad_square.h5') as hf:
         hf.create_dataset('X', data=X)
         hf.create_dataset('Y', data=Y)
 
