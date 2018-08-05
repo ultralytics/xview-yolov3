@@ -209,7 +209,7 @@ class Darknet(nn.Module):
         self.img_size = img_size
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC']
 
-    def forward(self, x, targets=None, requestPrecision=False):
+    def forward(self, x, targets=None, requestPrecision=False, weight=None):
         is_training = targets is not None
         output = []
         self.losses = defaultdict(float)
@@ -227,7 +227,7 @@ class Darknet(nn.Module):
             elif module_def['type'] == 'yolo':
                 # Train phase: get loss
                 if is_training:
-                    x, *losses = module[0](x, targets, requestPrecision)
+                    x, *losses = module[0](x, targets, requestPrecision, weight)
                     for name, loss in zip(self.loss_names, losses):
                         self.losses[name] += loss
                 # Test phase: Get detections

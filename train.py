@@ -123,7 +123,7 @@ def main(opt):
                     continue
 
                 loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True,
-                             class_weights=class_weights.to(device))
+                             weight=class_weights.to(device))
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -175,7 +175,7 @@ def main(opt):
                        'checkpoints/best.pt')
 
         print(class_weights)
-        class_weights = class_weights * 0.2 + metrics[4]/metrics[4].sum() * 0.8
+        class_weights = class_weights * 0.01 + metrics[4]/metrics[4].sum() * 0.99
         print(class_weights)
 
         # Save latest checkpoint
