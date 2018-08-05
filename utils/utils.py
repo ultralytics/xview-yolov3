@@ -259,7 +259,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         # Get score and class with highest confidence
 
         # cross-class NMS ---------------------------------------------
-        thresh = 0.9
+        thresh = 0.85
         a = pred.clone()
         a = a[np.argsort(-a[:, 4])]  # sort best to worst
         radius = 30  # area to search for cross-class ious
