@@ -102,20 +102,14 @@ class YOLOLayer(nn.Module):
         self.anchor_w = self.scaled_anchors[:, 0:1].view((1, nA, 1, 1))
         self.anchor_h = self.scaled_anchors[:, 1:2].view((1, nA, 1, 1))
 
-    def forward(self, p, targets=None, requestPrecision=False):
+    def forward(self, p, targets=None, requestPrecision=False, weight=None):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
         device = torch.device('cuda:0' if p.is_cuda else 'cpu')
-        weight = xview_class_weights(range(60)).to(device)
+        # weight = xview_class_weights(range(60)).to(device)
 
         bs = p.shape[0]
         nG = p.shape[2]
         stride = self.img_dim / nG
-
-        # BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(size_average=False, weight=weight)
-        BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
-        BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-        MSELoss = nn.MSELoss(size_average=False)
-        CrossEntropyLoss = nn.CrossEntropyLoss(size_average=True)
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
@@ -140,6 +134,12 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
+            # BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(size_average=False, weight=weight)
+            BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
+            BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
+            MSELoss = nn.MSELoss(size_average=False)
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=True)
+
             if requestPrecision:
                 gx = self.grid_x[:, :, :nG, :nG]
                 gy = self.grid_y[:, :, :nG, :nG]
@@ -168,7 +168,6 @@ class YOLOLayer(nn.Module):
                 lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
                 # lcls = 1.25 * (BCEWithLogitsLoss1(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-
                 # lcls = 1.25 * BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
                 lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
@@ -240,7 +239,7 @@ class Darknet(nn.Module):
         if is_training:
             self.losses['nGT'] /= 3
             self.losses['TC'] /= 3
-            metrics = torch.zeros((3, 60))  # TP, FP, FN
+            metrics = torch.zeros((4, 60))  # TP, FP, FN, target_count
             metrics[1] = self.losses['FPe']
 
             ui = np.unique(self.losses['TC'])[1:]
@@ -254,6 +253,7 @@ class Darknet(nn.Module):
             self.losses['FP'] = metrics[1].sum()
             self.losses['FN'] = metrics[2].sum()
             self.losses['TC'] = 0
+            metrics[3] = metrics.sum(0) - self.losses['FPe']
             self.losses['metrics'] = metrics
 
         return sum(output) if is_training else torch.cat(output, 1)

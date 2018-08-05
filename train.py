@@ -55,15 +55,6 @@ def main(opt):
     if opt.resume:
         checkpoint = torch.load('checkpoints/latest.pt', map_location='cpu')
 
-        # current = model.state_dict()
-        # saved = checkpoint['model']
-        # 1. filter out unnecessary keys
-        # saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
-        # 2. overwrite entries in the existing state dict
-        # current.update(saved)
-        # 3. load the new state dict
-        # model.load_state_dict(current)
-
         model.load_state_dict(checkpoint['model'])
         if torch.cuda.device_count() > 1:
             print('Using ', torch.cuda.device_count(), ' GPUs')
@@ -104,6 +95,7 @@ def main(opt):
     t0, t1 = time.time(), time.time()
     print('%10s' * 16 % (
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
+    class_weights = xview_class_weights(range(60))
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
@@ -120,7 +112,7 @@ def main(opt):
 
         ui = -1
         rloss = defaultdict(float)  # running loss
-        metrics = torch.zeros((3, 60))
+        metrics = torch.zeros(4, 60)
         for i, (imgs, targets) in enumerate(dataloader):
 
             n = 4  # number of pictures at a time
@@ -130,7 +122,8 @@ def main(opt):
                 if nGT < 1:
                     continue
 
-                loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True)
+                loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True,
+                             class_weights=class_weights.to(device))
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -180,6 +173,8 @@ def main(opt):
                         'model': model.state_dict(),
                         'optimizer': optimizer.state_dict()},
                        'checkpoints/best.pt')
+
+        class_weights = class_weights * 0.8 + metrics[4]/metrics[4].sum() * 0.2
 
         # Save latest checkpoint
         torch.save({'epoch': epoch,
