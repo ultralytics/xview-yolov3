@@ -161,7 +161,7 @@ def main(opt):
             #    return
 
         print(class_weights)
-        class_weights = class_weights * 0.01 + metrics[3]/metrics[3].sum() * 0.99
+        class_weights = class_weights * 0.01 + (1 / metrics[3]) / (1 / metrics[3]).sum() * 0.99
         print(class_weights)
 
         # Write epoch results
