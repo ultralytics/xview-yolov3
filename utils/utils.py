@@ -54,9 +54,10 @@ def xview_class_weights(indices):  # weights of each class in the training set, 
 
 def xview_class_weights_hard_mining(indices):  # weights of each class in the training set, normalized to mu = 1
     weights = 1 / torch.FloatTensor(
-        [74, 364, 713, 71, 2925, 209767, 6925, 1101, 3612, 12134, 5871, 3640, 860, 4062, 895, 149, 174, 17, 1624, 1846,
-         125, 122, 124, 662, 1452, 697, 222, 190, 786, 200, 450, 295, 79, 205, 156, 181, 70, 64, 337, 1352, 336, 78,
-         628, 841, 287, 83, 702, 1177, 313865, 195, 1081, 882, 1059, 4175, 123, 1700, 2317, 1579, 368, 85])
+        [786., 1167., 1069., 334., 5658., 181381., 7376., 1412., 3480., 14161., 11870., 7477., 6762., 6274., 3431.,
+         737., 628., 197., 7392., 7692., 675., 623., 551., 2815., 6250., 3140., 758., 823., 3271., 1192., 2136., 1157.,
+         341., 471., 390., 494., 677., 327., 1032., 3296., 1451., 717., 1556., 1867., 2907., 302., 4612., 1621.,
+         165088., 711., 1699., 668., 1958., 3832., 810., 2821., 7891., 7075., 288., 246.])
     weights /= weights.sum()
     return weights[indices]
 
@@ -414,7 +415,7 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2
     height = 64
 
-    l = np.round(np.maximum(w, h)*1.10 + 2) / 2
+    l = np.round(np.maximum(w, h) * 1.10 + 2) / 2
     x1 = np.maximum(x - l, 1).astype(np.uint16)
     x2 = np.minimum(x + l, img.shape[1]).astype(np.uint16)
     y1 = np.maximum(y - l, 1).astype(np.uint16)
