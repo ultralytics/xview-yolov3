@@ -130,6 +130,7 @@ def main(opt):
 
                 ui += 1
                 metrics += model.losses['metrics']
+                print(metrics[3])
                 for key, val in model.losses.items():
                     rloss[key] = (rloss[key] * ui + val) / (ui + 1)
 

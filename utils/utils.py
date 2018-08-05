@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 
 # set printoptions
-torch.set_printoptions(linewidth=320, precision=5, profile='long')
+torch.set_printoptions(linewidth=1320, precision=5, profile='long')
 np.set_printoptions(linewidth=320, formatter={'float_kind': '{11.5g}'.format})  # format short g, %precision=5
 
 
@@ -168,7 +168,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     TP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FP = torch.ByteTensor(nB, max(nT)).fill_(0)
     FN = torch.ByteTensor(nB, max(nT)).fill_(0)
-    TC = torch.ByteTensor(nB, max(nT)).fill_(0)  # target category
+    TC = torch.ShortTensor(nB, max(nT)).fill_(-1)  # target category
 
     for b in range(nB):
         nTb = nT[b]  # number of targets (measures index of first zero-height target box)
