@@ -130,7 +130,6 @@ def main(opt):
 
                 ui += 1
                 metrics += model.losses['metrics']
-                print(metrics[3])
                 for key, val in model.losses.items():
                     rloss[key] = (rloss[key] * ui + val) / (ui + 1)
 
@@ -164,6 +163,7 @@ def main(opt):
         # Update dynamic class weights
         new_weights = metrics[3]
         new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
+        new_weights = 1 / new_weights
         new_weights /= new_weights.sum()
         class_weights = class_weights * 0.9 + new_weights * 0.1
         print(1/class_weights)
