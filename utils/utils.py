@@ -268,12 +268,13 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                 break
 
             close = (np.abs(a[i, 0] - a[i + 1:, 0]) < radius) & (np.abs(a[i, 1] - a[i + 1:, 1]) < radius)
-            close = close
+            close = close.nonzero()
 
             if len(close) > 0:
                 close = close + i + 1
                 iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4), x1y1x2y2=False)
                 bad = close[iou > thresh]
+
                 if len(bad) > 0:
                     mask = torch.ones(len(a)).type(torch.ByteTensor)
                     mask[bad] = 0
