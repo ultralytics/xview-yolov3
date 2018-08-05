@@ -14,7 +14,7 @@ from utils.utils import *
 targets_path = 'utils/targets_c60.mat'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
+parser.add_argument('-epochs', type=int, default=4, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30.cfg', help='cfg file path')
 parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
@@ -162,11 +162,12 @@ def main(opt):
 
         # Update dynamic class weights
         new_weights = metrics[3]
+        print(metrics[3])
         new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
         new_weights = 1 / new_weights
         new_weights /= new_weights.sum()
         class_weights = class_weights * 0.9 + new_weights * 0.1
-        print(1/class_weights)
+        print(1 / class_weights)
 
         # Write epoch results
         with open('results.txt', 'a') as file:
