@@ -21,14 +21,14 @@ else:  # gcp
     parser.add_argument('-output_folder', type=str, default='../output', help='path to outputs')
     cuda = False
 
+parser.add_argument('-plot_flag', type=bool, default=True)
+parser.add_argument('-secondary_classifier', type=bool, default=False)
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30.cfg', help='cfg file path')
-parser.add_argument('-secondary_classifier', default=False)
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
 parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
 parser.add_argument('-img_size', type=int, default=32 * 51, help='size of each image dimension')
-parser.add_argument('-plot_flag', type=bool, default=True, help='plots predicted images if True')
 opt = parser.parse_args()
 print(opt)
 
@@ -65,9 +65,21 @@ def detect(opt):
             checkpoint = torch.load('../mnist/6leaky681_stripped.pt', map_location='cpu')
         else:
             checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
-        model2.load_state_dict(checkpoint['model'])
+
+        current = model2.state_dict()
+        saved = checkpoint['model']
+        # 1. filter out unnecessary keys
+        saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
+        # 2. overwrite entries in the existing state dict
+        current.update(saved)
+        # 3. load the new state dict
+        model2.load_state_dict(current)
+        del checkpoint, current, saved
         model2.to(device).eval()
-        del checkpoint
+
+        # model2.load_state_dict(checkpoint['model'])
+        # model2.to(device).eval()
+        # del checkpoint
     else:
         model2 = None
 
@@ -255,8 +267,7 @@ class ConvNetb(nn.Module):
             nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 32),
             nn.LeakyReLU())
-        self.fc = nn.Linear(int(32768/4), num_classes)  # 64 pixels, 4 layer, 64 filters
-
+        self.fc = nn.Linear(int(32768 / 4), num_classes)  # 64 pixels, 4 layer, 64 filters
 
     def forward(self, x):  # x.size() = [512, 1, 28, 28]
         x = self.layer1(x)
@@ -274,4 +285,3 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     detect(opt)
     torch.cuda.empty_cache()
-

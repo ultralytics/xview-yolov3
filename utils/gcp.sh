@@ -5,7 +5,6 @@ sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && 
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -img_size 608
 sudo rm -rf mnist && git clone https://github.com/ultralytics/mnist && cd mnist && python3 train_xview_classes.py -name 'chips_20pad_square'
 
-
 # Resume
 cd yolo && python3 train.py -epochs 999 -img_size 608 -resume 1
 
