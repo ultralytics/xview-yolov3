@@ -405,7 +405,7 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2
     height = 64
 
-    l = np.round(np.maximum(w, h) + 2) / 2
+    l = np.round(np.maximum(w, h)*1.10 + 2) / 2
     x1 = np.maximum(x - l, 1).astype(np.uint16)
     x2 = np.minimum(x + l, img.shape[1]).astype(np.uint16)
     y1 = np.maximum(y - l, 1).astype(np.uint16)

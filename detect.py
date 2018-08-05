@@ -11,7 +11,7 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images8',
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp',
                         help='path to images')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
@@ -62,7 +62,7 @@ def detect(opt):
     if opt.secondary_classifier:
         model2 = ConvNetb()
         if platform == 'darwin':  # macos
-            checkpoint = torch.load('../mnist/6leaky681_stripped.pt', map_location='cpu')
+            checkpoint = torch.load('../mnist/10pad_6ReLU_fullyconnected.pt', map_location='cpu')
         else:
             checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
 
@@ -246,39 +246,43 @@ class ConvNetb(nn.Module):
         self.layer1 = nn.Sequential(
             nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(n),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer2 = nn.Sequential(
             nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 2),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer3 = nn.Sequential(
             nn.Conv2d(n * 2, n * 4, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 4),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer4 = nn.Sequential(
             nn.Conv2d(n * 4, n * 8, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 8),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer5 = nn.Sequential(
             nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 16),
-            nn.LeakyReLU())
+            nn.ReLU())
         self.layer6 = nn.Sequential(
             nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 32),
-            nn.LeakyReLU())
-        self.fc = nn.Linear(int(32768 / 4), num_classes)  # 64 pixels, 4 layer, 64 filters
+            nn.ReLU())
 
-    def forward(self, x):  # x.size() = [512, 1, 28, 28]
+        # self.fc = nn.Linear(int(8192), num_classes)  # 64 pixels, 4 layer, 64 filters
+        self.fully_convolutional = nn.Conv2d(n * 32, 60, kernel_size=2, stride=1, padding=0, bias=True)
+
+    def forward(self, x):  # 500 x 1 x 64 x 64
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
         x = self.layer5(x)
         x = self.layer6(x)
-        x = x.reshape(x.size(0), -1)
-        x = self.fc(x)
-        return x
+        # x = self.fc(x.reshape(x.size(0), -1))
+        x = self.fully_convolutional(x)
+        return x.squeeze()  # 500 x 60
+
+
 
 
 if __name__ == '__main__':
