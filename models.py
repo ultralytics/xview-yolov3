@@ -111,17 +111,16 @@ class YOLOLayer(nn.Module):
         nG = p.shape[2]
         stride = self.img_dim / nG
 
-        BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(size_average=False, weight=weight)
+        # BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(size_average=False, weight=weight)
         BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
         BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
         MSELoss = nn.MSELoss(size_average=False)
-        # CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=True)
+        CrossEntropyLoss = nn.CrossEntropyLoss(size_average=True)
 
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
             self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
             # self.scaled_anchors = self.scaled_anchors.cuda()
-
 
         # x.view(4, 650, 19, 19) -- > (4, 10, 19, 19, 65)  # (bs, anchors, grid, grid, classes + xywh)
         p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
@@ -170,8 +169,8 @@ class YOLOLayer(nn.Module):
 
                 # lcls = 1.25 * (BCEWithLogitsLoss1(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
 
-                lcls = 1.25 * BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
-                # lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                # lcls = 1.25 * BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
+                lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
