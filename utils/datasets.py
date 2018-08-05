@@ -150,7 +150,7 @@ class ListDataset():  # for training
             labels1 = self.mat['targets'][i]
 
             img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-22.5, 22.5), translate=(0.01, 0.01),
-                                             scale=(.8, 1.2))  # RGB
+                                             scale=(0.8, 1.2))  # RGB
             nL1 = len(labels1)
             border = height / 2 + 1
 
