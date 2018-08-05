@@ -52,6 +52,15 @@ def xview_class_weights(indices):  # weights of each class in the training set, 
     return weights[indices]
 
 
+def xview_class_weights_hard_mining(indices):  # weights of each class in the training set, normalized to mu = 1
+    weights = 1 / torch.FloatTensor(
+        [74, 364, 713, 71, 2925, 209767, 6925, 1101, 3612, 12134, 5871, 3640, 860, 4062, 895, 149, 174, 17, 1624, 1846,
+         125, 122, 124, 662, 1452, 697, 222, 190, 786, 200, 450, 295, 79, 205, 156, 181, 70, 64, 337, 1352, 336, 78,
+         628, 841, 287, 83, 702, 1177, 313865, 195, 1081, 882, 1059, 4175, 123, 1700, 2317, 1579, 368, 85])
+    weights /= weights.sum()
+    return weights[indices]
+
+
 def xview_feedback_weights(indices):
     weights = 1 / torch.FloatTensor(
         [0, 0.175, 0.72, 1.0, 0.0441, 0.486, 0.168, 0.0233, 0.0304, 0.0177, 0.087, 0.209, 0.0308, 0.103, 0.0927, 0.269,
