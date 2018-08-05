@@ -96,7 +96,7 @@ class ListDataset():  # for training
                                                 p=self.mat['image_weights'].ravel())
         return self
 
-    @profile
+    # @profile
     def __next__(self):
         self.count += 1
         if self.count == self.nB:
@@ -137,10 +137,10 @@ class ListDataset():  # for training
 
                 img_hsv[:, :, 1] = S.astype(np.uint8)
                 img_hsv[:, :, 2] = V.astype(np.uint8)
-                img0 = cv2.cvtColor(img_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+                img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
 
             # equalize the histogram of the Y channel
-            img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
+            # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
             img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
             img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
 
