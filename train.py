@@ -157,8 +157,8 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            # if i == 3:
-            #    return
+            if i == 1:
+                return
 
         # Update dynamic class weights
         new_weights = metrics[3]

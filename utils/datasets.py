@@ -96,7 +96,7 @@ class ListDataset():  # for training
                                                 p=self.mat['image_weights'].ravel())
         return self
 
-    # @profile
+    @profile
     def __next__(self):
         self.count += 1
         if self.count == self.nB:
@@ -121,16 +121,22 @@ class ListDataset():  # for training
             if augment_hsv:
                 # SV augmentation by 50%
                 fraction = 0.50
-                img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV).astype(np.float32)
-                S = img_hsv[:, :, 1]
-                V = img_hsv[:, :, 2]
+                img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
+                S = img_hsv[:, :, 1].astype(np.float32)
+                V = img_hsv[:, :, 2].astype(np.float32)
 
-                S *= (random.random() * 2 - 1) * fraction + 1
-                img_hsv[:, :, 1] = np.clip(S, a_min=0, a_max=255)
+                a = (random.random() * 2 - 1) * fraction + 1
+                S *= a
+                if a > 1:
+                    S = np.clip(S, a_min=0, a_max=255)
 
-                V *= (random.random() * 2 - 1) * fraction + 1
-                img_hsv[:, :, 2] = np.clip(V, a_min=0, a_max=255)
+                a = (random.random() * 2 - 1) * fraction + 1
+                V *= a
+                if a > 1:
+                    V = np.clip(V, a_min=0, a_max=255)
 
+                img_hsv[:, :, 1] = S.astype(np.uint8)
+                img_hsv[:, :, 2] = V.astype(np.uint8)
                 img0 = cv2.cvtColor(img_hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
             # equalize the histogram of the Y channel
@@ -148,9 +154,9 @@ class ListDataset():  # for training
             nL1 = len(labels1)
             border = height / 2 + 1
 
-            import matplotlib.pyplot as plt
-            plt.imshow(img1[:, :, ::-1])
-            plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img1[:, :, ::-1])
+            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # Pick 100 random points inside image
             r = np.ones((100, 3))
