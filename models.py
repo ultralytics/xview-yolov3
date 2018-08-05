@@ -26,12 +26,12 @@ def create_modules(module_defs):
                                                         stride=int(module_def['stride']),
                                                         dilation=1,
                                                         padding=pad,
-                                                        bias=True))
+                                                        bias=not bn))
 
             if bn:
                 modules.add_module('batch_norm_%d' % i, nn.BatchNorm2d(filters))
             if module_def['activation'] == 'leaky':
-                modules.add_module('leaky_%d' % i, nn.LeakyReLU(0.1))
+                modules.add_module('leaky_%d' % i, nn.LeakyReLU())
 
         elif module_def['type'] == 'upsample':
             upsample = nn.Upsample(scale_factor=int(module_def['stride']), mode='bilinear', align_corners=True)
@@ -111,6 +111,7 @@ class YOLOLayer(nn.Module):
         nG = p.shape[2]
         stride = self.img_dim / nG
 
+        BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(size_average=False, weight=weight)
         BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)
         BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
         MSELoss = nn.MSELoss(size_average=False)
@@ -168,7 +169,9 @@ class YOLOLayer(nn.Module):
                 lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
                 # lcls = 1.25 * (BCEWithLogitsLoss1(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+
+                lcls = 1.25 * BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
+                # lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
