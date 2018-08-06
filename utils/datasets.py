@@ -128,12 +128,12 @@ class ListDataset():  # for training
                 a = (random.random() * 2 - 1) * fraction + 1
                 S *= a
                 if a > 1:
-                    S = np.clip(S, a_min=0, a_max=255)
+                    np.clip(S, a_min=0, a_max=255, out=S)
 
                 a = (random.random() * 2 - 1) * fraction + 1
                 V *= a
                 if a > 1:
-                    V = np.clip(V, a_min=0, a_max=255)
+                    np.clip(V, a_min=0, a_max=255, out=V)
 
                 img_hsv[:, :, 1] = S.astype(np.uint8)
                 img_hsv[:, :, 2] = V.astype(np.uint8)
