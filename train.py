@@ -75,6 +75,9 @@ def main(opt):
         optimizer = torch.optim.Adam(model.parameters())
         optimizer.load_state_dict(checkpoint['optimizer'])
 
+        for g in optimizer.param_groups:
+            g['weight_decay'] = 0.0005
+
         start_epoch = checkpoint['epoch'] + 1
         best_loss = checkpoint['best_loss']
 
