@@ -99,7 +99,7 @@ def main(opt):
     t0, t1 = time.time(), time.time()
     print('%10s' * 16 % (
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
-    class_weights = xview_class_weights_hard_mining(range(60))
+    class_weights = xview_class_weights_hard_mining(range(60)).to(device)
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
@@ -127,7 +127,7 @@ def main(opt):
                     continue
 
                 loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True,
-                             weight=class_weights.to(device))
+                             weight=class_weights)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -165,13 +165,13 @@ def main(opt):
             #    return
 
         # Update dynamic class weights
-        new_weights = metrics[3]
-        print(metrics[3])
-        new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
-        new_weights = 1 / new_weights
-        new_weights /= new_weights.sum()
-        class_weights = class_weights * 0.9 + new_weights * 0.1
-        print(1 / class_weights)
+        # new_weights = metrics[3]
+        # print(metrics[3])
+        # new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
+        # new_weights = 1 / new_weights
+        # new_weights /= new_weights.sum()
+        # class_weights = class_weights * 0.9 + new_weights * 0.1
+        # print(1 / class_weights)
 
         # Write epoch results
         with open('results.txt', 'a') as file:
