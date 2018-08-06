@@ -240,7 +240,6 @@ class Darknet(nn.Module):
             self.losses['nGT'] /= 3
             self.losses['TC'] /= 3
             metrics = torch.zeros((4, 60))  # TP, FP, FN, target_count
-            metrics[1] = self.losses['FPe']
 
             ui = np.unique(self.losses['TC'])[1:]
             for i in ui:
@@ -248,12 +247,13 @@ class Darknet(nn.Module):
                 metrics[0, i] = (self.losses['TP'][j] > 0).sum().float()  # TP
                 metrics[1, i] = (self.losses['FP'][j] > 0).sum().float()  # FP
                 metrics[2, i] = (self.losses['FN'][j] == 3).sum().float()  # FN
+            metrics[3] = metrics.sum(0)
+            metrics[1] += self.losses['FPe']
 
             self.losses['TP'] = metrics[0].sum()
             self.losses['FP'] = metrics[1].sum()
             self.losses['FN'] = metrics[2].sum()
             self.losses['TC'] = 0
-            metrics[3] = metrics.sum(0) - self.losses['FPe']
             self.losses['metrics'] = metrics
 
         return sum(output) if is_training else torch.cat(output, 1)
