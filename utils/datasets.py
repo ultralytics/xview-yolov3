@@ -192,7 +192,7 @@ class ListDataset():  # for training
                     labels = labels1.copy()
                     labels[:, [1, 3]] -= pad_x
                     labels[:, [2, 4]] -= pad_y
-                    labels[:, 1:5] = np.clip(labels[:, 1:5], 0, height)
+                    np.clip(labels[:, 1:5], 0, height, out=labels[:, 1:5])
 
                     lw = labels[:, 3] - labels[:, 1]
                     lh = labels[:, 4] - labels[:, 2]
@@ -346,7 +346,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             xy = np.concatenate((x - w / 2, y - h / 2, x + w / 2, y + h / 2)).reshape(4, n).T
 
             # reject warped points outside of image
-            xy = np.clip(xy, 0, height)
+            np.clip(xy, 0, height, out=xy)
             w = xy[:, 2] - xy[:, 0]
             h = xy[:, 3] - xy[:, 1]
             area = w * h
