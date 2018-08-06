@@ -137,7 +137,7 @@ class ListDataset():  # for training
 
                 img_hsv[:, :, 1] = S.astype(np.uint8)
                 img_hsv[:, :, 2] = V.astype(np.uint8)
-                img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
+                cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img0)
 
             # equalize the histogram of the Y channel
             # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
