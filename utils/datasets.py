@@ -283,8 +283,8 @@ class ListDataset():  # for training
         # Normalize
         img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        img_all -= self.rgb_mean
-        img_all /= self.rgb_std
+        # img_all -= self.rgb_mean
+        # img_all /= self.rgb_std
 
         return torch.from_numpy(img_all), labels_all
 
