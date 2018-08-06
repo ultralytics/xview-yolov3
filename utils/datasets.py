@@ -45,8 +45,8 @@ class ImageFolder():  # for eval-only
         # Normalize RGB
         img = img[:, :, ::-1].transpose(2, 0, 1)
         img = np.ascontiguousarray(img, dtype=np.float32)
-        img -= self.rgb_mean
-        img /= self.rgb_std
+        # img -= self.rgb_mean
+        # img /= self.rgb_std
 
         return [img_path], img
 
