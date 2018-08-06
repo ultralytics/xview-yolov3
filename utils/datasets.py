@@ -139,29 +139,6 @@ class ListDataset():  # for training
                 img_hsv[:, :, 2] = V.astype(np.uint8)
                 img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
 
-            # augment_hsv = True
-            # if augment_hsv:
-            #     # HSV augmentation by 10%, 50%, 50%
-            #     img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV).astype(np.float32)
-            #
-            #     a = (random.random() * 2 - 1) * 0.1 + 1
-            #     img_hsv[:, :, 0] *= a
-            #     if a > 1:
-            #         img_hsv[:, :, 0] = np.clip(img_hsv[:, :, 0], a_min=0, a_max=255)
-            #
-            #     a = (random.random() * 2 - 1) * 0.5 + 1
-            #     img_hsv[:, :, 1] *= a
-            #     if a > 1:
-            #         img_hsv[:, :, 1] = np.clip(img_hsv[:, :, 1], a_min=0, a_max=255)
-            #
-            #     a = (random.random() * 2 - 1) * 0.5 + 1
-            #     img_hsv[:, :, 2] *= a
-            #     if a > 1:
-            #         img_hsv[:, :, 2] = np.clip(img_hsv[:, :, 2], a_min=0, a_max=255)
-            #
-            #     img_hsv = img_hsv.astype(np.uint8)
-            #     img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
-
             # equalize the histogram of the Y channel
             # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
             # img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
