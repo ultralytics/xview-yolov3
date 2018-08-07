@@ -114,6 +114,7 @@ class YOLOLayer(nn.Module):
         if p.is_cuda and not self.grid_x.is_cuda:
             self.grid_x, self.grid_y = self.grid_x.cuda(), self.grid_y.cuda()
             self.anchor_w, self.anchor_h = self.anchor_w.cuda(), self.anchor_h.cuda()
+            # self.scaled_anchors = self.scaled_anchors.cuda()
 
         # x.view(4, 650, 19, 19) -- > (4, 10, 19, 19, 65)  # (bs, anchors, grid, grid, classes + xywh)
         p = p.view(bs, self.nA, self.bbox_attrs, nG, nG).permute(0, 1, 3, 4, 2).contiguous()  # prediction
@@ -148,7 +149,7 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 3] = y.data + gy + height / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC = \
-                build_targets(pred_boxes.cpu(), pred_conf.cpu(), pred_cls.cpu(), targets, self.scaled_anchors.cpu(), self.nA, self.nC, nG,
+                build_targets(pred_boxes, pred_conf, pred_cls, targets, self.scaled_anchors, self.nA, self.nC, nG,
                               requestPrecision)
             tcls = tcls[mask]
             if x.is_cuda:
