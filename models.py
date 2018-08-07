@@ -148,7 +148,7 @@ class YOLOLayer(nn.Module):
                 pred_boxes[..., 3] = y.data + gy + height / 2
 
             tx, ty, tw, th, mask, tcls, TP, FP, FN, TC = \
-                build_targets(pred_boxes.cpu(), pred_conf.cpu(), pred_cls.cpu(), targets, self.scaled_anchors, self.nA, self.nC, nG,
+                build_targets(pred_boxes.cpu(), pred_conf.cpu(), pred_cls.cpu(), targets, self.scaled_anchors.cpu(), self.nA, self.nC.cpu(), nG.cpu(),
                               requestPrecision)
             tcls = tcls[mask]
             if x.is_cuda:
