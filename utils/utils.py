@@ -411,12 +411,14 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
 
 # @profile
 def secondary_class_detection(x, y, w, h, img, model, device):
+    print('Classifying boxes...', end='')
+
     # 1. create 48-pixel squares from each chip
     img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2 (i.e. cv2 = 608 x 608 x 3)
     height = 64
 
-    img -= np.array([60.134, 49.697, 40.746]).reshape((1,1,3))  # rgb_mean
-    img /= np.array([29.990, 24.498, 22.046]).reshape((1,1,3))  # rgb_std
+    img -= np.array([60.134, 49.697, 40.746]).reshape((1, 1, 3))  # rgb_mean
+    img /= np.array([29.990, 24.498, 22.046]).reshape((1, 1, 3))  # rgb_std
 
     l = np.round(np.maximum(w, h) * 1.10 + 2) / 2
     x1 = np.maximum(x - l, 1).astype(np.uint16)
@@ -450,7 +452,9 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     with torch.no_grad():
         classes = []
         nB = int(n / 1000) + 1  # number of batches
+        print('%g batches...' % nB, end='')
         for i in range(nB):
+            print('%g ' % i, end='')
             j0 = int(i * 1000)
             j1 = int(min(j0 + 1000, n))
             im = images[j0:j1]
@@ -489,9 +493,6 @@ def createChips():
 
             l = np.round(np.maximum(w, h) * 1.1 + 2) / 2 * (full_height / height)  # square
             lx, ly = l, l
-
-            # lx = np.round(w * 1.4 + 2) / 2 * (full_height / height)  # fitted
-            # ly = np.round(h * 1.4 + 2) / 2 * (full_height / height)
 
             x1 = np.maximum(x - lx, 1).astype(np.uint16)
             x2 = np.minimum(x + lx, img.shape[1]).astype(np.uint16)

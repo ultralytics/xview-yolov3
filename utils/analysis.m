@@ -23,7 +23,7 @@ end
 % clean coordinates that fall off images (remove or crop)
 image_h = shapes(chip_id,1);
 image_w = shapes(chip_id,2);
-[coords, v] = clean_coords(coords, classes, image_h, image_w);
+[coords, v] = clean_coords(chip_number, coords, classes, image_h, image_w);
 mean(v)
 
 chip_id = chip_id(v);
@@ -32,14 +32,6 @@ classes = classes(v);
 image_h = image_h(v);
 image_w = image_w(v); 
 chip_number = chip_number(v); clear v i
-
-% % reject images with < 10 targets
-[uchip_number,~,~,n]=fcnunique(chip_number);
-% fprintf('Images target count range: %g-%g\n',min(n),max(n))
-fig; histogram(n,linspace(0,300,301))
-a=sortrows([n, uchip_number],-1);
-i=find(a(:,1)<2);
-%fprintf('rm -rf %g.bmp\n',a(i,2))
 
 % Target box width and height
 w = coords(:,3) - coords(:,1);
@@ -57,10 +49,6 @@ image_weights = accumarray(chip_id,weights(xview_classes2indices(classes)+1),[84
 image_weights = image_weights./sum(image_weights);
 image_numbers = uchips_numeric;
 %fig; bar(uchips_numeric(i), image_weights)
-
-%a=class_stats(:,[7 9]); 
-%[~,i]=sort(prod(a,2));  a=a(i,:);
-%vpa(a(:)',4)
 
 % K-means normalized with and height for 9 points
 C = fcn_kmeans([w h], 30);
@@ -87,7 +75,7 @@ wh = single([image_w, image_h]);
 classes = xview_classes2indices(classes);
 targets = single([classes(:), coords]);
 id = single(chip_number);  numel(id)
-save('targets_c60_.mat','wh','targets','id','class_mu','class_sigma','class_cov','image_weights','image_numbers')
+save('targets_c60.mat','wh','targets','id','class_mu','class_sigma','class_cov','image_weights','image_numbers')
 
 
 function [] = make_small_chips()
@@ -194,7 +182,13 @@ end
 end
 
 
-function [coords, valid] = clean_coords(coords, classes, image_h, image_w)
+function [coords, valid] = clean_coords(chip_number, coords, classes, image_h, image_w)
+% j = chip_number == 2294;
+% coords = coords(j,:);
+% classes = classes(j);
+% image_h = image_h(j,:);
+% image_w = image_w(j,:);
+
 x1 = coords(:,1);
 y1 = coords(:,2);
 x2 = coords(:,3);
@@ -211,32 +205,38 @@ y2 = min( max(y2,0), image_h);
 w = x2-x1;
 h = y2-y1;
 new_area = w.*h;
+new_ar = max(w./h, h./w);
+coords = [x1 y1 x2 y2];
 
 % no nans or infs in bounding boxes
 i0 = ~any(isnan(coords) | isinf(coords), 2);
 
-% sigma rejections on dimensions (entire dataset)
-[~, i1] = fcnsigmarejection(area,21, 3);
-[~, i2] = fcnsigmarejection(w,21, 3);
-[~, i3] = fcnsigmarejection(h,21, 3);
+% % sigma rejections on dimensions (entire dataset)
+% [~, i1] = fcnsigmarejection(new_area,21, 3);
+% [~, i2] = fcnsigmarejection(w,21, 3);
+% [~, i3] = fcnsigmarejection(h,21, 3);
+i1 = true(size(w));
+i2 = true(size(w));
+i3 = true(size(w));
 
 % sigma rejections on dimensions (per class)
 uc=unique(classes(:));
 for i = 1:numel(uc)
     j = find(classes==uc(i));
-    [~,v] = fcnsigmarejection(area(j),15,3);  i1(j) = i1(j) & v;
-    [~,v] = fcnsigmarejection(w(j),15,3);     i2(j) = i2(j) & v;
-    [~,v] = fcnsigmarejection(h(j),15,3);     i3(j) = i3(j) & v;
+    [~,v] = fcnsigmarejection(new_area(j),12,3);    i1(j) = i1(j) & v;
+    [~,v] = fcnsigmarejection(w(j),12,3);           i2(j) = i2(j) & v;
+    [~,v] = fcnsigmarejection(h(j),12,3);           i3(j) = i3(j) & v;
 end
 
 % manual dimension requirements
-i4 = area >= 20 & w > 4 & h > 4;  
+i4 = new_area >= 20 & w > 4 & h > 4 & new_ar<15;  
 
 % extreme edges (i.e. don't start an x1 10 pixels from the right side)
 i5 = x1 < (image_w-10) & y1 < (image_h-10) & x2 > 10 & y2 > 10;  % border = 5
 
 % cut objects that lost >90% of their area during crop
-i6 = (new_area./ area) > 0.10;
+new_area_ratio = new_area./ area;
+i6 = new_area_ratio > 0.25;
 
 % no image dimension nans or infs, or smaller than 32 pix
 hw = [image_h image_w];
@@ -255,7 +255,8 @@ i8 = ~any(classes(:) == [75, 82],2);
 %i9 = any(classes(:) == [53, 54, 55, 56, 57, 59, 61, 62, 63, 64, 65, 66],2);  % group 6 docks
 
 valid = i0 & i1 & i2 & i3 & i4 & i5 & i6 & i7 & i8;
-coords = [x1(valid) y1(valid) x2(valid) y2(valid)];
+coords = coords(valid,:);
+% fig; imshow(x2294); plot(x1,y1,'.'); plot(x2,y2,'.')
 end      
 
 
@@ -266,8 +267,11 @@ rng('default'); % For reproducibility
 
 % opts = statset('Display','iter');
 %[idx,C, sumd] = kmedoids(X,n,'Distance','cityblock','Options',opts);
+
+X = X(all(X<1000,2),:);
+
 X = [X; X(:,[2, 1])];
-[idx,C, sumd] = kmeans(X,n,'MaxIter',400,'OnlinePhase','on');
+[idx,C, sumd] = kmeans(X,n,'MaxIter',5000,'OnlinePhase','on');
 %sumd
 
 
@@ -278,7 +282,7 @@ end
 
 plot(C(:,1),C(:,2),'k.','MarkerSize',15)
 title('Cluster Assignments and Means');
-ha.XLim=[0 700]; ha.YLim=[0 700];
+ha.XLim=[0 1000]; ha.YLim=[0 1000];
 end
 
 

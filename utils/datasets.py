@@ -68,8 +68,6 @@ class ListDataset():  # for training
         self.mat['id'] = self.mat['id'].squeeze()
         self.class_weights = xview_class_weights(range(60)).numpy()
 
-        self.clahe = cv2.createCLAHE(clipLimit=2)
-
         # RGB normalization values
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((1, 3, 1, 1))
         self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((1, 3, 1, 1))
@@ -113,6 +111,8 @@ class ListDataset():  # for training
         for index, files_index in enumerate(range(ia, ib)):
             # img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img_path = '%s/%g.bmp' % (self.path, self.shuffled_vector[files_index])
+            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/2560.bmp'
+
             img0 = cv2.imread(img_path)
             if img0 is None:
                 continue
@@ -149,20 +149,21 @@ class ListDataset():  # for training
             i = (self.mat['id'] == float(chip.replace('.tif', '').replace('.bmp', ''))).nonzero()[0]
             labels1 = self.mat['targets'][i]
 
-            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-22.5, 22.5), translate=(0.01, 0.01),
-                                             scale=(0.8, 1.2))  # RGB
+            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01),
+                                             scale=(0.70, 1.30))  # RGB
             nL1 = len(labels1)
             border = height / 2 + 1
-
-            # import matplotlib.pyplot as plt
-            # plt.imshow(img1[:, :, ::-1])
-            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
 
             # Pick 100 random points inside image
             r = np.ones((100, 3))
             r[:, :2] = np.random.rand(100, 2) * (np.array(img0.shape)[[1, 0]] - border * 2) + border
             r = (r @ M.T)[:, :2]
             r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
+
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img1[:, :, ::-1])
+            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
+            # plt.plot(r[:,0],r[:,1],'.')
 
             if nL1 > 0:
                 weights = []
@@ -200,7 +201,7 @@ class ListDataset():  # for training
                     ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                     # objects must have width and height > 4 pixels
-                    labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
+                    labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.1) & (ar < 10)]
 
                 # pad_x, pad_y, counter = 0, 0, 0
                 # while (counter < len(r)) & (len(labels) == 0):
@@ -260,8 +261,8 @@ class ListDataset():  # for training
         # Normalize
         img_all = np.stack(img_all)[:, :, :, ::-1].transpose(0, 3, 1, 2)  # BGR to RGB and cv2 to pytorch
         img_all = np.ascontiguousarray(img_all, dtype=np.float32)
-        # img_all -= self.rgb_mean
-        # img_all /= self.rgb_std
+        img_all -= self.rgb_mean
+        img_all /= self.rgb_std
 
         return torch.from_numpy(img_all), labels_all
 
@@ -351,7 +352,7 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
             h = xy[:, 3] - xy[:, 1]
             area = w * h
             ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
-            i = (w > 4) & (h > 4) & (area / area0 > 0.2) & (ar < 15)
+            i = (w > 4) & (h > 4) & (area / area0 > 0.1) & (ar < 10)
 
             targets = targets[i]
             targets[:, 1:5] = xy[i]
@@ -361,53 +362,14 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         return imw
 
 
-def convert_tif2bmp_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_bmp'):
+def convert_tif2bmp(p='/Users/glennjocher/Downloads/DATA/xview/val_images_bmp'):
     import glob
     import cv2
-    import os
     files = sorted(glob.glob('%s/*.tif' % p))
-    # clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=3)
     for i, f in enumerate(files):
-        print('%g/%g' % (i, len(files)))
+        print('%g/%g' % (i + 1, len(files)))
 
         img = cv2.imread(f)
-        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
-        # # equalize the histogram of the Y channel
-        # img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-        # # convert the YUV image back to RGB format
-        # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
 
         cv2.imwrite(f.replace('.tif', '.bmp'), img)
-        os.system('rm -rf ' + f)
-
-
-def convert_yuv_clahe(p='/Users/glennjocher/Downloads/DATA/xview/train_images_yuv_cl3'):
-    import glob
-    import cv2
-    import numpy as np
-    files = sorted(glob.glob('%s/*.bmp' % p))
-    nF = len(files)
-    stats = np.zeros((nF, 6))
-    # clahe = cv2.createCLAHE(tileGridSize=(32, 32), clipLimit=2)
-    for i, f in enumerate(files):
-        print('%g/%g' % (i, len(files)))
-        img = cv2.imread(f)
-        for j in range(3):
-            stats[i, j + 0] = img[:, :, j].astype(np.float32).mean()
-            stats[i, j + 3] = img[:, :, j].astype(np.float32).std()
-
-        # img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images_reduced/33.bmp')
-        # img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        # # equalize the histogram of the Y channel
-        # # img_yuv[:, :, 0] = clahe.apply(img_yuv[:, :, 0])
-        # # img_yuv[:, :, 1] = clahe.apply(img_yuv[:, :, 1])
-        # img_yuv[:, :, 2] = clahe.apply(img_yuv[:, :, 2])
-        # # convert the YUV image back to RGB format
-        # img_output = cv2.cvtColor(img_yuv, cv2.COLOR_HSV2BGR)
-        # import matplotlib.pyplot as plt
-        # plt.imshow(img_output[:, :, ::-1])
-
-        # # cv2.imwrite(f, img_output)
-        # # # os.system('rm -rf ' + f)
-
-    print(stats.mean(0), stats.mean(0)[::-1])  # *WARNING THESE ARE BGR ORDER* !!!
+        # os.system('rm -rf ' + f)

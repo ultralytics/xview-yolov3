@@ -16,14 +16,14 @@ if platform == 'darwin':  # macos
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
     cuda = torch.cuda.is_available()
 else:  # gcp
-    # cd yolo && python3 detect.py -img_size 1632
+    # cd yolo && python3 detect.py -secondary_classifier 1
     parser.add_argument('-image_folder', type=str, default='../train_images/5.bmp', help='path to images')
     parser.add_argument('-output_folder', type=str, default='../output', help='path to outputs')
     cuda = False
 
 parser.add_argument('-plot_flag', type=bool, default=True)
 parser.add_argument('-secondary_classifier', type=bool, default=False)
-parser.add_argument('-cfg', type=str, default='cfg/c60_a30.cfg', help='cfg file path')
+parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
 parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
 parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
 parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
