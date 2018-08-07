@@ -2,7 +2,7 @@
 
 # Start
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3  # from utils import utils; utils.createChips()
-sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999 -resume 1
+sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo && python3 train.py -epochs 999
 sudo rm -rf mnist && git clone https://github.com/ultralytics/mnist && cd mnist && python3 train_xview_classes.py -name 'chips_20pad_square'
 
 # Resume
