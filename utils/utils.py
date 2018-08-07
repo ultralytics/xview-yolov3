@@ -186,7 +186,7 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
         nTb = nT[b]  # number of targets (measures index of first zero-height target box)
         if nTb == 0:
             continue
-        t = target[b]  # target[b, :nTb]
+        t = target[b].cpu()  # target[b, :nTb]
         FN[b, :nTb] = 1
 
         # Convert to position relative to box
