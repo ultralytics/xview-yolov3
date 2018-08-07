@@ -171,6 +171,7 @@ def main(opt):
         new_weights = 1 / new_weights
         new_weights /= new_weights.sum()
         class_weights = class_weights * 0.9 + new_weights * 0.1
+        class_weights /= class_weights.sum()
         print(1 / class_weights)
 
         # Write epoch results
