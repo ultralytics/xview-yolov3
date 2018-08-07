@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 33, help='size of each image dimension')
 parser.add_argument('-resume', default=False, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
@@ -102,6 +102,11 @@ def main(opt):
     class_weights = xview_class_weights_hard_mining(range(60))
     for epoch in range(opt.epochs):
         epoch += start_epoch
+
+        # img_size = random.choice([19, 23, 27, 31]) * 32
+
+        dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size,
+                                 targets_path=targets_path)
 
         # Update scheduler
         # if epoch % 25 == 0:
