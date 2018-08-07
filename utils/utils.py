@@ -417,8 +417,8 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2 (i.e. cv2 = 608 x 608 x 3)
     height = 64
 
-    img -= np.array([60.134, 49.697, 40.746]).reshape((1, 1, 3))  # rgb_mean
-    img /= np.array([29.990, 24.498, 22.046]).reshape((1, 1, 3))  # rgb_std
+    # img -= np.array([60.134, 49.697, 40.746]).reshape((1, 1, 3))  # rgb_mean
+    # img /= np.array([29.990, 24.498, 22.046]).reshape((1, 1, 3))  # rgb_std
 
     l = np.round(np.maximum(w, h) * 1.10 + 2) / 2
     x1 = np.maximum(x - l, 1).astype(np.uint16)
