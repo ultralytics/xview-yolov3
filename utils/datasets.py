@@ -372,4 +372,4 @@ def convert_tif2bmp(p='/Users/glennjocher/Downloads/DATA/xview/val_images_bmp'):
         img = cv2.imread(f)
 
         cv2.imwrite(f.replace('.tif', '.bmp'), img)
-        # os.system('rm -rf ' + f)
+        os.system('rm -rf ' + f)
