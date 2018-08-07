@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 32, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-resume', default=False, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
@@ -37,7 +37,7 @@ def main(opt):
 
     # Configure run
     if platform == 'darwin':  # macos
-        # torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.benchmark = True
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
     else:
         torch.backends.cudnn.benchmark = True
@@ -171,6 +171,7 @@ def main(opt):
         new_weights = 1 / new_weights
         new_weights /= new_weights.sum()
         class_weights = class_weights * 0.9 + new_weights * 0.1
+        class_weights /= class_weights.sum()
         print(1 / class_weights)
 
         # Write epoch results

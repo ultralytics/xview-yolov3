@@ -11,10 +11,9 @@ targets_path = 'utils/targets_c60.mat'
 parser = argparse.ArgumentParser()
 # Get data configuration
 if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp',
-                        help='path to images')
+    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
-    cuda = torch.cuda.is_available()
+    cuda = False # torch.cuda.is_available()
 else:  # gcp
     # cd yolo && python3 detect.py -secondary_classifier 1
     parser.add_argument('-image_folder', type=str, default='../train_images/5.bmp', help='path to images')
@@ -43,18 +42,18 @@ def detect(opt):
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
     checkpoint = torch.load('checkpoints/latest.pt', map_location='cpu')
-    # model.load_state_dict(checkpoint) #['model'])
-    # del checkpoint
+    model.load_state_dict(checkpoint['model'])
+    del checkpoint
 
-    current = model.state_dict()
-    saved = checkpoint['model']
-    # 1. filter out unnecessary keys
-    saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
-    # 2. overwrite entries in the existing state dict
-    current.update(saved)
-    # 3. load the new state dict
-    model.load_state_dict(current)
-    del checkpoint, current, saved
+    # current = model.state_dict()
+    # saved = checkpoint['model']
+    # # 1. filter out unnecessary keys
+    # saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
+    # # 2. overwrite entries in the existing state dict
+    # current.update(saved)
+    # # 3. load the new state dict
+    # model.load_state_dict(current)
+    # del checkpoint, current, saved
     model.to(device).eval()
 
     # Load model 2
@@ -231,7 +230,7 @@ def detect(opt):
 
             if opt.plot_flag:
                 # Save generated image with detections
-                cv2.imwrite(results_img_path.replace('.bmp', '.jpg'), img)
+                cv2.imwrite(results_img_path.replace('.bmp', '.jpg').replace('.tif','.jpg'), img)
 
     if opt.plot_flag:
         from scoring import score
