@@ -20,7 +20,6 @@ tar -xvzf train_images.tgz && sudo rm -rf train_images/._*
 # convert all .tif to .bmp
 sudo rm -rf yolo && git clone https://github.com/ultralytics/yolo && cd yolo
 
-cd yolo
 python3
 from utils import datasets
 datasets.convert_tif2bmp('../train_images')

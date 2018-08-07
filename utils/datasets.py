@@ -111,7 +111,7 @@ class ListDataset():  # for training
         for index, files_index in enumerate(range(ia, ib)):
             # img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img_path = '%s/%g.bmp' % (self.path, self.shuffled_vector[files_index])
-            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/2560.bmp'
+            # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/2294.bmp'
 
             img0 = cv2.imread(img_path)
             if img0 is None:
