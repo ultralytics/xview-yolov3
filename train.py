@@ -47,7 +47,7 @@ def main(opt):
     model = Darknet(opt.cfg, opt.img_size)
 
     # Get dataloader
-    dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
+    # dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=opt.img_size, targets_path=targets_path)
 
     # reload saved optimizer state
     start_epoch = 0
@@ -105,6 +105,7 @@ def main(opt):
 
         img_size = random.choice([19, 21, 23, 25, 27, 29, 31]) * 32
         dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size, targets_path=targets_path)
+        print('Running image size %g' % img_size)
 
         # Update scheduler
         # if epoch % 25 == 0:
