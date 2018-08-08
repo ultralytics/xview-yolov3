@@ -19,8 +19,8 @@ def create_modules(module_defs):
         if module_def['type'] == 'convolutional':
             bn = int(module_def['batch_normalize'])
             filters = int(module_def['filters'])
-            #if filters != 650:
-            #    filters *= 2
+            if filters != 650:
+                filters *= 2
             kernel_size = int(module_def['size'])
             pad = (kernel_size - 1) // 2 if int(module_def['pad']) else 0
             modules.add_module('conv_%d' % i, nn.Conv2d(in_channels=output_filters[-1],
@@ -37,7 +37,7 @@ def create_modules(module_defs):
                 modules.add_module('leaky_%d' % i, nn.LeakyReLU())
 
         elif module_def['type'] == 'upsample':
-            upsample = nn.Upsample(scale_factor=int(module_def['stride'])) #, mode='bilinear', align_corners=True)
+            upsample = nn.Upsample(scale_factor=int(module_def['stride']))  # , mode='bilinear', align_corners=True)
             # upsample = nn.functional.interpolate(scale_factor=int(module_def['stride']))
             modules.add_module('upsample_%d' % i, upsample)
 
