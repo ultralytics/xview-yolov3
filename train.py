@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 31, help='size of each image dimension')
 parser.add_argument('-resume', default=False, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
@@ -75,9 +75,6 @@ def main(opt):
         optimizer = torch.optim.Adam(model.parameters())
         optimizer.load_state_dict(checkpoint['optimizer'])
 
-        for g in optimizer.param_groups:
-            g['weight_decay'] = 0.0005
-
         start_epoch = checkpoint['epoch'] + 1
         best_loss = checkpoint['best_loss']
 
@@ -87,8 +84,7 @@ def main(opt):
             print('Using ', torch.cuda.device_count(), ' GPUs')
             model = nn.DataParallel(model)
         model.to(device).train()
-        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001,
-                                     weight_decay=0.0005)
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4, weight_decay=5e-4)
 
     # Set scheduler
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 24, eta_min=0.00001, last_epoch=-1)
@@ -103,9 +99,9 @@ def main(opt):
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
-        # img_size = 608 #random.choice([19, 21, 23, 25, 27, 29, 31]) * 32
-        # dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size, targets_path=targets_path)
-        # print('Running image size %g' % img_size)
+        img_size = random.choice([15, 17, 19, 21, 23, 25, 27, 29, 31]) * 32
+        dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size, targets_path=targets_path)
+        print('Running image size %g' % img_size)
 
         # Update scheduler
         # if epoch % 25 == 0:
