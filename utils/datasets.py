@@ -197,7 +197,7 @@ class ListDataset():  # for training
                     ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                     # objects must have width and height > 4 pixels
-                    labels = labels[(lw > 8) & (lh > 8) & (area / area0 > 0.1) & (ar < 10)]
+                    labels = labels[(lw > 4) & (lh > 4) & (area > 100) & (area / area0 > 0.1) & (ar < 10)]
 
                 # pad_x, pad_y, counter = 0, 0, 0
                 # while (counter < len(r)) & (len(labels) == 0):
@@ -223,9 +223,9 @@ class ListDataset():  # for training
 
                 img = img1[pad_y:pad_y + height, pad_x:pad_x + height]
 
-                # import matplotlib.pyplot as plt
-                # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
-                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                import matplotlib.pyplot as plt
+                plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
+                plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
