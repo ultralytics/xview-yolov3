@@ -139,13 +139,16 @@ class ListDataset():  # for training
                 img_hsv[:, :, 2] = V.astype(np.uint8)
                 cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img0)
 
-
-            # load labels
+            # Load labels
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.tif', '').replace('.bmp', ''))).nonzero()[0]
             labels1 = self.mat['targets'][i]
 
-            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01), scale=(0.70*0.5, 1.30*0.5))  # RGB
+            # Remove buildings and small cars
+            labels1 = labels1[(labels1[:, 0] != 5) & (labels1[:, 0] != 48)]
+
+            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01),
+                                             scale=(0.70, 1.30))  # RGB
 
             nL1 = len(labels1)
             border = height / 2 + 1
@@ -197,7 +200,7 @@ class ListDataset():  # for training
                     ar = np.maximum(lw / (lh + 1e-16), lh / (lw + 1e-16))
 
                     # objects must have width and height > 4 pixels
-                    labels = labels[(lw > 4) & (lh > 4) & (area > 100) & (area / area0 > 0.1) & (ar < 10)]
+                    labels = labels[(lw > 4) & (lh > 4) & (area > 20) & (area / area0 > 0.1) & (ar < 10)]
 
                 # pad_x, pad_y, counter = 0, 0, 0
                 # while (counter < len(r)) & (len(labels) == 0):
@@ -290,8 +293,8 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
                   borderValue=(0, 0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
-    # border = 500
-    border = -250
+    border = 500
+    # border = -250
     height = max(img.shape[0], img.shape[1]) + border * 2
 
     # Rotation and Scale
