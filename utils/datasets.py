@@ -223,9 +223,9 @@ class ListDataset():  # for training
 
                 img = img1[pad_y:pad_y + height, pad_x:pad_x + height]
 
-                import matplotlib.pyplot as plt
-                plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
-                plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
+                # import matplotlib.pyplot as plt
+                # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
+                # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
 
                 nL = len(labels)
                 if nL > 0:
