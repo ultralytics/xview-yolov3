@@ -294,7 +294,6 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
     border = 500
-    # border = -250
     height = max(img.shape[0], img.shape[1]) + border * 2
 
     # Rotation and Scale

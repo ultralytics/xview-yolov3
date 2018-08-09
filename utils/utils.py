@@ -270,29 +270,29 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         # Filter out confidence scores below threshold
         # Get score and class with highest confidence
 
-        # cross-class NMS ---------------------------------------------
-        thresh = 0.85
-        a = pred.clone()
-        a = a[np.argsort(-a[:, 4])]  # sort best to worst
-        radius = 30  # area to search for cross-class ious
-        for i in range(len(a)):
-            if i >= len(a) - 1:
-                break
+        # cross-class NMS
+        if model2 is not None:
+            thresh = 0.85
+            a = pred.clone()
+            a = a[np.argsort(-a[:, 4])]  # sort best to worst
+            radius = 30  # area to search for cross-class ious
+            for i in range(len(a)):
+                if i >= len(a) - 1:
+                    break
 
-            close = (np.abs(a[i, 0] - a[i + 1:, 0]) < radius) & (np.abs(a[i, 1] - a[i + 1:, 1]) < radius)
-            close = close.nonzero()
+                close = (np.abs(a[i, 0] - a[i + 1:, 0]) < radius) & (np.abs(a[i, 1] - a[i + 1:, 1]) < radius)
+                close = close.nonzero()
 
-            if len(close) > 0:
-                close = close + i + 1
-                iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4), x1y1x2y2=False)
-                bad = close[iou > thresh]
+                if len(close) > 0:
+                    close = close + i + 1
+                    iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4), x1y1x2y2=False)
+                    bad = close[iou > thresh]
 
-                if len(bad) > 0:
-                    mask = torch.ones(len(a)).type(torch.ByteTensor)
-                    mask[bad] = 0
-                    a = a[mask]
-        pred = a
-        # cross-class NMS ---------------------------------------------
+                    if len(bad) > 0:
+                        mask = torch.ones(len(a)).type(torch.ByteTensor)
+                        mask[bad] = 0
+                        a = a[mask]
+            pred = a
 
         x, y, w, h = pred[:, 0].numpy(), pred[:, 1].numpy(), pred[:, 2].numpy(), pred[:, 3].numpy()
         a = w * h  # area
@@ -316,7 +316,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             #         class_pred[i] = class_pred2[i]
 
         # Gather bbox priors
-        srl = 3  # sigma rejection level
+        srl = 6  # sigma rejection level
         mu = mat['class_mu'][class_pred].T
         sigma = mat['class_sigma'][class_pred].T * srl
 
@@ -529,10 +529,10 @@ def plotResults():
             '/Users/glennjocher/Downloads/results650.txt',
             '/Users/glennjocher/Downloads/results_home.txt',
             '/Users/glennjocher/Downloads/results.txt',
-            '/Users/glennjocher/Downloads/results (3).txt'):
+            '/Users/glennjocher/Downloads/results (1).txt'):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, :450], marker='.', label=f)
+            plt.plot(results[i, :250], marker='.', label=f)
             plt.title(s[i])
         plt.legend()
