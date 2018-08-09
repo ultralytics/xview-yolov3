@@ -156,10 +156,10 @@ class ListDataset():  # for training
             r = (r @ M.T)[:, :2]
             r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
 
-            import matplotlib.pyplot as plt
-            plt.imshow(img1[:, :, ::-1])
-            plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
-            plt.plot(r[:,0],r[:,1],'.')
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img1[:, :, ::-1])
+            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
+            # plt.plot(r[:,0],r[:,1],'.')
 
             if nL1 > 0:
                 weights = []
