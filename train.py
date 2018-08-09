@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 31, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
 parser.add_argument('-resume', default=False, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
@@ -103,9 +103,9 @@ def main(opt):
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
-        img_size = 608 #random.choice([19, 21, 23, 25, 27, 29, 31]) * 32
-        dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size, targets_path=targets_path)
-        print('Running image size %g' % img_size)
+        # img_size = 608 #random.choice([19, 21, 23, 25, 27, 29, 31]) * 32
+        # dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size, targets_path=targets_path)
+        # print('Running image size %g' % img_size)
 
         # Update scheduler
         # if epoch % 25 == 0:
