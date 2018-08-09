@@ -20,7 +20,7 @@ def create_modules(module_defs):
             bn = int(module_def['batch_normalize'])
             filters = int(module_def['filters'])
             if filters != 650:
-                filters *= 1.5
+                filters = int(filters * 2)
             kernel_size = int(module_def['size'])
             pad = (kernel_size - 1) // 2 if int(module_def['pad']) else 0
             modules.add_module('conv_%d' % i, nn.Conv2d(in_channels=output_filters[-1],
