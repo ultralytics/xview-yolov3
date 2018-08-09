@@ -164,15 +164,15 @@ def main(opt):
             # if i == 1:
             #    return
 
-        # Update dynamic class weights
-        new_weights = metrics[3]
-        print(metrics[3])
-        new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
-        new_weights = 1 / new_weights
-        new_weights /= new_weights.sum()
-        class_weights = class_weights * 0.9 + new_weights * 0.1
-        class_weights /= class_weights.sum()
-        print(1 / class_weights)
+        # # Update dynamic class weights
+        # new_weights = metrics[3]
+        # print(metrics[3])
+        # new_weights[new_weights == 0] = new_weights[new_weights > 0].min()
+        # new_weights = 1 / new_weights
+        # new_weights /= new_weights.sum()
+        # class_weights = class_weights * 0.9 + new_weights * 0.1
+        # class_weights /= class_weights.sum()
+        # print(1 / class_weights)
 
         # Write epoch results
         with open('results.txt', 'a') as file:
