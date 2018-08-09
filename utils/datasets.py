@@ -139,18 +139,14 @@ class ListDataset():  # for training
                 img_hsv[:, :, 2] = V.astype(np.uint8)
                 cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img0)
 
-            # equalize the histogram of the Y channel
-            # img_hsv = cv2.cvtColor(img0, cv2.COLOR_BGR2HSV)
-            # img_hsv[:, :, 2] = self.clahe.apply(img_hsv[:, :, 2])
-            # img0 = cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR)
 
             # load labels
             chip = img_path.rsplit('/')[-1]
             i = (self.mat['id'] == float(chip.replace('.tif', '').replace('.bmp', ''))).nonzero()[0]
             labels1 = self.mat['targets'][i]
 
-            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01),
-                                             scale=(0.70, 1.30))  # RGB
+            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01), scale=(0.70*0.5, 1.30*0.5))  # RGB
+
             nL1 = len(labels1)
             border = height / 2 + 1
 
@@ -160,10 +156,10 @@ class ListDataset():  # for training
             r = (r @ M.T)[:, :2]
             r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
 
-            # import matplotlib.pyplot as plt
-            # plt.imshow(img1[:, :, ::-1])
-            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
-            # plt.plot(r[:,0],r[:,1],'.')
+            import matplotlib.pyplot as plt
+            plt.imshow(img1[:, :, ::-1])
+            plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
+            plt.plot(r[:,0],r[:,1],'.')
 
             if nL1 > 0:
                 weights = []
@@ -294,7 +290,8 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
                   borderValue=(0, 0, 0)):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
-    border = 500
+    # border = 500
+    border = -250
     height = max(img.shape[0], img.shape[1]) + border * 2
 
     # Rotation and Scale
