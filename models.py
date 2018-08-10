@@ -162,8 +162,8 @@ class YOLOLayer(nn.Module):
             nM = mask.sum().float()
             nGT = sum([len(x) for x in targets])
             if nM > 0:
-                wC = weight[torch.argmax(tcls, 1)]  # weight class
-                wC /= sum(wC)
+                # wC = weight[torch.argmax(tcls, 1)]  # weight class
+                # wC /= sum(wC)
                 lx = 1 * MSELoss(x[mask], tx[mask])
                 ly = 1 * MSELoss(y[mask], ty[mask])
                 lw = 1 * MSELoss(w[mask], tw[mask])
@@ -171,7 +171,7 @@ class YOLOLayer(nn.Module):
                 lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
                 # lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
-                lcls = 1.25 * nM * BCEWithLogitsLoss2(pred_cls[mask], tcls)
+                lcls = 1.25 * nM * BCEWithLogitsLoss2(pred_cls[mask], tcls.float)
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
