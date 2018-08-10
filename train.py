@@ -96,7 +96,6 @@ def main(opt):
     print('%10s' * 16 % (
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
     class_weights = xview_class_weights_hard_mining(range(60)).to(device)
-    class_weights /= class_weights.mean()
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
