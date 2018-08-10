@@ -35,7 +35,7 @@ def create_modules(module_defs):
                 modules.add_module('leaky_%d' % i, nn.LeakyReLU())
 
         elif module_def['type'] == 'upsample':
-            upsample = nn.Upsample(scale_factor=int(module_def['stride']))  # , mode='bilinear', align_corners=True)
+            upsample = nn.Upsample(scale_factor=int(module_def['stride']), mode='bilinear', align_corners=True)
             modules.add_module('upsample_%d' % i, upsample)
 
         elif module_def['type'] == 'route':
@@ -139,7 +139,7 @@ class YOLOLayer(nn.Module):
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
             # BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(weight=weight, reduction='sum')
             MSELoss = nn.MSELoss(reduction='sum')
-            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight, size_average=True)
+            CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
             if requestPrecision:
                 gx = self.grid_x[:, :, :nG, :nG]
@@ -168,7 +168,7 @@ class YOLOLayer(nn.Module):
                 lh = 1 * MSELoss(h[mask], th[mask])
                 lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
-                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) * 0.125 # min(epoch*0.125 + 0.125,1)
+                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1).long()) * 0.125
                 # lcls = BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
