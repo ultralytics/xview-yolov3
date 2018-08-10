@@ -137,7 +137,7 @@ class YOLOLayer(nn.Module):
         if targets is not None:
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(reduction='sum')
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
-            BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(weight=weight, reduction='sum')
+            # BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(weight=weight, reduction='sum')
             MSELoss = nn.MSELoss(reduction='sum')
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
