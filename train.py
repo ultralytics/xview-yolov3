@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
 parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
 parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
+parser.add_argument('-img_size', type=int, default=32 * 19, help='size of each image dimension')
 parser.add_argument('-resume', default=False, help='resume training flag')
 opt = parser.parse_args()
 print(opt)
@@ -95,7 +95,8 @@ def main(opt):
     t0, t1 = time.time(), time.time()
     print('%10s' * 16 % (
         'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
-    class_weights = xview_class_weights_hard_mining(range(60))
+    class_weights = xview_class_weights_hard_mining(range(60)).to(device)
+    class_weights /= class_weights.mean()
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
@@ -127,7 +128,7 @@ def main(opt):
                     continue
 
                 loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True,
-                             weight=class_weights.to(device))
+                             weight=class_weights)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
