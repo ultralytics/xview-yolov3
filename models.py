@@ -103,7 +103,7 @@ class YOLOLayer(nn.Module):
         self.anchor_w = self.scaled_anchors[:, 0:1].view((1, nA, 1, 1))
         self.anchor_h = self.scaled_anchors[:, 1:2].view((1, nA, 1, 1))
 
-    def forward(self, p, targets=None, requestPrecision=False, weight=None):
+    def forward(self, p, targets=None, requestPrecision=False, weight=None, epoch=None):
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
         device = torch.device('cuda:0' if p.is_cuda else 'cpu')
         # weight = xview_class_weights(range(60)).to(device)
@@ -168,21 +168,14 @@ class YOLOLayer(nn.Module):
                 lh = 1.5 * MSELoss(h[mask], th[mask])
                 lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
-                lcls = CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1).long())
+                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1).long()) * torch.min(epoch*0.1,1)
                 # lcls = BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 
             lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
 
-            w1 = lx.detach().clone()
-            w2 = ly.detach().clone()
-            w3 = lw.detach().clone()
-            w4 = lh.detach().clone()
-            w5 = lconf.detach().clone()
-            w6 = lcls.detach().clone()
-
-            loss = lx/w1 + ly/w2 + lw/w3 + lh/w4 + lconf/w5 + lcls/w6
+            loss = lx + ly + lw + lh + lconf + lcls
             i = torch.sigmoid(pred_conf[~mask]) > 0.999
             FPe = torch.zeros(60)
             if i.sum() > 0:
@@ -216,7 +209,7 @@ class Darknet(nn.Module):
         self.img_size = img_size
         self.loss_names = ['loss', 'x', 'y', 'w', 'h', 'conf', 'cls', 'nGT', 'TP', 'FP', 'FPe', 'FN', 'TC']
 
-    def forward(self, x, targets=None, requestPrecision=False, weight=None):
+    def forward(self, x, targets=None, requestPrecision=False, weight=None, epoch=None):
         is_training = targets is not None
         output = []
         self.losses = defaultdict(float)
@@ -234,7 +227,7 @@ class Darknet(nn.Module):
             elif module_def['type'] == 'yolo':
                 # Train phase: get loss
                 if is_training:
-                    x, *losses = module[0](x, targets, requestPrecision, weight)
+                    x, *losses = module[0](x, targets, requestPrecision, weight, epoch)
                     for name, loss in zip(self.loss_names, losses):
                         self.losses[name] += loss
                 # Test phase: Get detections

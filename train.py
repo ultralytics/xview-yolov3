@@ -127,7 +127,7 @@ def main(opt):
                     continue
 
                 loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True,
-                             weight=class_weights)
+                             weight=class_weights, epoch=epoch)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
