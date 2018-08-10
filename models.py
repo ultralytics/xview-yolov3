@@ -139,6 +139,7 @@ class YOLOLayer(nn.Module):
         if targets is not None:
             BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(reduction='sum')
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
+            BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(weight=weight)
             MSELoss = nn.MSELoss(reduction='sum')
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
@@ -169,8 +170,8 @@ class YOLOLayer(nn.Module):
                 lh = 1 * MSELoss(h[mask], th[mask])
                 lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
-                # lcls = 1.25 * (BCEWithLogitsLoss1(pred_cls[mask], tcls.float()) * wC.unsqueeze(1)).sum() / 60
-                lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                # lcls = .125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))
+                lcls = 1.25 * nM * BCEWithLogitsLoss2(pred_cls[mask], tcls)
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
 

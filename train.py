@@ -99,9 +99,9 @@ def main(opt):
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
-        img_size = random.choice([19, 20, 21, 22, 23, 24, 25]) * 32
-        dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size, targets_path=targets_path)
-        print('Running image size %g' % img_size)
+        # img_size = random.choice([19, 20, 21, 22, 23, 24, 25]) * 32
+        # dataloader = ListDataset(train_path, batch_size=opt.batch_size, img_size=img_size, targets_path=targets_path)
+        # print('Running image size %g' % img_size)
 
         # Update scheduler
         # if epoch % 25 == 0:
