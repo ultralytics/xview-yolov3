@@ -166,9 +166,9 @@ class YOLOLayer(nn.Module):
                 ly = 1.5 * MSELoss(y[mask], ty[mask])
                 lw = 1.5 * MSELoss(w[mask], tw[mask])
                 lh = 1.5 * MSELoss(h[mask], th[mask])
-                lconf = 1.5 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
+                lconf = 1.25 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
-                lcls = 0.125 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1).long())
+                lcls = 0.25 * nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1).long())
                 # lcls = BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
