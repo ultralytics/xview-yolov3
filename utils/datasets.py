@@ -145,7 +145,7 @@ class ListDataset():  # for training
             labels1 = self.mat['targets'][i]
 
             # Remove buildings and small cars
-            labels1 = labels1[(labels1[:, 0] != 5) & (labels1[:, 0] != 48)]
+            # labels1 = labels1[(labels1[:, 0] != 5) & (labels1[:, 0] != 48)]
 
             img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01),
                                              scale=(0.70, 1.30))  # RGB
