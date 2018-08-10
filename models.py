@@ -175,7 +175,14 @@ class YOLOLayer(nn.Module):
 
             lconf += nM * BCEWithLogitsLoss0(pred_conf[~mask], mask[~mask].float())
 
-            loss = lx + ly + lw + lh + lconf + lcls
+            w1 = lx.detach().clone()
+            w2 = ly.detach().clone()
+            w3 = lw.detach().clone()
+            w4 = lh.detach().clone()
+            w5 = lconf.detach().clone()
+            w6 = lcls.detach().clone()
+
+            loss = lx/w1 + ly/w2 + lw/w3 + lh/w4 + lconf/w5 + lcls/w6
             i = torch.sigmoid(pred_conf[~mask]) > 0.999
             FPe = torch.zeros(60)
             if i.sum() > 0:
