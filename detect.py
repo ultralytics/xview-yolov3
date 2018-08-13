@@ -62,10 +62,7 @@ def detect(opt):
     # Load model 2
     if opt.secondary_classifier:
         model2 = ConvNetb()
-        if platform == 'darwin':  # macos
-            checkpoint = torch.load('../mnist/10pad_6ReLU_fullyconnected.pt', map_location='cpu')
-        else:
-            checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
+        checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
 
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
@@ -257,7 +254,7 @@ class ConvNetb(nn.Module):
         #     nn.LeakyReLU())
 
         # self.fc = nn.Linear(int(8192), num_classes)  # 64 pixels, 4 layer, 64 filters
-        self.fully_convolutional = nn.Conv2d(n * 16, 60, kernel_size=4, stride=1, padding=0, bias=True)
+        self.fully_conv = nn.Conv2d(n * 16, 60, kernel_size=4, stride=1, padding=0, bias=True)
 
     def forward(self, x):  # 500 x 1 x 64 x 64
         x = self.layer1(x)
@@ -267,7 +264,7 @@ class ConvNetb(nn.Module):
         x = self.layer5(x)
         # x = self.layer6(x)
         # x = self.fc(x.reshape(x.size(0), -1))
-        x = self.fully_convolutional(x)
+        x = self.fully_conv(x)
         return x.squeeze()  # 500 x 60
 
 
