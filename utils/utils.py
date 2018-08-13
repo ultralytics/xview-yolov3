@@ -352,6 +352,8 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         unique_labels = detections[:, -1].cpu().unique()
         if prediction.is_cuda:
             unique_labels = unique_labels.cuda()
+
+        nms_style = 'OR'  # 'AND' or 'OR' (classical)
         for c in unique_labels:
             # Get the detections with the particular class
             detections_class = detections[detections[:, -1] == c]
@@ -361,52 +363,38 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             # Perform non-maximum suppression
             max_detections = []
 
-            # print(detections_class)
-            while detections_class.shape[0]:
-                # Get detection with highest confidence and save as max detection
-                max_detections.append(detections_class[0].unsqueeze(0))
-                # Stop if we're at the last detection
-                if len(detections_class) == 1:
-                    break
-                # Get the IOUs for all boxes with lower confidence
-                ious = bbox_iou(max_detections[-1], detections_class[1:])
+            if nms_style == 'OR':  # Classical NMS
+                while detections_class.shape[0]:
+                    # Get detection with highest confidence and save as max detection
+                    max_detections.append(detections_class[0].unsqueeze(0))
+                    # Stop if we're at the last detection
+                    if len(detections_class) == 1:
+                        break
+                    # Get the IOUs for all boxes with lower confidence
+                    ious = bbox_iou(max_detections[-1], detections_class[1:])
 
-                # Remove detections with IoU >= NMS threshold
-                detections_class = detections_class[1:][ious < nms_thres]
+                    # Remove detections with IoU >= NMS threshold
+                    detections_class = detections_class[1:][ious < nms_thres]
 
-            max_detections = torch.cat(max_detections).data
-            # print(max_detections)
-            # Add max detections to outputs
-            output[image_i] = max_detections if output[image_i] is None else torch.cat(
-                (output[image_i], max_detections))
+            elif nms_style == 'AND':  # 'AND'-style NMS, at least two boxes must share commonality to pass, single boxes erased
+                while detections_class.shape[0]:
+                    if len(detections_class) == 1:
+                        break
 
-        # # NMS2
-        # for c in unique_labels:
-        #     # Get the detections with the particular class
-        #     detections_class = detections[detections[:, -1] == c]
-        #     # Sort the detections by maximum objectness confidence
-        #     _, conf_sort_index = torch.sort(detections_class[:, 4], descending=True)
-        #     detections_class = detections_class[conf_sort_index]
-        #     # Perform non-maximum suppression
-        #     max_detections = []
-        #
-        #     while detections_class.shape[0]:
-        #         if len(detections_class) == 1:
-        #             break
-        #
-        #         ious = bbox_iou(detections_class[0:1], detections_class[1:])
-        #
-        #         if ious.max() > 0.5:
-        #             max_detections.append(detections_class[0].unsqueeze(0))
-        #
-        #         # Remove detections with IoU >= NMS threshold
-        #         detections_class = detections_class[1:][ious < nms_thres]
-        #
-        #     if len(max_detections) > 0:
-        #         max_detections = torch.cat(max_detections).data
-        #         # Add max detections to outputs
-        #         output[image_i] = max_detections if output[image_i] is None else torch.cat(
-        #             (output[image_i], max_detections))
+                    ious = bbox_iou(detections_class[:1], detections_class[1:])
+
+                    if ious.max() > 0.5:
+                        max_detections.append(detections_class[0].unsqueeze(0))
+
+                    # Remove detections with IoU >= NMS threshold
+                    detections_class = detections_class[1:][ious < nms_thres]
+
+
+            if len(max_detections) > 0:
+                max_detections = torch.cat(max_detections).data
+                # Add max detections to outputs
+                output[image_i] = max_detections if output[image_i] is None else torch.cat(
+                    (output[image_i], max_detections))
 
     return output
 
@@ -520,6 +508,13 @@ def createChips():
         hf.create_dataset('Y', data=Y)
 
 
+def strip_optimizer_from_checkpoint(filename = 'checkpoints/best.pt'):
+    import torch
+    a = torch.load(filename, map_location='cpu')
+    a['optimizer'] = []
+    torch.save(a, filename.replace('.pt','_lite.pt'))
+
+
 def plotResults():
     import numpy as np
     import matplotlib.pyplot as plt
@@ -530,10 +525,12 @@ def plotResults():
             '/Users/glennjocher/Downloads/results_home.txt',
             '/Users/glennjocher/Downloads/results_1.5xyolo.txt',
             '/Users/glennjocher/Downloads/results.txt',
-            '/Users/glennjocher/Downloads/results (2).txt'):
+            '/Users/glennjocher/Downloads/results_nocars.txt',
+            '/Users/glennjocher/Downloads/results800_gradual.txt',
+            '/Users/glennjocher/Downloads/results800.txt'    ):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, :125], marker='.', label=f)
+            plt.plot(results[i, :250], marker='.', label=f)
             plt.title(s[i])
         plt.legend()

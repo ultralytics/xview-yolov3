@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser()
 if platform == 'darwin':  # macos
     parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.bmp')
     parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
-    cuda = False # torch.cuda.is_available()
+    cuda = False  # torch.cuda.is_available()
 else:  # gcp
     # cd yolo && python3 detect.py -secondary_classifier 1
     parser.add_argument('-image_folder', type=str, default='../train_images/5.bmp', help='path to images')
@@ -31,6 +31,7 @@ parser.add_argument('-img_size', type=int, default=32 * 51, help='size of each i
 opt = parser.parse_args()
 print(opt)
 
+
 def detect(opt):
     if opt.plot_flag:
         os.system('rm -rf ' + opt.output_folder + '_img')
@@ -41,8 +42,10 @@ def detect(opt):
 
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
-    checkpoint = torch.load('checkpoints/latest.pt', map_location='cpu')
+    checkpoint = torch.load('checkpoints/best.pt', map_location='cpu')
+
     model.load_state_dict(checkpoint['model'])
+    model.to(device).eval()
     del checkpoint
 
     # current = model.state_dict()
@@ -53,8 +56,8 @@ def detect(opt):
     # current.update(saved)
     # # 3. load the new state dict
     # model.load_state_dict(current)
+    # model.to(device).eval()
     # del checkpoint, current, saved
-    model.to(device).eval()
 
     # Load model 2
     if opt.secondary_classifier:
@@ -64,20 +67,20 @@ def detect(opt):
         else:
             checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
 
-        current = model2.state_dict()
-        saved = checkpoint['model']
-        # 1. filter out unnecessary keys
-        saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
-        # 2. overwrite entries in the existing state dict
-        current.update(saved)
-        # 3. load the new state dict
-        model2.load_state_dict(current)
-        del checkpoint, current, saved
+        model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()
+        del checkpoint
 
-        # model2.load_state_dict(checkpoint['model'])
+        # current = model2.state_dict()
+        # saved = checkpoint['model']
+        # # 1. filter out unnecessary keys
+        # saved = {k: v for k, v in saved.items() if ((k in current) and (current[k].shape == v.shape))}
+        # # 2. overwrite entries in the existing state dict
+        # current.update(saved)
+        # # 3. load the new state dict
+        # model2.load_state_dict(current)
         # model2.to(device).eval()
-        # del checkpoint
+        # del checkpoint, current, saved
     else:
         model2 = None
 
@@ -92,6 +95,9 @@ def detect(opt):
     mat_priors = scipy.io.loadmat(targets_path)
     for batch_i, (img_paths, img) in enumerate(dataloader):
         print('\n', batch_i, img.shape, end=' ')
+
+        img_ud = np.ascontiguousarray(np.flip(img, axis=1))
+        img_lr = np.ascontiguousarray(np.flip(img, axis=2))
 
         preds = []
         length = opt.img_size
@@ -108,14 +114,13 @@ def detect(opt):
                 y1 = y2 - length
                 x2 = min((j + 1) * length, img.shape[2])
                 x1 = x2 - length
-                chip = img[:, y1:y2, x1:x2]
 
                 # Get detections
-                chip = torch.from_numpy(chip).unsqueeze(0).to(device)
                 with torch.no_grad():
+                    # Normal orientation
+                    chip = torch.from_numpy(img[:, y1:y2, x1:x2]).unsqueeze(0).to(device)
                     pred = model(chip)
                     pred = pred[pred[:, :, 4] > opt.conf_thres]
-
                     # if (j > 0) & (len(pred) > 0):
                     #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 2)]  # near left border
                     # if (j < nj) & (len(pred) > 0):
@@ -124,43 +129,28 @@ def detect(opt):
                     #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 2)]  # near top border
                     # if (i < ni) & (len(pred) > 0):
                     #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 606)]  # near bottom border
-
                     if len(pred) > 0:
                         pred[:, 0] += x1
                         pred[:, 1] += y1
                         preds.append(pred.unsqueeze(0))
 
-                # # backward scan
-                # y2 = max(img.shape[1] - i * length, length)
-                # y1 = y2 - length
-                # x2 = max(img.shape[2] - j * length, length)
-                # x1 = x2 - length
-                # chip = img[:, y1:y2, x1:x2]
-                #
-                # # plot
-                # #import matplotlib.pyplot as plt
-                # #plt.subplot(ni, nj, i * nj + j + 1).imshow(chip[1])
-                # # plt.plot(labels[:, [1, 3, 3, 1, 1]].T, labels[:, [2, 2, 4, 4, 2]].T, '.-')
-                #
-                # # Get detections
-                # chip = torch.from_numpy(chip).unsqueeze(0).to(device)
-                # with torch.no_grad():
-                #     pred = model2(chip)
-                #     pred = pred[pred[:, :, 4] > opt.conf_thres]
-                #
-                #     # if (j < nj) & (len(pred) > 0):
-                #     #     pred = pred[(pred[:, 0] - pred[:, 2] / 2 > 2)]  # near left border
-                #     # if (j > 0) & (len(pred) > 0):
-                #     #     pred = pred[(pred[:, 0] + pred[:, 2] / 2 < 606)]  # near right border
-                #     # if (i < ni) & (len(pred) > 0):
-                #     #     pred = pred[(pred[:, 1] - pred[:, 3] / 2 > 2)]  # near top border
-                #     # if (i > 0) & (len(pred) > 0):
-                #     #     pred = pred[(pred[:, 1] + pred[:, 3] / 2 < 606)]  # near bottom border
-                #
-                #     if len(pred) > 0:
-                #         pred[:, 0] += x1
-                #         pred[:, 1] += y1
-                #         preds.append(pred.unsqueeze(0))
+                    # # Flipped Up-Down
+                    # chip = torch.from_numpy(img_ud[:, y1:y2, x1:x2]).unsqueeze(0).to(device)
+                    # pred = model(chip)
+                    # pred = pred[pred[:, :, 4] > opt.conf_thres]
+                    # if len(pred) > 0:
+                    #     pred[:, 0] += x1
+                    #     pred[:, 1] = img.shape[1] - (pred[:, 1] + y1)
+                    #     preds.append(pred.unsqueeze(0))
+
+                    # # Flipped Left-Right
+                    # chip = torch.from_numpy(img_lr[:, y1:y2, x1:x2]).unsqueeze(0).to(device)
+                    # pred = model(chip)
+                    # pred = pred[pred[:, :, 4] > opt.conf_thres]
+                    # if len(pred) > 0:
+                    #     pred[:, 0] = img.shape[2] - (pred[:, 0] + x1)
+                    #     pred[:, 1] += y1
+                    #     preds.append(pred.unsqueeze(0))
 
         if len(preds) > 0:
             detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img,
@@ -230,7 +220,7 @@ def detect(opt):
 
             if opt.plot_flag:
                 # Save generated image with detections
-                cv2.imwrite(results_img_path.replace('.bmp', '.jpg').replace('.tif','.jpg'), img)
+                cv2.imwrite(results_img_path.replace('.bmp', '.jpg').replace('.tif', '.jpg'), img)
 
     if opt.plot_flag:
         from scoring import score
@@ -279,8 +269,6 @@ class ConvNetb(nn.Module):
         # x = self.fc(x.reshape(x.size(0), -1))
         x = self.fully_convolutional(x)
         return x.squeeze()  # 500 x 60
-
-
 
 
 if __name__ == '__main__':
