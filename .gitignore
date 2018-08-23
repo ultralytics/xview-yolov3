@@ -19,7 +19,6 @@ xview_predictions
 results*
 
 
-output
 checkpoints
 results.txt
 metrics.txt
