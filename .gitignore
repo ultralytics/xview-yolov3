@@ -13,6 +13,8 @@
 *.tif.txt
 xview_predictions
 !zidane.jpg
+!5.jpg
+!5.tif.txt
 !images/*
 results*
 

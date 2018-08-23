@@ -1,3 +1,4 @@
+
 <img src="https://storage.googleapis.com/ultralytics/UltralyticsLogoName1000×676.png" width="200">  
 
 # Introduction
@@ -7,21 +8,24 @@ http://www.ultralytics.com  
 
 # Description
 
-The https://github.com/ultralytics/yolov3 repo contains You Only Look Once (YOLO) sandbox code. Credit to P.J. Reddie for YOLO (https://pjreddie.com/darknet/yolo/) and to Erik Lindernoren for the pytorch implementation (https://github.com/eriklindernoren/PyTorch-YOLOv3).
+The https://github.com/ultralytics/xview-yolo repo contains code to train YOLOv3 on the xView training set for the xView challenge: https://challenge.xviewdataset.org/. Credit to P.J. Reddie for YOLO (https://pjreddie.com/darknet/yolo/) and to Erik Lindernoren for the pytorch implementation (https://github.com/eriklindernoren/PyTorch-YOLOv3).
 
 # Requirements
 
 Python 3.6 or later with the following `pip3 install -U -r requirements.txt` packages:
 
 - `numpy`
+- `scipy`
 - `torch`
-- `torchvision`
 - `opencv-python`
+- `h5py`
+- `tqdm`
 
 # Running
-- From python run `detect.py` to process images in `data/samples/` folder. Results are written to  `output/` folder.
 
-![Alt](https://github.com/ultralytics/yolo/blob/master/results/zidane.jpg "example")
+- Run `train.py` to begin training. Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply trained weights to an xview image, such as `5.tif` from the training set, shown below.
+
+![Alt](https://github.com/ultralytics/xview/blob/master/output_img/5.jpg "example")
 
 # Contact
 
