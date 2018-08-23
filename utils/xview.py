@@ -54,17 +54,3 @@ def create_mat_file():
                      {'coords': coords, 'chips': chips, 'classes': classes, 'shapes': shapes, 'stats': stats,
                       'uchips': uchips})
 
-# # create train_labels folder in coco format
-# nF = []  # number of features
-# os.makedirs(path + 'train_labels/', exist_ok=True)
-# for name in tqdm(np.unique(chips)):
-#     rows = [i for i, x in enumerate(chips) if x == name]
-#     nF.append(len(rows))
-#     if any(rows):
-#         with open(path + 'train_labels/' + name.replace('.tif', '.txt'), 'a') as file:
-#             for i in rows:
-#                 file.write('%g %g %g %g %g\n' % (classes[i], *coords[i]))
-
-# from PIL import Image
-# img_path = '/Users/glennjocher/downloads/DATA/xview/train_images3/5.tif'
-# img = Image.open(img_path)

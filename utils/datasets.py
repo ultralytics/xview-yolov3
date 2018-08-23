@@ -117,7 +117,7 @@ class ListDataset():  # for training
             if img0 is None:
                 continue
 
-            augment_hsv = True
+            augment_hsv = False
             if augment_hsv:
                 # SV augmentation by 50%
                 fraction = 0.50
