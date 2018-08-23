@@ -269,14 +269,6 @@ class ListDataset():  # for training
         return self.nB  # number of batches
 
 
-def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
-    indices = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14,
-               15, -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34,
-               35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, -1, 50, 51, -1, 52, -1,
-               -1, -1, 53, 54, -1, 55, -1, -1, 56, -1, 57, -1, 58, 59]
-    return [indices[int(c)] for c in classes]
-
-
 def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular image to a padded square
     shape = img.shape[:2]  # shape = [height, width]
     ratio = float(height) / max(shape)

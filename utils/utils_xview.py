@@ -4,7 +4,14 @@ import numpy as np
 from tqdm import tqdm
 
 
+def xview_class2name(classes):
+    with open('data/xview.names', 'r') as f:
+        x = f.readlines()
+    return x[classes].replace('\n', '')
+
+
 def get_labels(fname):
+    # official function supplied by xview
     with open(fname) as f:
         data = json.load(f)
 
@@ -28,6 +35,7 @@ def get_labels(fname):
 
 
 def create_mat_file():
+    # saves geojson file to .mat format for analysis in MATLAB
     import scipy.io
     import cv2
     import numpy as np
@@ -53,4 +61,3 @@ def create_mat_file():
     scipy.io.savemat('xview.mat',
                      {'coords': coords, 'chips': chips, 'classes': classes, 'shapes': shapes, 'stats': stats,
                       'uchips': uchips})
-

@@ -30,10 +30,12 @@ def modelinfo(model):
     print('\n%g layers, %g parameters, %g gradients' % (i + 1, nparams, ngradients))
 
 
-def xview_class2name(classes):
-    with open('data/xview.names', 'r') as f:
-        x = f.readlines()
-    return x[classes].replace('\n', '')
+def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
+    indices = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14,
+               15, -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34,
+               35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, -1, 50, 51, -1, 52, -1,
+               -1, -1, 53, 54, -1, 55, -1, -1, 56, -1, 57, -1, 58, 59]
+    return [indices[int(c)] for c in classes]
 
 
 def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
@@ -61,17 +63,6 @@ def xview_class_weights_hard_mining(indices):  # weights of each class in the tr
          64.62336, 46.36672, 103.29935, 110.10422, 145.03802, 17.35346, 226.90453, 89.09844, 10227.20508, 46.64930,
          90.11716, 49.69421, 116.69005, 269.13092, 37.82637, 173.11961, 490.53397, 447.31345, 17.29692, 14.43979])
     weights /= weights.sum()
-    return weights[indices]
-
-
-def xview_feedback_weights(indices):
-    weights = 1 / torch.FloatTensor(
-        [0, 0.175, 0.72, 1.0, 0.0441, 0.486, 0.168, 0.0233, 0.0304, 0.0177, 0.087, 0.209, 0.0308, 0.103, 0.0927, 0.269,
-         0.285, 0, 0.294, 0.675, 0, 0.505, 0.456, 0.0557, 0.157, 0, 0.621, 0.24, 0.222, 0.222, 0.145, 0.0417, 0.429,
-         0.0606, 0.025, 0, 0.547, 0.531, 0.00133, 0.194, 0.547, 0.355, 0.17, 0.143, 0.233, 0.121, 0.00567, 0.0208,
-         0.517, 0.0184, 0.0255, 0.0191, 0.0813, 0.039, 0.233, 0.283, 0.0904, 0.0745, 0.402, 0])
-    weights = torch.clamp(weights, 0, 500)
-    weights /= weights.max()
     return weights[indices]
 
 
@@ -254,7 +245,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     return tx, ty, tw, th, tconf, tcls, TP, FP, FN, TC
 
 
-# @profile
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device='cpu'):
     prediction = prediction.cpu()
 
@@ -389,7 +379,6 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                     # Remove detections with IoU >= NMS threshold
                     detections_class = detections_class[1:][ious < nms_thres]
 
-
             if len(max_detections) > 0:
                 max_detections = torch.cat(max_detections).data
                 # Add max detections to outputs
@@ -399,8 +388,8 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
     return output
 
 
-# @profile
 def secondary_class_detection(x, y, w, h, img, model, device):
+    # Runs secondary classifier on bounding boxes
     print('Classifying boxes...', end='')
 
     # 1. create 48-pixel squares from each chip
@@ -455,6 +444,8 @@ def secondary_class_detection(x, y, w, h, img, model, device):
 
 
 def createChips():
+    # Creates *.h5 file of all chips in xview dataset for training independent classifier
+
     import scipy.io
     import numpy as np
     import cv2
@@ -508,14 +499,16 @@ def createChips():
         hf.create_dataset('Y', data=Y)
 
 
-def strip_optimizer_from_checkpoint(filename = 'checkpoints/best.pt'):
+def strip_optimizer_from_checkpoint(filename='checkpoints/best.pt'):
+    # Strip optimizer from *.pt files for lighter files (reduced by 2/3 size)
     import torch
     a = torch.load(filename, map_location='cpu')
     a['optimizer'] = []
-    torch.save(a, filename.replace('.pt','_lite.pt'))
+    torch.save(a, filename.replace('.pt', '_lite.pt'))
 
 
 def plotResults():
+    # Plot YOLO training results
     import numpy as np
     import matplotlib.pyplot as plt
     plt.figure(figsize=(18, 9))
