@@ -25,7 +25,7 @@ Python 3.6 or later with the following `pip3 install -U -r requirements.txt` pac
 
 - Run `train.py` to begin training. Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply trained weights to an xview image, such as `5.tif` from the training set, shown below.
 
-![Alt](https://github.com/ultralytics/xview/blob/master/output/5.jpg "example")
+![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/output/5.jpg "example")
 
 # Contact
 
