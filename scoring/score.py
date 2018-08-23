@@ -201,7 +201,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=.5):
 
     # gt_coords, gt_chips, gt_classes = get_labels(path_groundtruth)
     # scipy.io.savemat('json.mat',{'gt_coords':gt_coords,'gt_chips':gt_chips,'gt_classes':gt_classes})
-    mat = scipy.io.loadmat('json.mat')
+    mat = scipy.io.loadmat('scoring/json.mat')
     gt_coords, gt_chips, gt_classes = mat['gt_coords'], mat['gt_chips'], mat['gt_classes']
 
     gt_unique = np.unique(gt_classes.astype(np.int64))
