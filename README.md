@@ -1,4 +1,3 @@
-
 <img src="https://storage.googleapis.com/ultralytics/UltralyticsLogoName1000×676.png" width="200">  
 
 # Introduction
