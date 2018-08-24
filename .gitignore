@@ -13,6 +13,7 @@
 *.tif.txt
 xview_predictions
 !zidane.jpg
+!xview_training_loss.png
 !5.jpg
 !5.tif.txt
 !images/*
