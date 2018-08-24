@@ -1,6 +1,6 @@
 % 659.bmp and 769.bmp are bad pictures, delete
 clc; clear; close all
-load json_data.mat
+load xview_geojson.mat
 
 % make_small_chips()
 % return

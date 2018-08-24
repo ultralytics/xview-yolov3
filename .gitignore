@@ -30,7 +30,9 @@ temp-plot.html
 # MATLAB GitIgnore -----------------------------------------------------------------------------------------------------
 *.mat
 !targets*.mat
-!json.mat
+!ground_truth.mat
+!xview_geojson.mat
+
 
 *.m~
 
