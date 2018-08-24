@@ -17,11 +17,9 @@ xview_predictions
 !5.jpg
 !5.tif.txt
 !images/*
-results*
 
 
 checkpoints
-results.txt
 metrics.txt
 printedResults.txt
 temp-plot.html
