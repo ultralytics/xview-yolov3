@@ -1,4 +1,5 @@
-% 659.bmp and 769.bmp are bad pictures, delete
+% MATLAB xView analysis code for cleaning up targets and building a targets.mat file used during training
+
 clc; clear; close all
 load xview_geojson.mat
 
