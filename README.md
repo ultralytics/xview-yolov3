@@ -22,7 +22,7 @@ Python 3.6 or later with the following `pip3 install -U -r requirements.txt` pac
 
 # Running
 
-Before training, targets are cleaned up, removing outlies via sigma-rejection and creating 30 new k-means anchors for `c60_a30symmetric.cfg` with the MATLAB file `analysis.m`:
+Before training, targets are cleaned up, removing outliers via sigma-rejection and creating 30 new k-means anchors for `c60_a30symmetric.cfg` with the MATLAB file `analysis.m`:
 
 <img src="https://github.com/ultralytics/xview-yolov3/blob/master/cfg/c60_a30.png" width="400">
 
