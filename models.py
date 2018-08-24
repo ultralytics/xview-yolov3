@@ -1,7 +1,6 @@
 from collections import defaultdict
 
 import torch.nn as nn
-import torch.nn.functional as F
 
 from utils.utils import *
 
@@ -35,7 +34,7 @@ def create_modules(module_defs):
                 modules.add_module('leaky_%d' % i, nn.LeakyReLU())
 
         elif module_def['type'] == 'upsample':
-            upsample = nn.Upsample(scale_factor=int(module_def['stride']))  #, mode='bilinear', align_corners=True)
+            upsample = nn.Upsample(scale_factor=int(module_def['stride']))  # , mode='bilinear', align_corners=True)
             modules.add_module('upsample_%d' % i, upsample)
 
         elif module_def['type'] == 'route':
@@ -135,10 +134,12 @@ class YOLOLayer(nn.Module):
 
         # Training
         if targets is not None:
-            BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(reduction='sum')
+            # BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(reduction='sum')  # version 0.4.1
+            BCEWithLogitsLoss1 = nn.BCEWithLogitsLoss(size_average=False)  # version 0.4.0
             BCEWithLogitsLoss0 = nn.BCEWithLogitsLoss()
             # BCEWithLogitsLoss2 = nn.BCEWithLogitsLoss(weight=weight, reduction='sum')
-            MSELoss = nn.MSELoss(reduction='sum')
+            # MSELoss = nn.MSELoss(reduction='sum')  # version 0.4.1
+            MSELoss = nn.MSELoss(size_average=False)  # version 0.4.0
             CrossEntropyLoss = nn.CrossEntropyLoss(weight=weight)
 
             if requestPrecision:
@@ -168,7 +169,7 @@ class YOLOLayer(nn.Module):
                 lh = 4 * MSELoss(h[mask], th[mask])
                 lconf = 1.5 * BCEWithLogitsLoss1(pred_conf[mask], mask[mask].float())
 
-                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1)) #* min(epoch*.01 + 0.125, 1)
+                lcls = nM * CrossEntropyLoss(pred_cls[mask], torch.argmax(tcls, 1))  # * min(epoch*.01 + 0.125, 1)
                 # lcls = BCEWithLogitsLoss2(pred_cls[mask], tcls.float())
             else:
                 lx, ly, lw, lh, lcls, lconf = FT([0]), FT([0]), FT([0]), FT([0]), FT([0]), FT([0])
