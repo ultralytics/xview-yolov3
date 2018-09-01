@@ -35,13 +35,11 @@ Run `train.py` to begin training. Note that `train.py` will look for a folder wi
 
 Augmentation | Description
 --- | ---
-Translation | +/- 1% vertical and horizontal
+Translation | +/- 1% (vertical and horizontal)
 Rotation | +/- 20 degrees
-Vertical Shear | +/- 3 degrees
-Horizontal Shear | +/- 3 degrees
+Shear | +/- 3 degrees (vertical and horizontal)
 Scale | +/- 30%
-Vertical Reflection | 50% probability
-Horizontal Reflection | 50% probability
+Reflection | 50% probability (vertical and horizontal)
 H**S**V Saturation | +/- 50%
 HS**V** Intensity | +/- 50%
 
