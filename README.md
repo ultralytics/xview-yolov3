@@ -36,7 +36,7 @@ Each epoch consists of processing 8 608x608 sized chips randomly sampled from ea
 
 ## Image Augmentation
 
-`datasets.py` applies random OpenCV-powered (https://opencv.org/) augmentation to the full-resolution input images in accordance with the following specifications. 8 random smaller-sized chips are then selected from the augmented image for training. Augmentation is applied **only** during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
+`datasets.py` applies random OpenCV-powered (https://opencv.org/) augmentation to the full-resolution input images in accordance with the following specifications. 8 608 x 608 sized chips are then selected at random from the augmented image for training. Augmentation is applied **only** during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
 
 Augmentation | Description
 --- | ---
