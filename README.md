@@ -2,7 +2,7 @@
 
 # Introduction
 
-This directory contains software developed by Ultralytics LLC. For more information on Ultralytics projects please visit:
+This directory contains software developed by Ultralytics LLC, and **is freely available for redistribution under the MIT license**. For more information on Ultralytics projects please visit:
 http://www.ultralytics.com  
 
 # Description
@@ -31,7 +31,7 @@ Run `train.py` to begin training. Note that `train.py` will look for a folder wi
 
 ## Image Augmentation
 
-`datasets.py` applies random augmentation to the full-resolution input images in accordance with the following specifications. Smaller-sized chips are then selected from the augmented image. Augmentation is applied **only** during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
+`datasets.py` applies random augmentation to the full-resolution input images in accordance with the following specifications. 8 random smaller-sized chips are then selected from the augmented image for training. Augmentation is applied **only** during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
 
 Augmentation | Description
 --- | ---
