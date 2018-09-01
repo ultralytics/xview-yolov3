@@ -29,6 +29,21 @@ Before training, targets are cleaned up, removing outliers via sigma-rejection a
 Run `train.py` to begin training. Note that `train.py` will look for a folder with xView training images at the path specified on line 41. Each epoch consists of processing 8 608x608 sized chips randomly sampled from each (augmented) image at full resolution. An Nvidia GTX 1080 Ti will run about 100 epochs per day. Loss plots for the bounding boxes, objectness and class confidence should appear similar to results shown here. **Note that overtraining starts to become a significant issue past about 200 epochs, a problem I was not able to overcome during the competition.** Best validation mAP is 0.16 after 300 epochs (3 days), corresponding to a training mAP of 0.30.
 ![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/data/xview_training_loss.png "training loss")
 
+## Image Augmentation
+
+`datasets.py` applies random augmentation to the full-resolution input images in accordance with the following specifications. Smaller-sized chips are then selected from the augmented image. Augmentation is applied *only* during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
+
+Augmentation | Description
+--- | ---
+Translation |  +/- 1% vertical and horizontal
+Rotation |     +/- 20 degrees
+Skew |         +/- 3 degrees
+Scale |        +/- 30%
+Vertical Reflection |   50% probability
+Horizontal Reflection |   50% probability
+Saturation |   +/- 50%
+Intensity |    +/- 50%
+
 # Inference
 
 Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply trained weights to an xView image, such as `5.tif` from the training set, shown here.
