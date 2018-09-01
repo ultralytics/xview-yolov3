@@ -31,18 +31,19 @@ Run `train.py` to begin training. Note that `train.py` will look for a folder wi
 
 ## Image Augmentation
 
-`datasets.py` applies random augmentation to the full-resolution input images in accordance with the following specifications. Smaller-sized chips are then selected from the augmented image. Augmentation is applied *only* during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
+`datasets.py` applies random augmentation to the full-resolution input images in accordance with the following specifications. Smaller-sized chips are then selected from the augmented image. Augmentation is applied **only** during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
 
 Augmentation | Description
 --- | ---
-Translation |  +/- 1% vertical and horizontal
-Rotation |     +/- 20 degrees
-Skew |         +/- 3 degrees
-Scale |        +/- 30%
-Vertical Reflection |   50% probability
-Horizontal Reflection |   50% probability
-Saturation |   +/- 50%
-Intensity |    +/- 50%
+Translation | +/- 1% vertical and horizontal
+Rotation | +/- 20 degrees
+Vertical Shear | +/- 3 degrees
+Horizontal Shear | +/- 3 degrees
+Scale | +/- 30%
+Vertical Reflection | 50% probability
+Horizontal Reflection | 50% probability
+H**S**V Saturation | +/- 50%
+HS**V** Intensity | +/- 50%
 
 # Inference
 
