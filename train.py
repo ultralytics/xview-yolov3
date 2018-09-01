@@ -34,13 +34,12 @@ def main(opt):
     if cuda:
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
+        torch.backends.cudnn.benchmark = True
 
     # Configure run
-    if platform == 'darwin':  # macos
-        torch.backends.cudnn.benchmark = True
+    if platform == 'darwin':  # MacOS (local)
         train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
-    else:
-        torch.backends.cudnn.benchmark = True
+    else: # linux (GCP cloud)
         train_path = '../train_images'
 
     # Initialize model

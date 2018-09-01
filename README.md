@@ -26,7 +26,12 @@ Before training, targets are cleaned up, removing outliers via sigma-rejection a
 
 <img src="https://github.com/ultralytics/xview-yolov3/blob/master/cfg/c60_a30.png" width="400">
 
-Run `train.py` to begin training. Note that `train.py` will look for a folder with xView training images at the path specified on line 41. Each epoch consists of processing 8 608x608 sized chips randomly sampled from each (augmented) image at full resolution. An Nvidia GTX 1080 Ti will run about 100 epochs per day. Loss plots for the bounding boxes, objectness and class confidence should appear similar to results shown here. **Note that overtraining starts to become a significant issue past about 200 epochs, a problem I was not able to overcome during the competition.** Best validation mAP is 0.16 after 300 epochs (3 days), corresponding to a training mAP of 0.30.
+**Start Training:** Run `train.py` to begin training after downloading xView data with and specifying xView path on line 41 (local) or line 43 (cloud).
+
+**Resume Training:** Run `train.py -resume 1` to resume training from the most recently saved checkpoint `latest.pt`.
+
+Each epoch consists of processing 8 608x608 sized chips randomly sampled from each (augmented) image at full resolution. An Nvidia GTX 1080 Ti will run about 100 epochs per day. Loss plots for the bounding boxes, objectness and class confidence should appear similar to results shown here. **Note that overtraining starts to become a significant issue past about 200 epochs, a problem I was not able to overcome during the competition.** Best validation mAP is 0.16 after 300 epochs (3 days), corresponding to a training mAP of 0.30.
+
 ![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/data/xview_training_loss.png "training loss")
 
 ## Image Augmentation
@@ -46,6 +51,7 @@ HS**V** Intensity | +/- 50%
 # Inference
 
 Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply trained weights to an xView image, such as `5.tif` from the training set, shown here.
+
 ![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/output/5.jpg "example")
 
 # Contact
