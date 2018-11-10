@@ -3,7 +3,7 @@
 # Introduction
 
 This directory contains software developed by Ultralytics LLC, and **is freely available for redistribution under the MIT license**. For more information on Ultralytics projects please visit:
-http://www.ultralytics.com  
+http://www.ultralytics.com.
 
 # Description
 
