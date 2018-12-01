@@ -57,7 +57,7 @@ class ImageFolder():  # for eval-only
 class ListDataset():  # for training
     def __init__(self, path, batch_size=1, img_size=608, targets_path=''):
         self.path = path
-        self.files = sorted(glob.glob('%s/*.bmp' % path))
+        self.files = sorted(glob.glob('%s/*.tif' % path))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
@@ -110,7 +110,7 @@ class ListDataset():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             # img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            img_path = '%s/%g.bmp' % (self.path, self.shuffled_vector[files_index])
+            img_path = '%s/%g.tif' % (self.path, self.shuffled_vector[files_index])
             # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/2294.bmp'
 
             img0 = cv2.imread(img_path)
