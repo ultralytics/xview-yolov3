@@ -42,7 +42,7 @@ def detect(opt):
 
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
-    checkpoint = torch.load('checkpoints/best.pt', map_location='cpu')
+    checkpoint = torch.load('weights/best.pt', map_location='cpu')
 
     model.load_state_dict(checkpoint['model'])
     model.to(device).eval()
@@ -62,7 +62,7 @@ def detect(opt):
     # Load model 2
     if opt.secondary_classifier:
         model2 = ConvNetb()
-        checkpoint = torch.load('checkpoints/classifier.pt', map_location='cpu')
+        checkpoint = torch.load('weights/classifier.pt', map_location='cpu')
 
         model2.load_state_dict(checkpoint['model'])
         model2.to(device).eval()

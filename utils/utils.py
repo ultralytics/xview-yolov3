@@ -499,7 +499,7 @@ def createChips():
         hf.create_dataset('Y', data=Y)
 
 
-def strip_optimizer_from_checkpoint(filename='checkpoints/best.pt'):
+def strip_optimizer_from_checkpoint(filename='weights/best.pt'):
     # Strip optimizer from *.pt files for lighter files (reduced by 2/3 size)
     import torch
     a = torch.load(filename, map_location='cpu')
