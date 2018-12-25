@@ -1,4 +1,4 @@
-<img src="https://storage.googleapis.com/ultralytics/UltralyticsLogoName1000×676.png" width="200">  
+<img src="https://storage.googleapis.com/ultralytics/logo/logoname1000.png" width="200">
 
 # Introduction
 
@@ -19,6 +19,10 @@ Python 3.6 or later with the following `pip3 install -U -r requirements.txt` pac
 - `opencv-python`
 - `h5py`
 - `tqdm`
+
+# Download Data
+
+Download xView data from https://challenge.xviewdataset.org/data-download.
 
 # Training
 
@@ -56,4 +60,4 @@ Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply 
 
 # Contact
 
-For questions or comments please contact Glenn Jocher at glenn.jocher@ultralytics.com or visit us at http://www.ultralytics.com/contact
+For questions or comments please contact Glenn Jocher at glenn.jocher@ultralytics.com or visit us at http://contact.ultralytics.com
