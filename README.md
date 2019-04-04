@@ -1,4 +1,5 @@
 <img src="https://storage.googleapis.com/ultralytics/logo/logoname1000.png" width="200">
+
 # Introduction
 
 This directory contains software developed by Ultralytics LLC, and **is freely available for redistribution under the MIT license**. For more information on Ultralytics projects please visit:
