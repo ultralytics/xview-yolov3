@@ -58,6 +58,11 @@ Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply 
 
 ![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/output/5.jpg "example")
 
+# Citation
+
+[![DOI](https://zenodo.org/badge/137117503.svg)](https://zenodo.org/badge/latestdoi/137117503)
+
 # Contact
 
-For questions or comments please contact Glenn Jocher at glenn.jocher@ultralytics.com or visit us at http://contact.ultralytics.com
+Issues should be raised directly in the repository. For additional questions or comments please email Glenn Jocher at glenn.jocher@ultralytics.com or visit us at https://contact.ultralytics.com/contact.
+
