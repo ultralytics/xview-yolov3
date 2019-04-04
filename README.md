@@ -36,7 +36,7 @@ Before training, targets are cleaned up, removing outliers via sigma-rejection a
 
 **Resume Training:** Run `train.py -resume 1` to resume training from the most recently saved checkpoint `latest.pt`.
 
-Each epoch consists of processing 8 608x608 sized chips randomly sampled from each (augmented) image at full resolution. An Nvidia GTX 1080 Ti will run about 100 epochs per day. Loss plots for the bounding boxes, objectness and class confidence should appear similar to results shown here. **Note that overtraining starts to become a significant issue past about 200 epochs, a problem I was not able to overcome during the competition.** Best validation mAP is 0.16 after 300 epochs (3 days), corresponding to a training mAP of 0.30.
+Each epoch consists of processing 8 608x608 sized chips randomly sampled from each (augmented) image at full resolution. An Nvidia GTX 1080 Ti will run about 100 epochs per day. Loss plots for the bounding boxes, objectness and class confidence should appear similar to results shown here. **Note that overtraining starts to become a significant issue past about 200 epochs.** Best validation mAP is 0.16 after 300 epochs (3 days), corresponding to a training mAP of 0.30.
 
 ![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/data/xview_training_loss.png "training loss")
 
@@ -57,6 +57,7 @@ HS**V** Intensity | +/- 50%
 # Inference
 
 Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply trained weights to an xView image, such as `5.tif` from the training set, shown here.
+![Alt](https://github.com/ultralytics/xview/blob/master/output_img/1047.jpg "example")
 
 # Citation
 
