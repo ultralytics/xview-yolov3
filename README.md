@@ -7,7 +7,9 @@ http://www.ultralytics.com.
 
 # Description
 
-The https://github.com/ultralytics/xview-yolov3 repo contains code to train YOLOv3 on the xView training set for the xView challenge: https://challenge.xviewdataset.org/. **Credit to Joseph Redmon for YOLO** (https://pjreddie.com/darknet/yolo/) and to **Erik Lindernoren for the pytorch implementation** this work is based on (https://github.com/eriklindernoren/PyTorch-YOLOv3).
+The https://github.com/ultralytics/xview-yolov3 repo contains code to train YOLOv3 on the xView training set for the xView challenge: https://challenge.xviewdataset.org/. **Credit to Joseph Redmon for YOLO**.
+
+![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/output/5.jpg "example")
 
 # Requirements
 
@@ -55,8 +57,6 @@ HS**V** Intensity | +/- 50%
 # Inference
 
 Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply trained weights to an xView image, such as `5.tif` from the training set, shown here.
-
-![Alt](https://github.com/ultralytics/xview-yolov3/blob/master/output/5.jpg "example")
 
 # Citation
 
