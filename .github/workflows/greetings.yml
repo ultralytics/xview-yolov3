@@ -16,13 +16,11 @@ jobs:
           <a href="https://apps.apple.com/app/id1452689527" target="_blank">
           <img src="https://user-images.githubusercontent.com/26833433/98699617-a1595a00-2377-11eb-8145-fc674eb9b1a7.jpg" width="800"></a>
 
-          <img src="https://user-images.githubusercontent.com/26833433/103594689-455e0e00-4eae-11eb-9cdf-7d753e2ceeeb.png" width="800">
+          <img src="https://github.com/ultralytics/yolov5/releases/download/v1.0/model_plot.png" width="800">
 
-          If this is a bug report, please provide screenshots and **minimum viable code to reproduce your issue**, otherwise we can not help you.
+          If this is a 🐛 Bug Report, please provide screenshots and **minimum viable code to reproduce your issue**, otherwise we can not help you.
+          
+          If this is a custom training ❓ Question, please provide as much information as possible, including dataset images, training logs, screenshots, and a public link to online [W&B logging](https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data#visualize) if available.
+          
+          For business inquiries or professional support requests please visit https://ultralytics.com or email Glenn Jocher at glenn.jocher@ultralytics.com.
 
-          If this is a custom model or data training question, please note that Ultralytics does **not** provide free personal support. As a leader in vision ML and AI, we do offer professional consulting, from simple expert advice up to delivery of fully customized, end-to-end production solutions for our clients, such as:
-          - **Cloud-based AI** systems operating on **hundreds of HD video streams in realtime.**
-          - **Edge AI** integrated into custom iOS and Android apps for realtime **30 FPS video inference.**
-          - **Custom data training**, hyperparameter evolution, and model exportation to any destination.
-
-          For more information please visit https://www.ultralytics.com.
