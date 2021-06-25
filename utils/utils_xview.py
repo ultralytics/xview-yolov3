@@ -10,15 +10,16 @@ def xview_class2name(classes):
     return x[classes].replace('\n', '')
 
 
-def get_labels(fname):
-    # official function supplied by xview
+def get_labels(fname='xView_train.geojson'):
+    # Official function supplied by xView
     with open(fname) as f:
         data = json.load(f)
 
-    coords = np.zeros((len(data['features']), 4))
-    chips = np.zeros((len(data['features'])), dtype="object")
-    classes = np.zeros((len(data['features'])))
-    for i in tqdm(range(len(data['features']))):
+    n = len(data['features'])
+    coords = np.zeros((n, 4))
+    chips = np.zeros(n, dtype="object")
+    classes = np.zeros(n)
+    for i in tqdm(range(n)):
         if data['features'][i]['properties']['bounds_imcoords'] != []:
             b_id = data['features'][i]['properties']['image_id']
             val = np.array([int(num) for num in data['features'][i]['properties']['bounds_imcoords'].split(",")])
