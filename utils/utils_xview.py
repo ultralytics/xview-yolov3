@@ -10,7 +10,7 @@ def xview_class2name(classes):
     return x[classes].replace('\n', '')
 
 
-def get_labels(fname='xView_train.geojson'):
+def get_labels(fname='xView_train.geojson'):  # from utils.utils_xview import get_labels; get_labels()
     # Official function supplied by xView
     with open(fname) as f:
         data = json.load(f)
