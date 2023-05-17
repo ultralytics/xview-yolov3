@@ -9,7 +9,9 @@ http://www.ultralytics.com.
 
 The https://github.com/ultralytics/xview-yolov3 repo contains code to train YOLOv3 on the xView training set for the xView challenge: https://challenge.xviewdataset.org/. **Credit to Joseph Redmon for YOLO**.
 
-<img src="https://github.com/ultralytics/xview-yolov3/blob/master/output/5.jpg?raw=true" width="900">
+<img src="https://github-production-user-asset-6210df.s3.amazonaws.com/26833433/238799379-bb3b02f0-dee4-4e67-80ae-4b2378b813ad.jpg?raw=true" width="900">
+
+
 
 # Requirements
 
