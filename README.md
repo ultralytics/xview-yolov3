@@ -11,8 +11,6 @@ The https://github.com/ultralytics/xview-yolov3 repo contains code to train YOLO
 
 <img src="https://github-production-user-asset-6210df.s3.amazonaws.com/26833433/238799379-bb3b02f0-dee4-4e67-80ae-4b2378b813ad.jpg?raw=true" width="900">
 
-
-
 # Requirements
 
 Python 3.6 or later with the following `pip3 install -U -r requirements.txt` packages:
