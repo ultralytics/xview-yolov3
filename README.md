@@ -1,3 +1,4 @@
+<br>
 <img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="320">
 
 # 🚀 Introduction
@@ -117,6 +118,3 @@ At Ultralytics, we provide two different licensing options to suit various use c
   <img src="https://github.com/ultralytics/assets/raw/main/social/logo-transparent.png" width="3%" alt="space">
   <a href="https://ultralytics.com/discord"><img src="https://github.com/ultralytics/assets/raw/main/social/logo-social-discord.png" width="3%" alt="Ultralytics Discord"></a>
 </div>
-```
-
-This enhanced README includes more explanations and additional content to help users comprehend and utilize the repository more effectively. Various elements, such as the inclusion of comments in the code blocks and the restructuring of information, aim to provide a more user-friendly and comprehensive guide. Emojis at the start of headers add a touch of friendliness, while professional language is maintained throughout.
