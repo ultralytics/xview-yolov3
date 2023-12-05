@@ -1,11 +1,6 @@
-<img src="https://storage.googleapis.com/ultralytics/logo/logoname1000.png" width="200">
+<img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="400">
 
 # Introduction
-
-This directory contains software developed by Ultralytics LLC, and **is freely available for redistribution under the MIT license**. For more information on Ultralytics projects please visit:
-http://www.ultralytics.com.
-
-# Description
 
 The https://github.com/ultralytics/xview-yolov3 repo contains code to train YOLOv3 on the xView training set for the xView challenge: https://challenge.xviewdataset.org/. **Credit to Joseph Redmon for YOLO**.
 
