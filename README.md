@@ -1,83 +1,106 @@
 <br>
 <img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="320">
 
-# Introduction
+# 🚀 Introduction
 
-The https://github.com/ultralytics/xview-yolov3 repo contains code to train YOLOv3 on the xView training set for the xView challenge: https://challenge.xviewdataset.org/.
+Welcome to the [Ultralytics xView YOLOv3](https://github.com/ultralytics/xview-yolov3) repository! Here we provide code to train the powerful YOLOv3 object detection model on the xView dataset for the [xView Challenge](https://challenge.xviewdataset.org/). This challenge focuses on detecting objects from satellite imagery, advancing the state of the art in computer vision applications for remote sensing.
 
 <img src="https://github-production-user-asset-6210df.s3.amazonaws.com/26833433/238799379-bb3b02f0-dee4-4e67-80ae-4b2378b813ad.jpg?raw=true" width="100%">
 
-# Requirements
+# 📦 Requirements
 
-Python 3.6 or later with the following `pip3 install -U -r requirements.txt` packages:
+To run this project, ensure that you have Python 3.6 or later. You will also need to install several dependencies which can be done easily using pip:
 
-- `numpy`
-- `scipy`
-- `torch`
-- `opencv-python`
-- `h5py`
-- `tqdm`
+```bash
+pip3 install -U -r requirements.txt
+```
 
-# Download Data
+The following packages should be included:
+- `numpy`: For numerical operations.
+- `scipy`: Useful for scientific and technical computations.
+- `torch`: The PyTorch machine learning framework.
+- `opencv-python`: Open Source Computer Vision Library.
+- `h5py`: For managing and manipulating data in HDF5 format.
+- `tqdm`: For adding progress bars to loops and command line.
 
-Download xView data from https://challenge.xviewdataset.org/data-download.
+# 📥 Download Data
 
-# Training
+Start by downloading the xView data from the [data download page](https://challenge.xviewdataset.org/data-download) of the xView Challenge.
 
-Before training, targets are cleaned up, removing outliers via sigma-rejection and creating 30 new k-means anchors for `c60_a30symmetric.cfg` with the MATLAB file `utils/analysis.m`:
+# 🏋️‍♂️ Training
+
+## Preprocessing Steps
+Before we launch into training, we perform preprocessing on the targets to clean them up:
+
+1. Outliers are removed using sigma-rejection.
+2. A new set of 30 k-means anchors are created specifically for `c60_a30symmetric.cfg` using the MATLAB script `utils/analysis.m`:
 
 <img src="https://github.com/ultralytics/xview-yolov3/blob/master/cfg/c60_a30.png?raw=true" width="500">
 
-**Start Training:** Run `train.py` to begin training after downloading xView data with and specifying xView path on line 41 (local) or line 43 (cloud).
+## Starting the Training
+**To start training**, execute `train.py` after you have downloaded the xView data. You'll need to specify the path to your xView data on line 41 (for local execution) or line 43 (if you're working in the cloud).
 
-**Resume Training:** Run `train.py -resume 1` to resume training from the most recently saved checkpoint `latest.pt`.
+## Resuming Training
+**To resume training**, use the following command:
+```bash
+train.py --resume 1
+```
+Training will continue from the most recent checkpoint found in the `latest.pt` file.
 
-Each epoch consists of processing 8 608x608 sized chips randomly sampled from each (augmented) image at full resolution. An Nvidia GTX 1080 Ti will run about 100 epochs per day. Loss plots for the bounding boxes, objectness and class confidence should appear similar to results shown here. **Note that overtraining starts to become a significant issue past about 200 epochs.** Best validation mAP is 0.16 after 300 epochs (3 days), corresponding to a training mAP of 0.30.
+During training, each epoch will process 8 randomly sampled 608x608 chips from each full-resolution image. If you're using a GPU like the Nvidia GTX 1080 Ti, you can expect to complete around 100 epochs per day.
+
+Watch out for overtraining! It becomes a significant problem after roughly 200 epochs. The best validation mean Average Precision (mAP) observed is 0.16 after 300 epochs, which takes about 3 days, corresponding to a training mAP of 0.30.
+
+You'll see loss plots for bounding boxes, objectness, and class confidence that should resemble the following results:
 
 <img src="https://github.com/ultralytics/xview-yolov3/blob/master/data/xview_training_loss.png?raw=true" width="100%">
 
-## Image Augmentation
+### Image Augmentation 📸
 
-`datasets.py` applies random OpenCV-powered (https://opencv.org/) augmentation to the full-resolution input images in accordance with the following specifications. 8 608 x 608 sized chips are then selected at random from the augmented image for training. Augmentation is applied **only** during training, not during inference. Bounding boxes are automatically tracked and updated with the images.
+During training, `datasets.py` will apply various augmentations to the full-resolution input images using OpenCV. Here are the specifications for each augmentation applied:
 
-Augmentation | Description
---- | ---
-Translation | +/- 1% (vertical and horizontal)
-Rotation | +/- 20 degrees
-Shear | +/- 3 degrees (vertical and horizontal)
-Scale | +/- 30%
-Reflection | 50% probability (vertical and horizontal)
-H**S**V Saturation | +/- 50%
-HS**V** Intensity | +/- 50%
+| Augmentation           | Description                               |
+|------------------------|-------------------------------------------|
+| Translation            | +/- 1% (vertical and horizontal)          |
+| Rotation               | +/- 20 degrees                            |
+| Shear                  | +/- 3 degrees (vertical and horizontal)   |
+| Scale                  | +/- 30%                                   |
+| Reflection             | 50% probability (vertical and horizontal) |
+| HSV Saturation         | +/- 50%                                   |
+| HSV Intensity          | +/- 50%                                   |
 
-# Inference
+Please note that augmentation is applied **only** during training and not during inference. All corresponding bounding boxes are automatically adjusted to match the augmented images.
 
-Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply trained weights to an xView image, such as `5.tif` from the training set, shown here.
+# 🔍 Inference
+
+Once training is done, model checkpoints will be available in the `/checkpoints` directory. Use `detect.py` to apply your trained weights to any xView image—for instance, `5.tif` from the training set:
 
 <img src="https://github.com/ultralytics/xview/blob/master/output_img/1047.jpg?raw=true" width="100%">
 
-# Citation
+# 📝 Citation
+
+If you use this repository or the associated tools and datasets in your research, please cite accordingly:
 
 [![DOI](https://zenodo.org/badge/137117503.svg)](https://zenodo.org/badge/latestdoi/137117503)
 
-# Contribute
+# 👥 Contribute
 
-We love your input! Ultralytics open-source efforts would not be possible without help from our community. Please see our [Contributing Guide](https://docs.ultralytics.com/help/contributing) to get started, and fill out our [Survey](https://ultralytics.com/survey?utm_source=github&utm_medium=social&utm_campaign=Survey) to send us feedback on your experience. Thank you 🙏 to all our contributors!
+🤝 We love contributions from the community! Our open-source projects thrive on your help. To start contributing, please check out our [Contributing Guide](https://docs.ultralytics.com/help/contributing). Additionally, we'd love to hear from you through our [Survey](https://ultralytics.com/survey?utm_source=github&utm_medium=social&utm_campaign=Survey). It's a way to **impact** the future of our projects. A big shoutout and thank you 🙏 to all our contributors!
 
-<!-- SVG image from https://opencollective.com/ultralytics/contributors.svg?width=990 -->
+<!-- Image with SVG format can be troublesome in some markdown viewers -->
 <a href="https://github.com/ultralytics/yolov5/graphs/contributors">
-<img width="100%" src="https://github.com/ultralytics/assets/raw/main/im/image-contributors.png" alt="Ultralytics open-source contributors"></a>
+<img src="https://github.com/ultralytics/assets/raw/main/im/image-contributors.png" width="100%" alt="Ultralytics open-source contributors"></a>
 
-# License
+# 📜 License
 
-Ultralytics offers two licensing options to accommodate diverse use cases:
+At Ultralytics, we provide two different licensing options to suit various use cases:
 
-- **AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students and enthusiasts, promoting open collaboration and knowledge sharing. See the [LICENSE](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) file for more details.
-- **Enterprise License**: Designed for commercial use, this license permits seamless integration of Ultralytics software and AI models into commercial goods and services, bypassing the open-source requirements of AGPL-3.0. If your scenario involves embedding our solutions into a commercial offering, reach out through [Ultralytics Licensing](https://ultralytics.com/license).
+- **AGPL-3.0 License**: The [AGPL-3.0 License](https://www.gnu.org/licenses/agpl-3.0.html) is an [OSI-approved](https://opensource.org/licenses/) open-source format that's best suited for students, researchers, and enthusiasts to promote collaboration and knowledge sharing. The full terms can be found in the [LICENSE](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) file.
+- **Enterprise License**: If you're looking for a commercial application of our software and models, the Enterprise License enables integration into commercial products while bypassing the open-source stipulations of the AGPL-3.0. For embedding our solutions into your commercial offerings, please contact us through [Ultralytics Licensing](https://ultralytics.com/license).
 
-# Contact
+# 📬 Contact
 
-For Ultralytics bug reports and feature requests please visit [GitHub Issues](https://github.com/ultralytics/xview-yolov3/issues), and join our [Discord](https://ultralytics.com/discord) community for questions and discussions!
+🐞 For reporting bugs or suggesting new features, please open an issue on our [GitHub Issues](https://github.com/ultralytics/xview-yolov3/issues) page. And if you have questions or fancy engaging with us, join our vibrant [Discord](https://ultralytics.com/discord) community!
 
 <br>
 <div align="center">
