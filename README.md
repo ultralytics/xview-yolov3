@@ -60,23 +60,22 @@ Checkpoints will be saved in `/checkpoints` directory. Run `detect.py` to apply 
 
 [![DOI](https://zenodo.org/badge/137117503.svg)](https://zenodo.org/badge/latestdoi/137117503)
 
-# <div align="center">Contribute</div>
+# Contribute
 
 We love your input! Ultralytics open-source efforts would not be possible without help from our community. Please see our [Contributing Guide](https://docs.ultralytics.com/help/contributing) to get started, and fill out our [Survey](https://ultralytics.com/survey?utm_source=github&utm_medium=social&utm_campaign=Survey) to send us feedback on your experience. Thank you 🙏 to all our contributors!
 
 <!-- SVG image from https://opencollective.com/ultralytics/contributors.svg?width=990 -->
-
 <a href="https://github.com/ultralytics/yolov5/graphs/contributors">
 <img width="100%" src="https://github.com/ultralytics/assets/raw/main/im/image-contributors.png" alt="Ultralytics open-source contributors"></a>
 
-# <div align="center">License</div>
+# License
 
 Ultralytics offers two licensing options to accommodate diverse use cases:
 
 - **AGPL-3.0 License**: This [OSI-approved](https://opensource.org/licenses/) open-source license is ideal for students and enthusiasts, promoting open collaboration and knowledge sharing. See the [LICENSE](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) file for more details.
 - **Enterprise License**: Designed for commercial use, this license permits seamless integration of Ultralytics software and AI models into commercial goods and services, bypassing the open-source requirements of AGPL-3.0. If your scenario involves embedding our solutions into a commercial offering, reach out through [Ultralytics Licensing](https://ultralytics.com/license).
 
-# <div align="center">Contact</div>
+# Contact
 
 For Ultralytics bug reports and feature requests please visit [GitHub Issues](https://github.com/ultralytics/xview-yolov3/issues), and join our [Discord](https://ultralytics.com/discord) community for questions and discussions!
 
