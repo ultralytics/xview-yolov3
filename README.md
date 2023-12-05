@@ -1,7 +1,5 @@
-<p align="center">
-  <br>
-  <img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="320">
-</p>
+<br>
+<img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="320">
 
 # Introduction
 
