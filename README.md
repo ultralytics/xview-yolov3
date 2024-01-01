@@ -16,6 +16,7 @@ pip3 install -U -r requirements.txt
 ```
 
 The following packages should be included:
+
 - `numpy`: For numerical operations.
 - `scipy`: Useful for scientific and technical computations.
 - `torch`: The PyTorch machine learning framework.
@@ -30,6 +31,7 @@ Start by downloading the xView data from the [data download page](https://challe
 # 🏋️‍♂️ Training
 
 ## Preprocessing Steps
+
 Before we launch into training, we perform preprocessing on the targets to clean them up:
 
 1. Outliers are removed using sigma-rejection.
@@ -38,13 +40,17 @@ Before we launch into training, we perform preprocessing on the targets to clean
 <img src="https://github.com/ultralytics/xview-yolov3/blob/master/cfg/c60_a30.png?raw=true" width="500">
 
 ## Starting the Training
+
 **To start training**, execute `train.py` after you have downloaded the xView data. You'll need to specify the path to your xView data on line 41 (for local execution) or line 43 (if you're working in the cloud).
 
 ## Resuming Training
+
 **To resume training**, use the following command:
+
 ```bash
 train.py --resume 1
 ```
+
 Training will continue from the most recent checkpoint found in the `latest.pt` file.
 
 During training, each epoch will process 8 randomly sampled 608x608 chips from each full-resolution image. If you're using a GPU like the Nvidia GTX 1080 Ti, you can expect to complete around 100 epochs per day.
@@ -59,15 +65,15 @@ You'll see loss plots for bounding boxes, objectness, and class confidence that 
 
 During training, `datasets.py` will apply various augmentations to the full-resolution input images using OpenCV. Here are the specifications for each augmentation applied:
 
-| Augmentation           | Description                               |
-|------------------------|-------------------------------------------|
-| Translation            | +/- 1% (vertical and horizontal)          |
-| Rotation               | +/- 20 degrees                            |
-| Shear                  | +/- 3 degrees (vertical and horizontal)   |
-| Scale                  | +/- 30%                                   |
-| Reflection             | 50% probability (vertical and horizontal) |
-| HSV Saturation         | +/- 50%                                   |
-| HSV Intensity          | +/- 50%                                   |
+| Augmentation   | Description                               |
+| -------------- | ----------------------------------------- |
+| Translation    | +/- 1% (vertical and horizontal)          |
+| Rotation       | +/- 20 degrees                            |
+| Shear          | +/- 3 degrees (vertical and horizontal)   |
+| Scale          | +/- 30%                                   |
+| Reflection     | 50% probability (vertical and horizontal) |
+| HSV Saturation | +/- 50%                                   |
+| HSV Intensity  | +/- 50%                                   |
 
 Please note that augmentation is applied **only** during training and not during inference. All corresponding bounding boxes are automatically adjusted to match the augmented images.
 
@@ -88,6 +94,7 @@ If you use this repository or the associated tools and datasets in your research
 🤝 We love contributions from the community! Our open-source projects thrive on your help. To start contributing, please check out our [Contributing Guide](https://docs.ultralytics.com/help/contributing). Additionally, we'd love to hear from you through our [Survey](https://ultralytics.com/survey?utm_source=github&utm_medium=social&utm_campaign=Survey). It's a way to **impact** the future of our projects. A big shoutout and thank you 🙏 to all our contributors!
 
 <!-- Image with SVG format can be troublesome in some markdown viewers -->
+
 <a href="https://github.com/ultralytics/yolov5/graphs/contributors">
 <img src="https://github.com/ultralytics/assets/raw/main/im/image-contributors.png" width="100%" alt="Ultralytics open-source contributors"></a>
 
