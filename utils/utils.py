@@ -514,8 +514,9 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device="cpu"):
     prediction = prediction.cpu()
     """
-    Removes detections with lower object confidence score than 'conf_thres' and performs
-    Non-Maximum Suppression to further filter detections.
+    Removes detections with lower object confidence score than 'conf_thres' and performs Non-Maximum Suppression to
+    further filter detections.
+
     Returns detections with shape:
         (x1, y1, x2, y2, object_conf, class_score, class_pred)
     """
