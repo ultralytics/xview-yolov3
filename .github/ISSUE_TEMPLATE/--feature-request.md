@@ -1,13 +1,11 @@
----
-name: "\U0001F680Feature request"
-about: Suggest an idea for this project
-title: ''
-labels: enhancement
-assignees: ''
+______________________________________________________________________
 
----
+name: "\\U0001F680Feature request" about: Suggest an idea for this project title: '' labels: enhancement assignees: ''
+
+______________________________________________________________________
 
 ## 🚀 Feature
+
 <!-- A clear and concise description of the feature proposal -->
 
 ## Motivation
