@@ -12,10 +12,10 @@ import torch
 from utils.utils import xyxy2xywh, xview_class_weights
 
 
-class ImageFolder():  # for eval-only
+class ImageFolder:  # for eval-only
     def __init__(self, path, batch_size=1, img_size=416):
         if os.path.isdir(path):
-            self.files = sorted(glob.glob('%s/*.*' % path))
+            self.files = sorted(glob.glob("%s/*.*" % path))
         elif os.path.isfile(path):
             self.files = [path]
 
@@ -23,7 +23,7 @@ class ImageFolder():  # for eval-only
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
         self.height = img_size
-        assert self.nF > 0, 'No images found in path %s' % path
+        assert self.nF > 0, "No images found in path %s" % path
 
         # RGB normalization values
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
@@ -54,18 +54,18 @@ class ImageFolder():  # for eval-only
         return self.nB  # number of batches
 
 
-class ListDataset():  # for training
-    def __init__(self, path, batch_size=1, img_size=608, targets_path=''):
+class ListDataset:  # for training
+    def __init__(self, path, batch_size=1, img_size=608, targets_path=""):
         self.path = path
-        self.files = sorted(glob.glob('%s/*.tif' % path))
+        self.files = sorted(glob.glob("%s/*.tif" % path))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
-        assert self.nB > 0, 'No images found in path %s' % path
+        assert self.nB > 0, "No images found in path %s" % path
         self.height = img_size
         # load targets
         self.mat = scipy.io.loadmat(targets_path)
-        self.mat['id'] = self.mat['id'].squeeze()
+        self.mat["id"] = self.mat["id"].squeeze()
         self.class_weights = xview_class_weights(range(60)).numpy()
 
         # RGB normalization values
@@ -90,8 +90,9 @@ class ListDataset():  # for training
     def __iter__(self):
         self.count = -1
         # self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
-        self.shuffled_vector = np.random.choice(self.mat['image_numbers'].ravel(), self.nF,
-                                                p=self.mat['image_weights'].ravel())
+        self.shuffled_vector = np.random.choice(
+            self.mat["image_numbers"].ravel(), self.nF, p=self.mat["image_weights"].ravel()
+        )
         return self
 
     # @profile
@@ -110,7 +111,7 @@ class ListDataset():  # for training
         labels_all = []
         for index, files_index in enumerate(range(ia, ib)):
             # img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            img_path = '%s/%g.tif' % (self.path, self.shuffled_vector[files_index])
+            img_path = "%s/%g.tif" % (self.path, self.shuffled_vector[files_index])
             # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/2294.bmp'
 
             img0 = cv2.imread(img_path)
@@ -140,15 +141,16 @@ class ListDataset():  # for training
                 cv2.cvtColor(img_hsv, cv2.COLOR_HSV2BGR, dst=img0)
 
             # Load labels
-            chip = img_path.rsplit('/')[-1]
-            i = (self.mat['id'] == float(chip.replace('.tif', '').replace('.bmp', ''))).nonzero()[0]
-            labels1 = self.mat['targets'][i]
+            chip = img_path.rsplit("/")[-1]
+            i = (self.mat["id"] == float(chip.replace(".tif", "").replace(".bmp", ""))).nonzero()[0]
+            labels1 = self.mat["targets"][i]
 
             # Remove buildings and small cars
             # labels1 = labels1[(labels1[:, 0] != 5) & (labels1[:, 0] != 48)]
 
-            img1, labels1, M = random_affine(img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01),
-                                             scale=(0.70, 1.30))  # RGB
+            img1, labels1, M = random_affine(
+                img0, targets=labels1, degrees=(-20, 20), translate=(0.01, 0.01), scale=(0.70, 1.30)
+            )  # RGB
 
             nL1 = len(labels1)
             border = height / 2 + 1
@@ -159,10 +161,10 @@ class ListDataset():  # for training
             r = (r @ M.T)[:, :2]
             r = r[np.all(r > border, 1) & np.all(r < img1.shape[0] - border, 1)]
 
-            #import matplotlib.pyplot as plt
-            #plt.imshow(img1[:, :, ::-1])
-            #plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
-            #plt.plot(r[:,0],r[:,1],'.')
+            # import matplotlib.pyplot as plt
+            # plt.imshow(img1[:, :, ::-1])
+            # plt.plot(labels1[:, [1, 3, 3, 1, 1]].T, labels1[:, [2, 2, 4, 4, 2]].T, '.-')
+            # plt.plot(r[:,0],r[:,1],'.')
 
             if nL1 > 0:
                 weights = []
@@ -224,7 +226,7 @@ class ListDataset():  # for training
                 #     labels = labels[(lw > 4) & (lh > 4) & (area / area0 > 0.2) & (ar < 15)]
                 #     counter += 1
 
-                img = img1[pad_y:pad_y + height, pad_x:pad_x + height]
+                img = img1[pad_y : pad_y + height, pad_x : pad_x + height]
 
                 # import matplotlib.pyplot as plt
                 # plt.subplot(4, 4, j+1).imshow(img[:, :, ::-1])
@@ -281,8 +283,9 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
     return cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
 
 
-def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-3, 3),
-                  borderValue=(0, 0, 0)):
+def random_affine(
+    img, targets=None, degrees=(-10, 10), translate=(0.1, 0.1), scale=(0.9, 1.1), shear=(-3, 3), borderValue=(0, 0, 0)
+):
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
     border = 750
@@ -307,8 +310,9 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
     S[1, 0] = math.tan((random.random() * (shear[1] - shear[0]) + shear[0]) * math.pi / 180)  # y shear (deg)
 
     M = S @ T @ R  # ORDER IS IMPORTANT HERE!!
-    imw = cv2.warpPerspective(img, M, dsize=(height, height), flags=cv2.INTER_LINEAR,
-                              borderValue=borderValue)  # BGR order (YUV-equalized BGR means)
+    imw = cv2.warpPerspective(
+        img, M, dsize=(height, height), flags=cv2.INTER_LINEAR, borderValue=borderValue
+    )  # BGR order (YUV-equalized BGR means)
     # borderValue = [40.746, 49.697, 60.134])  # RGB
 
     # Return warped points also
@@ -353,14 +357,15 @@ def random_affine(img, targets=None, degrees=(-10, 10), translate=(.1, .1), scal
         return imw
 
 
-def convert_tif2bmp(p='/Users/glennjocher/Downloads/DATA/xview/val_images_bmp'):
+def convert_tif2bmp(p="/Users/glennjocher/Downloads/DATA/xview/val_images_bmp"):
     import glob
     import cv2
-    files = sorted(glob.glob('%s/*.tif' % p))
+
+    files = sorted(glob.glob("%s/*.tif" % p))
     for i, f in enumerate(files):
-        print('%g/%g' % (i + 1, len(files)))
+        print("%g/%g" % (i + 1, len(files)))
 
         img = cv2.imread(f)
 
-        cv2.imwrite(f.replace('.tif', '.bmp'), img)
-        os.system('rm -rf ' + f)
+        cv2.imwrite(f.replace(".tif", ".bmp"), img)
+        os.system("rm -rf " + f)

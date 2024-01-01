@@ -11,22 +11,22 @@ from utils.utils import *
 # batch_size 2: 32*35 = 1120 (1.40 vs 800, 2.06 cumulative)
 # batch_size 1: 32*49 = 1568 (1.40 vs 1120, 2.88 cumulative)
 
-targets_path = 'utils/targets_c60.mat'
+targets_path = "utils/targets_c60.mat"
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-epochs', type=int, default=999, help='number of epochs')
-parser.add_argument('-batch_size', type=int, default=8, help='size of each image batch')
-parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
-parser.add_argument('-img_size', type=int, default=32 * 25, help='size of each image dimension')
-parser.add_argument('-resume', default=False, help='resume training flag')
+parser.add_argument("-epochs", type=int, default=999, help="number of epochs")
+parser.add_argument("-batch_size", type=int, default=8, help="size of each image batch")
+parser.add_argument("-cfg", type=str, default="cfg/c60_a30symmetric.cfg", help="cfg file path")
+parser.add_argument("-img_size", type=int, default=32 * 25, help="size of each image dimension")
+parser.add_argument("-resume", default=False, help="resume training flag")
 opt = parser.parse_args()
 print(opt)
 
 
 def main(opt):
-    os.makedirs('weights', exist_ok=True)
+    os.makedirs("weights", exist_ok=True)
     cuda = torch.cuda.is_available()
-    device = torch.device('cuda:0' if cuda else 'cpu')
+    device = torch.device("cuda:0" if cuda else "cpu")
 
     random.seed(0)
     np.random.seed(0)
@@ -37,10 +37,10 @@ def main(opt):
         torch.backends.cudnn.benchmark = True
 
     # Configure run
-    if platform == 'darwin':  # MacOS (local)
-        train_path = '/Users/glennjocher/Downloads/DATA/xview/train_images'
-    else: # linux (GCP cloud)
-        train_path = '../train_images'
+    if platform == "darwin":  # MacOS (local)
+        train_path = "/Users/glennjocher/Downloads/DATA/xview/train_images"
+    else:  # linux (GCP cloud)
+        train_path = "../train_images"
 
     # Initialize model
     model = Darknet(opt.cfg, opt.img_size)
@@ -50,13 +50,13 @@ def main(opt):
 
     # reload saved optimizer state
     start_epoch = 0
-    best_loss = float('inf')
+    best_loss = float("inf")
     if opt.resume:
-        checkpoint = torch.load('weights/latest.pt', map_location='cpu')
+        checkpoint = torch.load("weights/latest.pt", map_location="cpu")
 
-        model.load_state_dict(checkpoint['model'])
+        model.load_state_dict(checkpoint["model"])
         if torch.cuda.device_count() > 1:
-            print('Using ', torch.cuda.device_count(), ' GPUs')
+            print("Using ", torch.cuda.device_count(), " GPUs")
             model = nn.DataParallel(model)
         model.to(device).train()
 
@@ -72,15 +72,15 @@ def main(opt):
         # optimizer = torch.optim.SGD(model.parameters(), lr=.001, momentum=.9, weight_decay=0.0005 * 0, nesterov=True)
         # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()))
         optimizer = torch.optim.Adam(model.parameters())
-        optimizer.load_state_dict(checkpoint['optimizer'])
+        optimizer.load_state_dict(checkpoint["optimizer"])
 
-        start_epoch = checkpoint['epoch'] + 1
-        best_loss = checkpoint['best_loss']
+        start_epoch = checkpoint["epoch"] + 1
+        best_loss = checkpoint["best_loss"]
 
         del checkpoint  # current, saved
     else:
         if torch.cuda.device_count() > 1:
-            print('Using ', torch.cuda.device_count(), ' GPUs')
+            print("Using ", torch.cuda.device_count(), " GPUs")
             model = nn.DataParallel(model)
         model.to(device).train()
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=1e-4, weight_decay=5e-4)
@@ -92,8 +92,11 @@ def main(opt):
 
     modelinfo(model)
     t0, t1 = time.time(), time.time()
-    print('%10s' * 16 % (
-        'Epoch', 'Batch', 'x', 'y', 'w', 'h', 'conf', 'cls', 'total', 'P', 'R', 'nGT', 'TP', 'FP', 'FN', 'time'))
+    print(
+        "%10s"
+        * 16
+        % ("Epoch", "Batch", "x", "y", "w", "h", "conf", "cls", "total", "P", "R", "nGT", "TP", "FP", "FN", "time")
+    )
     class_weights = xview_class_weights_hard_mining(range(60)).to(device)
     for epoch in range(opt.epochs):
         epoch += start_epoch
@@ -117,22 +120,26 @@ def main(opt):
         rloss = defaultdict(float)  # running loss
         metrics = torch.zeros(4, 60)
         for i, (imgs, targets) in enumerate(dataloader):
-
             n = 4  # number of pictures at a time
             for j in range(int(len(imgs) / n)):
-                targets_j = targets[j * n:j * n + n]
+                targets_j = targets[j * n : j * n + n]
                 nGT = sum([len(x) for x in targets_j])
                 if nGT < 1:
                     continue
 
-                loss = model(imgs[j * n:j * n + n].to(device), targets_j, requestPrecision=True,
-                             weight=class_weights, epoch=epoch)
+                loss = model(
+                    imgs[j * n : j * n + n].to(device),
+                    targets_j,
+                    requestPrecision=True,
+                    weight=class_weights,
+                    epoch=epoch,
+                )
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
                 ui += 1
-                metrics += model.losses['metrics']
+                metrics += model.losses["metrics"]
                 for key, val in model.losses.items():
                     rloss[key] = (rloss[key] * ui + val) / (ui + 1)
 
@@ -152,11 +159,24 @@ def main(opt):
                 else:
                     mean_recall = 0
 
-                s = ('%10s%10s' + '%10.3g' * 14) % (
-                    '%g/%g' % (epoch, opt.epochs - 1), '%g/%g' % (i, len(dataloader) - 1), rloss['x'],
-                    rloss['y'], rloss['w'], rloss['h'], rloss['conf'], rloss['cls'],
-                    rloss['loss'], mean_precision, mean_recall, model.losses['nGT'], model.losses['TP'],
-                    model.losses['FP'], model.losses['FN'], time.time() - t1)
+                s = ("%10s%10s" + "%10.3g" * 14) % (
+                    "%g/%g" % (epoch, opt.epochs - 1),
+                    "%g/%g" % (i, len(dataloader) - 1),
+                    rloss["x"],
+                    rloss["y"],
+                    rloss["w"],
+                    rloss["h"],
+                    rloss["conf"],
+                    rloss["cls"],
+                    rloss["loss"],
+                    mean_precision,
+                    mean_recall,
+                    model.losses["nGT"],
+                    model.losses["TP"],
+                    model.losses["FP"],
+                    model.losses["FN"],
+                    time.time() - t1,
+                )
                 t1 = time.time()
                 print(s)
 
@@ -174,35 +194,37 @@ def main(opt):
         # print(1 / class_weights)
 
         # Write epoch results
-        with open('results.txt', 'a') as file:
-            file.write(s + '\n')
+        with open("results.txt", "a") as file:
+            file.write(s + "\n")
 
         # Update best loss
-        loss_per_target = rloss['loss'] / rloss['nGT']
+        loss_per_target = rloss["loss"] / rloss["nGT"]
         if loss_per_target < best_loss:
             best_loss = loss_per_target
 
         # Save latest checkpoint
-        checkpoint = {'epoch': epoch,
-                      'best_loss': best_loss,
-                      'model': model.state_dict(),
-                      'optimizer': optimizer.state_dict()}
-        torch.save(checkpoint, 'weights/latest.pt')
+        checkpoint = {
+            "epoch": epoch,
+            "best_loss": best_loss,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+        }
+        torch.save(checkpoint, "weights/latest.pt")
 
         # Save best checkpoint
         if best_loss == loss_per_target:
-            os.system('cp weights/latest.pt weights/best.pt')
+            os.system("cp weights/latest.pt weights/best.pt")
 
         # Save backup checkpoint
         if (epoch > 0) & (epoch % 100 == 0):
-            os.system('cp weights/latest.pt weights/backup' + str(epoch) + '.pt')
+            os.system("cp weights/latest.pt weights/backup" + str(epoch) + ".pt")
 
     # Save final model
     dt = time.time() - t0
-    print('Finished %g epochs in %.2fs (%.2fs/epoch)' % (epoch, dt, dt / (epoch + 1)))
+    print("Finished %g epochs in %.2fs (%.2fs/epoch)" % (epoch, dt, dt / (epoch + 1)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     torch.cuda.empty_cache()
     main(opt)
     torch.cuda.empty_cache()
