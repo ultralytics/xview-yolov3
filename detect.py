@@ -6,45 +6,45 @@ from models import *
 from utils.datasets import *
 from utils.utils import *
 
-targets_path = 'utils/targets_c60.mat'
+targets_path = "utils/targets_c60.mat"
 
 parser = argparse.ArgumentParser()
 # Get data configuration
-if platform == 'darwin':  # macos
-    parser.add_argument('-image_folder', type=str, default='/Users/glennjocher/Downloads/DATA/xview/train_images/5.tif')
-    parser.add_argument('-output_folder', type=str, default='./output_xview', help='path to outputs')
+if platform == "darwin":  # macos
+    parser.add_argument("-image_folder", type=str, default="/Users/glennjocher/Downloads/DATA/xview/train_images/5.tif")
+    parser.add_argument("-output_folder", type=str, default="./output_xview", help="path to outputs")
     cuda = False  # torch.cuda.is_available()
 else:  # gcp
     # cd yolo && python3 detect.py -secondary_classifier 1
-    parser.add_argument('-image_folder', type=str, default='../train_images/5.tif', help='path to images')
-    parser.add_argument('-output_folder', type=str, default='../output', help='path to outputs')
+    parser.add_argument("-image_folder", type=str, default="../train_images/5.tif", help="path to images")
+    parser.add_argument("-output_folder", type=str, default="../output", help="path to outputs")
     cuda = False
 
-parser.add_argument('-plot_flag', type=bool, default=True)
-parser.add_argument('-secondary_classifier', type=bool, default=False)
-parser.add_argument('-cfg', type=str, default='cfg/c60_a30symmetric.cfg', help='cfg file path')
-parser.add_argument('-class_path', type=str, default='data/xview.names', help='path to class label file')
-parser.add_argument('-conf_thres', type=float, default=0.99, help='object confidence threshold')
-parser.add_argument('-nms_thres', type=float, default=0.4, help='iou threshold for non-maximum suppression')
-parser.add_argument('-batch_size', type=int, default=1, help='size of the batches')
-parser.add_argument('-img_size', type=int, default=32 * 51, help='size of each image dimension')
+parser.add_argument("-plot_flag", type=bool, default=True)
+parser.add_argument("-secondary_classifier", type=bool, default=False)
+parser.add_argument("-cfg", type=str, default="cfg/c60_a30symmetric.cfg", help="cfg file path")
+parser.add_argument("-class_path", type=str, default="data/xview.names", help="path to class label file")
+parser.add_argument("-conf_thres", type=float, default=0.99, help="object confidence threshold")
+parser.add_argument("-nms_thres", type=float, default=0.4, help="iou threshold for non-maximum suppression")
+parser.add_argument("-batch_size", type=int, default=1, help="size of the batches")
+parser.add_argument("-img_size", type=int, default=32 * 51, help="size of each image dimension")
 opt = parser.parse_args()
 print(opt)
 
 
 def detect(opt):
     if opt.plot_flag:
-        os.system('rm -rf ' + opt.output_folder + '_img')
-        os.makedirs(opt.output_folder + '_img', exist_ok=True)
-    os.system('rm -rf ' + opt.output_folder)
+        os.system("rm -rf " + opt.output_folder + "_img")
+        os.makedirs(opt.output_folder + "_img", exist_ok=True)
+    os.system("rm -rf " + opt.output_folder)
     os.makedirs(opt.output_folder, exist_ok=True)
-    device = torch.device('cuda:0' if cuda else 'cpu')
+    device = torch.device("cuda:0" if cuda else "cpu")
 
     # Load model 1
     model = Darknet(opt.cfg, opt.img_size)
-    checkpoint = torch.load('weights/xview_best_lite.pt', map_location='cpu')
+    checkpoint = torch.load("weights/xview_best_lite.pt", map_location="cpu")
 
-    model.load_state_dict(checkpoint['model'])
+    model.load_state_dict(checkpoint["model"])
     model.to(device).eval()
     del checkpoint
 
@@ -62,9 +62,9 @@ def detect(opt):
     # Load model 2
     if opt.secondary_classifier:
         model2 = ConvNetb()
-        checkpoint = torch.load('weights/classifier.pt', map_location='cpu')
+        checkpoint = torch.load("weights/classifier.pt", map_location="cpu")
 
-        model2.load_state_dict(checkpoint['model'])
+        model2.load_state_dict(checkpoint["model"])
         model2.to(device).eval()
         del checkpoint
 
@@ -91,7 +91,7 @@ def detect(opt):
     detections = None
     mat_priors = scipy.io.loadmat(targets_path)
     for batch_i, (img_paths, img) in enumerate(dataloader):
-        print('\n', batch_i, img.shape, end=' ')
+        print("\n", batch_i, img.shape, end=" ")
 
         img_ud = np.ascontiguousarray(np.flip(img, axis=1))
         img_lr = np.ascontiguousarray(np.flip(img, axis=2))
@@ -101,10 +101,10 @@ def detect(opt):
         ni = int(math.ceil(img.shape[1] / length))  # up-down
         nj = int(math.ceil(img.shape[2] / length))  # left-right
         for i in range(ni):  # for i in range(ni - 1):
-            print('row %g/%g: ' % (i, ni), end='')
+            print("row %g/%g: " % (i, ni), end="")
 
             for j in range(nj):  # for j in range(nj if i==0 else nj - 1):
-                print('%g ' % j, end='', flush=True)
+                print("%g " % j, end="", flush=True)
 
                 # forward scan
                 y2 = min((i + 1) * length, img.shape[1])
@@ -150,12 +150,13 @@ def detect(opt):
                     #     preds.append(pred.unsqueeze(0))
 
         if len(preds) > 0:
-            detections = non_max_suppression(torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img,
-                                             model2, device)
+            detections = non_max_suppression(
+                torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, model2, device
+            )
             img_detections.extend(detections)
             imgs.extend(img_paths)
 
-        print('Batch %d... (Done %.3fs)' % (batch_i, time.time() - prev_time))
+        print("Batch %d... (Done %.3fs)" % (batch_i, time.time() - prev_time))
         prev_time = time.time()
 
     # Bounding-box colors
@@ -184,15 +185,15 @@ def detect(opt):
             bbox_colors = random.sample(color_list, len(unique_classes))
 
             # write results to .txt file
-            results_path = os.path.join(opt.output_folder, path.split('/')[-1])
-            if os.path.isfile(results_path + '.txt'):
-                os.remove(results_path + '.txt')
+            results_path = os.path.join(opt.output_folder, path.split("/")[-1])
+            if os.path.isfile(results_path + ".txt"):
+                os.remove(results_path + ".txt")
 
-            results_img_path = os.path.join(opt.output_folder + '_img', path.split('/')[-1])
-            with open(results_path.replace('.bmp', '.tif') + '.txt', 'a') as file:
+            results_img_path = os.path.join(opt.output_folder + "_img", path.split("/")[-1])
+            with open(results_path.replace(".bmp", ".tif") + ".txt", "a") as file:
                 for i in unique_classes:
                     n = (detections[:, -1].cpu() == i).sum()
-                    print('%g %ss' % (n, classes[int(i)]))
+                    print("%g %ss" % (n, classes[int(i)]))
 
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                     # Rescale coordinates to original dimensions
@@ -207,21 +208,22 @@ def detect(opt):
                     # write to file
                     xvc = xview_indices2classes(int(cls_pred))  # xview class
                     # if (xvc != 21) & (xvc != 72):
-                    file.write(('%g %g %g %g %g %g \n') % (x1, y1, x2, y2, xvc, cls_conf * conf))
+                    file.write(("%g %g %g %g %g %g \n") % (x1, y1, x2, y2, xvc, cls_conf * conf))
 
                     if opt.plot_flag:
                         # Add the bbox to the plot
-                        label = '%s %.2f' % (classes[int(cls_pred)], cls_conf) if cls_conf > 0.05 else None
+                        label = "%s %.2f" % (classes[int(cls_pred)], cls_conf) if cls_conf > 0.05 else None
                         color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
                         plot_one_box([x1, y1, x2, y2], img, label=label, color=color, line_thickness=1)
 
             if opt.plot_flag:
                 # Save generated image with detections
-                cv2.imwrite(results_img_path.replace('.bmp', '.jpg').replace('.tif', '.jpg'), img)
+                cv2.imwrite(results_img_path.replace(".bmp", ".jpg").replace(".tif", ".jpg"), img)
 
     if opt.plot_flag:
         from scoring import score
-        score.score(opt.output_folder + '/', '/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson', '.')
+
+        score.score(opt.output_folder + "/", "/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson", ".")
 
 
 class ConvNetb(nn.Module):
@@ -229,25 +231,26 @@ class ConvNetb(nn.Module):
         super(ConvNetb, self).__init__()
         n = 64  # initial convolution size
         self.layer1 = nn.Sequential(
-            nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(n),
-            nn.LeakyReLU())
+            nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1, bias=False), nn.BatchNorm2d(n), nn.LeakyReLU()
+        )
         self.layer2 = nn.Sequential(
-            nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(n * 2),
-            nn.LeakyReLU())
+            nn.Conv2d(n, n * 2, kernel_size=3, stride=2, padding=1, bias=False), nn.BatchNorm2d(n * 2), nn.LeakyReLU()
+        )
         self.layer3 = nn.Sequential(
             nn.Conv2d(n * 2, n * 4, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 4),
-            nn.LeakyReLU())
+            nn.LeakyReLU(),
+        )
         self.layer4 = nn.Sequential(
             nn.Conv2d(n * 4, n * 8, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 8),
-            nn.LeakyReLU())
+            nn.LeakyReLU(),
+        )
         self.layer5 = nn.Sequential(
             nn.Conv2d(n * 8, n * 16, kernel_size=3, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(n * 16),
-            nn.LeakyReLU())
+            nn.LeakyReLU(),
+        )
         # self.layer6 = nn.Sequential(
         #     nn.Conv2d(n * 16, n * 32, kernel_size=3, stride=2, padding=1, bias=False),
         #     nn.BatchNorm2d(n * 32),
@@ -268,7 +271,7 @@ class ConvNetb(nn.Module):
         return x.squeeze()  # 500 x 60
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     torch.cuda.empty_cache()
     detect(opt)
     torch.cuda.empty_cache()

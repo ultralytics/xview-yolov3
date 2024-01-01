@@ -6,14 +6,12 @@ import torch
 import torch.nn.functional as F
 
 # set printoptions
-torch.set_printoptions(linewidth=1320, precision=5, profile='long')
-np.set_printoptions(linewidth=320, formatter={'float_kind': '{:11.5g}'.format})  # format short g, %precision=5
+torch.set_printoptions(linewidth=1320, precision=5, profile="long")
+np.set_printoptions(linewidth=320, formatter={"float_kind": "{:11.5g}".format})  # format short g, %precision=5
 
 
 def load_classes(path):
-    """
-    Loads class labels at 'path'
-    """
+    """Loads class labels at 'path'."""
     fp = open(path, "r")
     names = fp.read().split("\n")[:-1]
     return names
@@ -22,46 +20,316 @@ def load_classes(path):
 def modelinfo(model):
     nparams = sum(x.numel() for x in model.parameters())
     ngradients = sum(x.numel() for x in model.parameters() if x.requires_grad)
-    print('\n%4s %70s %9s %12s %20s %12s %12s' % ('', 'name', 'gradient', 'parameters', 'shape', 'mu', 'sigma'))
+    print("\n%4s %70s %9s %12s %20s %12s %12s" % ("", "name", "gradient", "parameters", "shape", "mu", "sigma"))
     for i, (name, p) in enumerate(model.named_parameters()):
-        name = name.replace('module_list.', '')
-        print('%4g %70s %9s %12g %20s %12g %12g' % (
-            i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std()))
-    print('\n%g layers, %g parameters, %g gradients' % (i + 1, nparams, ngradients))
+        name = name.replace("module_list.", "")
+        print(
+            "%4g %70s %9s %12g %20s %12g %12g" % (i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std())
+        )
+    print("\n%g layers, %g parameters, %g gradients" % (i + 1, nparams, ngradients))
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
-    indices = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, -1, 3, -1, 4, 5, 6, 7, 8, -1, 9, 10, 11, 12, 13, 14,
-               15, -1, -1, 16, 17, 18, 19, 20, 21, 22, -1, 23, 24, 25, -1, 26, 27, -1, 28, -1, 29, 30, 31, 32, 33, 34,
-               35, 36, 37, -1, 38, 39, 40, 41, 42, 43, 44, 45, -1, -1, -1, -1, 46, 47, 48, 49, -1, 50, 51, -1, 52, -1,
-               -1, -1, 53, 54, -1, 55, -1, -1, 56, -1, 57, -1, 58, 59]
+    indices = [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        0,
+        1,
+        2,
+        -1,
+        3,
+        -1,
+        4,
+        5,
+        6,
+        7,
+        8,
+        -1,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        -1,
+        -1,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        -1,
+        23,
+        24,
+        25,
+        -1,
+        26,
+        27,
+        -1,
+        28,
+        -1,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        -1,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        -1,
+        -1,
+        -1,
+        -1,
+        46,
+        47,
+        48,
+        49,
+        -1,
+        50,
+        51,
+        -1,
+        52,
+        -1,
+        -1,
+        -1,
+        53,
+        54,
+        -1,
+        55,
+        -1,
+        -1,
+        56,
+        -1,
+        57,
+        -1,
+        58,
+        59,
+    ]
     return [indices[int(c)] for c in classes]
 
 
 def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
-    class_list = [11, 12, 13, 15, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 29, 32, 33, 34, 35, 36, 37, 38, 40, 41,
-                  42, 44, 45, 47, 49, 50, 51, 52, 53, 54, 55, 56, 57, 59, 60, 61, 62, 63, 64, 65, 66, 71, 72, 73, 74,
-                  76, 77, 79, 83, 84, 86, 89, 91, 93, 94]
+    class_list = [
+        11,
+        12,
+        13,
+        15,
+        17,
+        18,
+        19,
+        20,
+        21,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        40,
+        41,
+        42,
+        44,
+        45,
+        47,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        71,
+        72,
+        73,
+        74,
+        76,
+        77,
+        79,
+        83,
+        84,
+        86,
+        89,
+        91,
+        93,
+        94,
+    ]
     return class_list[indices]
 
 
 def xview_class_weights(indices):  # weights of each class in the training set, normalized to mu = 1
     weights = 1 / torch.FloatTensor(
-        [74, 364, 713, 71, 2925, 209767, 6925, 1101, 3612, 12134, 5871, 3640, 860, 4062, 895, 149, 174, 17, 1624, 1846,
-         125, 122, 124, 662, 1452, 697, 222, 190, 786, 200, 450, 295, 79, 205, 156, 181, 70, 64, 337, 1352, 336, 78,
-         628, 841, 287, 83, 702, 1177, 313865, 195, 1081, 882, 1059, 4175, 123, 1700, 2317, 1579, 368, 85])
+        [
+            74,
+            364,
+            713,
+            71,
+            2925,
+            209767,
+            6925,
+            1101,
+            3612,
+            12134,
+            5871,
+            3640,
+            860,
+            4062,
+            895,
+            149,
+            174,
+            17,
+            1624,
+            1846,
+            125,
+            122,
+            124,
+            662,
+            1452,
+            697,
+            222,
+            190,
+            786,
+            200,
+            450,
+            295,
+            79,
+            205,
+            156,
+            181,
+            70,
+            64,
+            337,
+            1352,
+            336,
+            78,
+            628,
+            841,
+            287,
+            83,
+            702,
+            1177,
+            313865,
+            195,
+            1081,
+            882,
+            1059,
+            4175,
+            123,
+            1700,
+            2317,
+            1579,
+            368,
+            85,
+        ]
+    )
     weights /= weights.sum()
     return weights[indices]
 
 
 def xview_class_weights_hard_mining(indices):  # weights of each class in the training set, normalized to mu = 1
     weights = 1 / torch.FloatTensor(
-        [33.97268, 93.15154, 65.63010, 25.50680, 315.10718, 11155.36523, 435.13831, 90.31747, 243.61844, 949.65210,
-         617.89618, 444.08023, 288.31467, 624.93048, 172.96718, 32.82379, 40.19281, 20.85552, 489.79105, 611.20111,
-         59.31967, 56.11718, 34.23215, 165.60268, 555.22137, 362.42404, 57.16855, 50.70805, 169.26582, 63.82553,
-         157.74074, 76.08432, 20.93476, 32.51611, 22.38825, 33.12125, 34.09357, 24.90087, 59.74687, 200.52057,
-         64.62336, 46.36672, 103.29935, 110.10422, 145.03802, 17.35346, 226.90453, 89.09844, 10227.20508, 46.64930,
-         90.11716, 49.69421, 116.69005, 269.13092, 37.82637, 173.11961, 490.53397, 447.31345, 17.29692, 14.43979])
+        [
+            33.97268,
+            93.15154,
+            65.63010,
+            25.50680,
+            315.10718,
+            11155.36523,
+            435.13831,
+            90.31747,
+            243.61844,
+            949.65210,
+            617.89618,
+            444.08023,
+            288.31467,
+            624.93048,
+            172.96718,
+            32.82379,
+            40.19281,
+            20.85552,
+            489.79105,
+            611.20111,
+            59.31967,
+            56.11718,
+            34.23215,
+            165.60268,
+            555.22137,
+            362.42404,
+            57.16855,
+            50.70805,
+            169.26582,
+            63.82553,
+            157.74074,
+            76.08432,
+            20.93476,
+            32.51611,
+            22.38825,
+            33.12125,
+            34.09357,
+            24.90087,
+            59.74687,
+            200.52057,
+            64.62336,
+            46.36672,
+            103.29935,
+            110.10422,
+            145.03802,
+            17.35346,
+            226.90453,
+            89.09844,
+            10227.20508,
+            46.64930,
+            90.11716,
+            49.69421,
+            116.69005,
+            269.13092,
+            37.82637,
+            173.11961,
+            490.53397,
+            447.31345,
+            17.29692,
+            14.43979,
+        ]
+    )
     weights /= weights.sum()
     return weights[indices]
 
@@ -81,9 +349,9 @@ def plot_one_box(x, im, color=None, label=None, line_thickness=None):
 
 def weights_init_normal(m):
     classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
+    if classname.find("Conv") != -1:
         torch.nn.init.normal_(m.weight.data, 0.0, 0.03)
-    elif classname.find('BatchNorm2d') != -1:
+    elif classname.find("BatchNorm2d") != -1:
         torch.nn.init.normal_(m.weight.data, 1.0, 0.03)
         torch.nn.init.constant_(m.bias.data, 0.0)
 
@@ -98,7 +366,9 @@ def xyxy2xywh(box):
 
 
 def compute_ap(recall, precision):
-    """ Compute the average precision, given the recall and precision curves.
+    """
+    Compute the average precision, given the recall and precision curves.
+
     Code originally from https://github.com/rbgirshick/py-faster-rcnn.
     # Arguments
         recall:    The recall curve (list).
@@ -108,8 +378,8 @@ def compute_ap(recall, precision):
     """
     # correct AP calculation
     # first append sentinel values at the end
-    mrec = np.concatenate(([0.], recall, [1.]))
-    mpre = np.concatenate(([0.], precision, [0.]))
+    mrec = np.concatenate(([0.0], recall, [1.0]))
+    mpre = np.concatenate(([0.0], precision, [0.0]))
 
     # compute the precision envelope
     for i in range(mpre.size - 1, 0, -1):
@@ -128,9 +398,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
     # if len(box1.shape) == 1:
     #    box1 = box1.reshape(1, 4)
 
-    """
-    Returns the IoU of two bounding boxes
-    """
+    """Returns the IoU of two bounding boxes."""
     if x1y1x2y2:
         # Get the coordinates of bounding boxes
         b1_x1, b1_y1, b1_x2, b1_y2 = box1[:, 0], box1[:, 1], box1[:, 2], box1[:, 3]
@@ -142,7 +410,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
         b2_x1, b2_x2 = box2[:, 0] - box2[:, 2] / 2, box2[:, 0] + box2[:, 2] / 2
         b2_y1, b2_y2 = box2[:, 1] - box2[:, 3] / 2, box2[:, 1] + box2[:, 3] / 2
 
-    # get the corrdinates of the intersection rectangle
+    # get the coordinates of the intersection rectangle
     inter_rect_x1 = torch.max(b1_x1, b2_x1)
     inter_rect_y1 = torch.max(b1_y1, b2_y1)
     inter_rect_x2 = torch.min(b1_x2, b2_x2)
@@ -157,9 +425,7 @@ def bbox_iou(box1, box2, x1y1x2y2=True):
 
 
 def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG, requestPrecision):
-    """
-    returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls
-    """
+    """Returns nGT, nCorrect, tx, ty, tw, th, tconf, tcls."""
     nB = len(target)  # target.shape[0]
     nT = [len(x) for x in target]  # torch.argmin(target[:, :, 4], 1)  # targets per image
     tx = torch.zeros(nB, nA, nG, nG)  # batch size (4), number of anchors (3), number of grid points (13)
@@ -245,12 +511,12 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
     return tx, ty, tw, th, tconf, tcls, TP, FP, FN, TC
 
 
-def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device='cpu'):
+def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device="cpu"):
     prediction = prediction.cpu()
-
     """
-    Removes detections with lower object confidence score than 'conf_thres' and performs
-    Non-Maximum Suppression to further filter detections.
+    Removes detections with lower object confidence score than 'conf_thres' and performs Non-Maximum Suppression to
+    further filter detections.
+
     Returns detections with shape:
         (x1, y1, x2, y2, object_conf, class_score, class_pred)
     """
@@ -270,12 +536,12 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                 if i >= len(a) - 1:
                     break
 
-                close = (np.abs(a[i, 0] - a[i + 1:, 0]) < radius) & (np.abs(a[i, 1] - a[i + 1:, 1]) < radius)
+                close = (np.abs(a[i, 0] - a[i + 1 :, 0]) < radius) & (np.abs(a[i, 1] - a[i + 1 :, 1]) < radius)
                 close = close.nonzero()
 
                 if len(close) > 0:
                     close = close + i + 1
-                    iou = bbox_iou(a[i:i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4), x1y1x2y2=False)
+                    iou = bbox_iou(a[i : i + 1, :4], a[close.squeeze(), :4].reshape(-1, 4), x1y1x2y2=False)
                     bad = close[iou > thresh]
 
                     if len(bad) > 0:
@@ -307,10 +573,10 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
 
         # Gather bbox priors
         srl = 6  # sigma rejection level
-        mu = mat['class_mu'][class_pred].T
-        sigma = mat['class_sigma'][class_pred].T * srl
+        mu = mat["class_mu"][class_pred].T
+        sigma = mat["class_sigma"][class_pred].T * srl
 
-        v = ((pred[:, 4] > conf_thres) & (class_prob > .3)).numpy()
+        v = ((pred[:, 4] > conf_thres) & (class_prob > 0.3)).numpy()
         v *= (a > 20) & (w > 4) & (h > 4) & (ar < 10) & (ar > 1 / 10)
         v *= (log_w > mu[0] - sigma[0]) & (log_w < mu[0] + sigma[0])
         v *= (log_h > mu[1] - sigma[1]) & (log_h < mu[1] + sigma[1])
@@ -343,7 +609,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
         if prediction.is_cuda:
             unique_labels = unique_labels.cuda()
 
-        nms_style = 'OR'  # 'AND' or 'OR' (classical)
+        nms_style = "OR"  # 'AND' or 'OR' (classical)
         for c in unique_labels:
             # Get the detections with the particular class
             detections_class = detections[detections[:, -1] == c]
@@ -353,7 +619,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             # Perform non-maximum suppression
             max_detections = []
 
-            if nms_style == 'OR':  # Classical NMS
+            if nms_style == "OR":  # Classical NMS
                 while detections_class.shape[0]:
                     # Get detection with highest confidence and save as max detection
                     max_detections.append(detections_class[0].unsqueeze(0))
@@ -366,7 +632,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                     # Remove detections with IoU >= NMS threshold
                     detections_class = detections_class[1:][ious < nms_thres]
 
-            elif nms_style == 'AND':  # 'AND'-style NMS, at least two boxes must share commonality to pass, single boxes erased
+            elif (
+                nms_style == "AND"
+            ):  # 'AND'-style NMS, at least two boxes must share commonality to pass, single boxes erased
                 while detections_class.shape[0]:
                     if len(detections_class) == 1:
                         break
@@ -382,15 +650,16 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             if len(max_detections) > 0:
                 max_detections = torch.cat(max_detections).data
                 # Add max detections to outputs
-                output[image_i] = max_detections if output[image_i] is None else torch.cat(
-                    (output[image_i], max_detections))
+                output[image_i] = (
+                    max_detections if output[image_i] is None else torch.cat((output[image_i], max_detections))
+                )
 
     return output
 
 
 def secondary_class_detection(x, y, w, h, img, model, device):
     # Runs secondary classifier on bounding boxes
-    print('Classifying boxes...', end='')
+    print("Classifying boxes...", end="")
 
     # 1. create 48-pixel squares from each chip
     img = np.ascontiguousarray(img.transpose([1, 2, 0]))  # torch to cv2 (i.e. cv2 = 608 x 608 x 3)
@@ -408,7 +677,7 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     n = len(x)
     images = []
     for i in range(n):
-        images.append(cv2.resize(img[y1[i]:y2[i], x1[i]:x2[i]], (height, height), interpolation=cv2.INTER_LINEAR))
+        images.append(cv2.resize(img[y1[i] : y2[i], x1[i] : x2[i]], (height, height), interpolation=cv2.INTER_LINEAR))
 
     # # plot
     # images_numpy = images.copy()
@@ -431,9 +700,9 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     with torch.no_grad():
         classes = []
         nB = int(n / 1000) + 1  # number of batches
-        print('%g batches...' % nB, end='')
+        print("%g batches..." % nB, end="")
         for i in range(nB):
-            print('%g ' % i, end='')
+            print("%g " % i, end="")
             j0 = int(i * 1000)
             j1 = int(min(j0 + 1000, n))
             im = images[j0:j1]
@@ -452,8 +721,8 @@ def createChips():
     import h5py
     from sys import platform
 
-    mat = scipy.io.loadmat('utils/targets_c60.mat')
-    unique_images = np.unique(mat['id'])
+    mat = scipy.io.loadmat("utils/targets_c60.mat")
+    unique_images = np.unique(mat["id"])
 
     height = 64
     full_height = 128
@@ -461,13 +730,13 @@ def createChips():
     for counter, i in enumerate(unique_images):
         print(counter)
 
-        if platform == 'darwin':  # macos
-            img = cv2.imread('/Users/glennjocher/Downloads/DATA/xview/train_images/%g.tif' % i)
+        if platform == "darwin":  # macos
+            img = cv2.imread("/Users/glennjocher/Downloads/DATA/xview/train_images/%g.tif" % i)
         else:  # gcp
-            img = cv2.imread('../train_images/%g.tif' % i)
+            img = cv2.imread("../train_images/%g.tif" % i)
 
-        for j in np.nonzero(mat['id'] == i)[0]:
-            c, x1, y1, x2, y2 = mat['targets'][j]
+        for j in np.nonzero(mat["id"] == i)[0]:
+            c, x1, y1, x2, y2 = mat["targets"][j]
             x, y, w, h = (x1 + x2) / 2, (y1 + y2) / 2, x2 - x1, y2 - y1
             if ((c == 48) | (c == 5)) & (random.random() > 0.1):  # keep only 10% of buildings and cars
                 continue
@@ -494,29 +763,31 @@ def createChips():
     X = torch.from_numpy(np.ascontiguousarray(X))
     Y = torch.from_numpy(np.ascontiguousarray(np.array(Y))).long()
 
-    with h5py.File('chips_10pad_square.h5') as hf:
-        hf.create_dataset('X', data=X)
-        hf.create_dataset('Y', data=Y)
+    with h5py.File("chips_10pad_square.h5") as hf:
+        hf.create_dataset("X", data=X)
+        hf.create_dataset("Y", data=Y)
 
 
-def strip_optimizer_from_checkpoint(filename='weights/best.pt'):
+def strip_optimizer_from_checkpoint(filename="weights/best.pt"):
     # Strip optimizer from *.pt files for lighter files (reduced by 2/3 size)
     import torch
-    a = torch.load(filename, map_location='cpu')
-    a['optimizer'] = []
-    torch.save(a, filename.replace('.pt', '_lite.pt'))
+
+    a = torch.load(filename, map_location="cpu")
+    a["optimizer"] = []
+    torch.save(a, filename.replace(".pt", "_lite.pt"))
 
 
 def plotResults():
     # Plot YOLO training results
     import numpy as np
     import matplotlib.pyplot as plt
+
     plt.figure(figsize=(16, 8))
-    s = ['X', 'Y', 'Width', 'Height', 'Objectness', 'Classification', 'Total Loss', 'Precision', 'Recall']
-    for f in ('results.txt',):
+    s = ["X", "Y", "Width", "Height", "Objectness", "Classification", "Total Loss", "Precision", "Recall"]
+    for f in ("results.txt",):
         results = np.loadtxt(f, usecols=[2, 3, 4, 5, 6, 7, 8, 9, 10]).T
         for i in range(9):
             plt.subplot(2, 5, i + 1)
-            plt.plot(results[i, :300], marker='.', label=f)
+            plt.plot(results[i, :300], marker=".", label=f)
             plt.title(s[i])
         plt.legend()
