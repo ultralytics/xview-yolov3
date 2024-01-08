@@ -5,6 +5,8 @@
 
 Welcome to the [Ultralytics xView YOLOv3](https://github.com/ultralytics/xview-yolov3) repository! Here we provide code to train the powerful YOLOv3 object detection model on the xView dataset for the [xView Challenge](https://challenge.xviewdataset.org/). This challenge focuses on detecting objects from satellite imagery, advancing the state of the art in computer vision applications for remote sensing.
 
+[![Ultralytics Actions](https://github.com/ultralytics/xview-yolov3/actions/workflows/format.yml/badge.svg)](https://github.com/ultralytics/xview-yolov3/actions/workflows/format.yml)
+
 <img src="https://github-production-user-asset-6210df.s3.amazonaws.com/26833433/238799379-bb3b02f0-dee4-4e67-80ae-4b2378b813ad.jpg?raw=true" width="100%">
 
 # 📦 Requirements
