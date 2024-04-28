@@ -9,12 +9,14 @@ import scipy.io
 import torch
 
 # from torch.utils.data import Dataset
-from utils.utils import xyxy2xywh, xview_class_weights
+from utils.utils import xview_class_weights, xyxy2xywh
 
 
 class ImageFolder:  # for eval-only
     def __init__(self, path, batch_size=1, img_size=416):
-        """Initializes an ImageFolder object to load images from directory or file for evaluation, with customizable batch size and image size."""
+        """Initializes an ImageFolder object to load images from directory or file for evaluation, with customizable
+        batch size and image size.
+        """
         if os.path.isdir(path):
             self.files = sorted(glob.glob("%s/*.*" % path))
         elif os.path.isfile(path):
@@ -60,7 +62,9 @@ class ImageFolder:  # for eval-only
 
 class ListDataset:  # for training
     def __init__(self, path, batch_size=1, img_size=608, targets_path=""):
-        """Initializes ListDataset for image training with optional batch size and target path, ensuring image path contains images."""
+        """Initializes ListDataset for image training with optional batch size and target path, ensuring image path
+        contains images.
+        """
         self.path = path
         self.files = sorted(glob.glob("%s/*.tif" % path))
         self.nF = len(self.files)  # number of image files
@@ -93,7 +97,9 @@ class ListDataset:  # for training
         # self.rgb_std = np.array([69.095, 66.369, 64.236], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
-        """Initializes iterator by resetting count, creating a shuffled vector of image numbers based on their weights."""
+        """Initializes iterator by resetting count, creating a shuffled vector of image numbers based on their
+        weights.
+        """
         self.count = -1
         # self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
         self.shuffled_vector = np.random.choice(
@@ -369,6 +375,7 @@ def random_affine(
 def convert_tif2bmp(p="/Users/glennjocher/Downloads/DATA/xview/val_images_bmp"):
     """Converts TIF images to BMP format in a specified path, deleting the original TIF files."""
     import glob
+
     import cv2
 
     files = sorted(glob.glob("%s/*.tif" % p))

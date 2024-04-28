@@ -38,9 +38,9 @@ def get_labels(fname="xView_train.geojson"):  # from utils.utils_xview import ge
 
 def create_mat_file():
     """Saves geojson data as a MATLAB (.mat) file, enriching it with image statistics and shapes."""
-    import scipy.io
     import cv2
     import numpy as np
+    import scipy.io
 
     path = "/Users/glennjocher/Downloads/DATA/xview/"
     coords, chips, classes = get_labels(path + "xView_train.geojson")

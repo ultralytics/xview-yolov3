@@ -666,7 +666,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
 
 
 def secondary_class_detection(x, y, w, h, img, model, device):
-    """Applies secondary classification to bounding boxes using a given model and returns the class with the highest probability for each box."""
+    """Applies secondary classification to bounding boxes using a given model and returns the class with the highest
+    probability for each box.
+    """
     print("Classifying boxes...", end="")
 
     # 1. create 48-pixel squares from each chip
@@ -723,11 +725,12 @@ def secondary_class_detection(x, y, w, h, img, model, device):
 def createChips():
     """Generates and saves a dataset of image chips from the xview dataset for classifier training."""
 
-    import scipy.io
-    import numpy as np
+    from sys import platform
+
     import cv2
     import h5py
-    from sys import platform
+    import numpy as np
+    import scipy.io
 
     mat = scipy.io.loadmat("utils/targets_c60.mat")
     unique_images = np.unique(mat["id"])
@@ -777,7 +780,9 @@ def createChips():
 
 
 def strip_optimizer_from_checkpoint(filename="weights/best.pt"):
-    """Strips optimizer from .pt checkpoint files, reducing size by 2/3, by saving a lite version without optimizer state."""
+    """Strips optimizer from .pt checkpoint files, reducing size by 2/3, by saving a lite version without optimizer
+    state.
+    """
     import torch
 
     a = torch.load(filename, map_location="cpu")
@@ -787,8 +792,8 @@ def strip_optimizer_from_checkpoint(filename="weights/best.pt"):
 
 def plotResults():
     """Plots YOLO training results from 'results.txt' for key metrics over first 300 epochs."""
-    import numpy as np
     import matplotlib.pyplot as plt
+    import numpy as np
 
     plt.figure(figsize=(16, 8))
     s = ["X", "Y", "Width", "Height", "Objectness", "Classification", "Total Loss", "Precision", "Recall"]

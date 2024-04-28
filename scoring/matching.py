@@ -14,8 +14,10 @@ limitations under the License.
 """
 
 from collections import defaultdict
-from scoring.rectangle import Rectangle
+
 import numpy as np
+
+from scoring.rectangle import Rectangle
 
 
 class Matching(object):

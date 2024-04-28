@@ -229,7 +229,9 @@ class Darknet(nn.Module):
     """YOLOv3 object detection model."""
 
     def __init__(self, config_path, img_size=416):
-        """Initializes Darknet model with a configuration path and optional image size, parsing and creating model modules."""
+        """Initializes Darknet model with a configuration path and optional image size, parsing and creating model
+        modules.
+        """
         super(Darknet, self).__init__()
         self.module_defs = parse_model_config(config_path)
         self.module_defs[0]["height"] = img_size
@@ -238,7 +240,9 @@ class Darknet(nn.Module):
         self.loss_names = ["loss", "x", "y", "w", "h", "conf", "cls", "nGT", "TP", "FP", "FPe", "FN", "TC"]
 
     def forward(self, x, targets=None, requestPrecision=False, weight=None, epoch=None):
-        """Processes input through the model, calculates losses, and returns output; includes optional precision computation."""
+        """Processes input through the model, calculates losses, and returns output; includes optional precision
+        computation.
+        """
         is_training = targets is not None
         output = []
         self.losses = defaultdict(float)
