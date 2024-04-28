@@ -72,6 +72,7 @@ class EmptyLayer(nn.Module):
     """Placeholder for 'route' and 'shortcut' layers."""
 
     def __init__(self):
+        """Initializes a placeholder layer for 'route' and 'shortcut' in YOLO architecture."""
         super(EmptyLayer, self).__init__()
 
 
@@ -79,6 +80,7 @@ class YOLOLayer(nn.Module):
     # YOLO Layer 0
 
     def __init__(self, anchors, nC, img_dim, anchor_idxs):
+        """Initializes YOLO layer with given anchors, number of classes, image dimensions, and anchor indexes."""
         super(YOLOLayer, self).__init__()
 
         anchors = [(a_w, a_h) for a_w, a_h in anchors]  # (pixels)
@@ -106,6 +108,7 @@ class YOLOLayer(nn.Module):
         self.anchor_h = self.scaled_anchors[:, 1:2].view((1, nA, 1, 1))
 
     def forward(self, p, targets=None, requestPrecision=False, weight=None, epoch=None):
+        """Processes input tensor `p`, optional targets for precision calculation; returns loss, precision, or both."""
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
         device = torch.device("cuda:0" if p.is_cuda else "cpu")
         # weight = xview_class_weights(range(60)).to(device)
@@ -226,6 +229,7 @@ class Darknet(nn.Module):
     """YOLOv3 object detection model."""
 
     def __init__(self, config_path, img_size=416):
+        """Initializes Darknet model with a configuration path and optional image size, parsing and creating model modules."""
         super(Darknet, self).__init__()
         self.module_defs = parse_model_config(config_path)
         self.module_defs[0]["height"] = img_size
@@ -234,6 +238,7 @@ class Darknet(nn.Module):
         self.loss_names = ["loss", "x", "y", "w", "h", "conf", "cls", "nGT", "TP", "FP", "FPe", "FN", "TC"]
 
     def forward(self, x, targets=None, requestPrecision=False, weight=None, epoch=None):
+        """Processes input through the model, calculates losses, and returns output; includes optional precision computation."""
         is_training = targets is not None
         output = []
         self.losses = defaultdict(float)

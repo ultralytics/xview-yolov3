@@ -85,6 +85,7 @@ class Matching(object):
             self.iou_matrix = np.zeros((n, m))
 
     def greedy_match(self, iou_threshold):
+        """Performs greedy matching of rectangles based on IOU threshold, returning matched indices."""
         gt_rects_matched = [False for gt_index in range(self.m)]
         rects_matched = [False for r_index in range(self.n)]
 
