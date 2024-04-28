@@ -39,7 +39,7 @@ Before we launch into training, we perform preprocessing on the targets to clean
 1. Outliers are removed using sigma-rejection.
 2. A new set of 30 k-means anchors are created specifically for `c60_a30symmetric.cfg` using the MATLAB script `utils/analysis.m`:
 
-<img src="https://github.com/ultralytics/xview-yolov3/blob/master/cfg/c60_a30.png?raw=true" width="500">
+<img src="https://github.com/ultralytics/xview-yolov3/blob/main/cfg/c60_a30.png?raw=true" width="500">
 
 ## Starting the Training
 
@@ -61,7 +61,7 @@ Watch out for overtraining! It becomes a significant problem after roughly 200 e
 
 You'll see loss plots for bounding boxes, objectness, and class confidence that should resemble the following results:
 
-<img src="https://github.com/ultralytics/xview-yolov3/blob/master/data/xview_training_loss.png?raw=true" width="100%">
+<img src="https://github.com/ultralytics/xview-yolov3/blob/main/data/xview_training_loss.png?raw=true" width="100%">
 
 ### Image Augmentation 📸
 
@@ -83,7 +83,7 @@ Please note that augmentation is applied **only** during training and not during
 
 Once training is done, model checkpoints will be available in the `/checkpoints` directory. Use `detect.py` to apply your trained weights to any xView image—for instance, `5.tif` from the training set:
 
-<img src="https://github.com/ultralytics/xview/blob/master/output_img/1047.jpg?raw=true" width="100%">
+<img src="https://github.com/ultralytics/xview/blob/main/output_img/1047.jpg?raw=true" width="100%">
 
 # 📝 Citation
 
