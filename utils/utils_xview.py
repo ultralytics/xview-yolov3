@@ -5,13 +5,14 @@ from tqdm import tqdm
 
 
 def xview_class2name(classes):
+    """Converts numerical class IDs to their corresponding names using 'data/xview.names'."""
     with open("data/xview.names", "r") as f:
         x = f.readlines()
     return x[classes].replace("\n", "")
 
 
 def get_labels(fname="xView_train.geojson"):  # from utils.utils_xview import get_labels; get_labels()
-    # Official function supplied by xView
+    """Parses 'xView_train.geojson' to extract object coordinates, chip IDs, and class IDs as numpy arrays."""
     with open(fname) as f:
         data = json.load(f)
 
@@ -36,10 +37,10 @@ def get_labels(fname="xView_train.geojson"):  # from utils.utils_xview import ge
 
 
 def create_mat_file():
-    # saves geojson file to .mat format for analysis in MATLAB
-    import scipy.io
+    """Saves geojson data as a MATLAB (.mat) file, enriching it with image statistics and shapes."""
     import cv2
     import numpy as np
+    import scipy.io
 
     path = "/Users/glennjocher/Downloads/DATA/xview/"
     coords, chips, classes = get_labels(path + "xView_train.geojson")

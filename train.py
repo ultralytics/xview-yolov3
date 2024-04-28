@@ -24,6 +24,7 @@ print(opt)
 
 
 def main(opt):
+    """Initializes and trains a Darknet model for object detection with configurable parameters and data paths."""
     os.makedirs("weights", exist_ok=True)
     cuda = torch.cuda.is_available()
     device = torch.device("cuda:0" if cuda else "cpu")

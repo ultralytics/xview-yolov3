@@ -9,11 +9,14 @@ import scipy.io
 import torch
 
 # from torch.utils.data import Dataset
-from utils.utils import xyxy2xywh, xview_class_weights
+from utils.utils import xview_class_weights, xyxy2xywh
 
 
 class ImageFolder:  # for eval-only
     def __init__(self, path, batch_size=1, img_size=416):
+        """Initializes an ImageFolder object to load images from directory or file for evaluation, with customizable
+        batch size and image size.
+        """
         if os.path.isdir(path):
             self.files = sorted(glob.glob("%s/*.*" % path))
         elif os.path.isfile(path):
@@ -30,10 +33,12 @@ class ImageFolder:  # for eval-only
         self.rgb_std = np.array([29.99, 24.498, 22.046], dtype=np.float32).reshape((3, 1, 1))
 
     def __iter__(self):
+        """Initializes iterator by resetting count and returns the iterator object itself for sequential access."""
         self.count = -1
         return self
 
     def __next__(self):
+        """Iterates to the next image path in the dataset, raising StopIteration when all images are iterated."""
         self.count += 1
         if self.count == self.nB:
             raise StopIteration
@@ -51,11 +56,15 @@ class ImageFolder:  # for eval-only
         return [img_path], img
 
     def __len__(self):
+        """Returns the number of batches in the dataset."""
         return self.nB  # number of batches
 
 
 class ListDataset:  # for training
     def __init__(self, path, batch_size=1, img_size=608, targets_path=""):
+        """Initializes ListDataset for image training with optional batch size and target path, ensuring image path
+        contains images.
+        """
         self.path = path
         self.files = sorted(glob.glob("%s/*.tif" % path))
         self.nF = len(self.files)  # number of image files
@@ -88,6 +97,9 @@ class ListDataset:  # for training
         # self.rgb_std = np.array([69.095, 66.369, 64.236], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
+        """Initializes iterator by resetting count, creating a shuffled vector of image numbers based on their
+        weights.
+        """
         self.count = -1
         # self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
         self.shuffled_vector = np.random.choice(
@@ -97,6 +109,7 @@ class ListDataset:  # for training
 
     # @profile
     def __next__(self):
+        """Advances to the next batch of data, raising StopIteration when the dataset end is reached."""
         self.count += 1
         if self.count == self.nB:
             raise StopIteration
@@ -268,10 +281,12 @@ class ListDataset:  # for training
         return torch.from_numpy(img_all), labels_all
 
     def __len__(self):
+        """Returns the number of batches in the dataset."""
         return self.nB  # number of batches
 
 
 def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular image to a padded square
+    """Resizes an image to a padded square of given height, maintaining aspect ratio; default color is black."""
     shape = img.shape[:2]  # shape = [height, width]
     ratio = float(height) / max(shape)
     new_shape = [round(shape[0] * ratio), round(shape[1] * ratio)]
@@ -358,7 +373,9 @@ def random_affine(
 
 
 def convert_tif2bmp(p="/Users/glennjocher/Downloads/DATA/xview/val_images_bmp"):
+    """Converts TIF images to BMP format in a specified path, deleting the original TIF files."""
     import glob
+
     import cv2
 
     files = sorted(glob.glob("%s/*.tif" % p))

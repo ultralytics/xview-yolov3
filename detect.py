@@ -33,6 +33,7 @@ print(opt)
 
 
 def detect(opt):
+    """Detects objects in images using Darknet model, optionally uses a secondary classifier, and performs NMS."""
     if opt.plot_flag:
         os.system("rm -rf " + opt.output_folder + "_img")
         os.makedirs(opt.output_folder + "_img", exist_ok=True)
@@ -228,6 +229,9 @@ def detect(opt):
 
 class ConvNetb(nn.Module):
     def __init__(self, num_classes=60):
+        """Initializes a ConvNetb model with configurable number of classes, defaulting to 60, and a series of
+        convolutional layers.
+        """
         super(ConvNetb, self).__init__()
         n = 64  # initial convolution size
         self.layer1 = nn.Sequential(
@@ -260,6 +264,9 @@ class ConvNetb(nn.Module):
         self.fully_conv = nn.Conv2d(n * 16, 60, kernel_size=4, stride=1, padding=0, bias=True)
 
     def forward(self, x):  # 500 x 1 x 64 x 64
+        """Processes input through 5 layers and a fully connected layer, returning squeezed output; expects input shape
+        500x1x64x64.
+        """
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)

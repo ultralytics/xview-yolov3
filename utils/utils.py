@@ -18,6 +18,7 @@ def load_classes(path):
 
 
 def modelinfo(model):
+    """Prints model layers, parameters, gradients, and statistics; requires a model object as input."""
     nparams = sum(x.numel() for x in model.parameters())
     ngradients = sum(x.numel() for x in model.parameters() if x.requires_grad)
     print("\n%4s %70s %9s %12s %20s %12s %12s" % ("", "name", "gradient", "parameters", "shape", "mu", "sigma"))
@@ -30,6 +31,7 @@ def modelinfo(model):
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
+    """Remaps xview classes (11-94) to indices (0-61), skipping unassigned classes; classes not mapped are set to -1."""
     indices = [
         -1,
         -1,
@@ -131,6 +133,7 @@ def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
 
 
 def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
+    """Remaps xView dataset class indices (11-94) to a contiguous range (0-61)."""
     class_list = [
         11,
         12,
@@ -197,6 +200,7 @@ def xview_indices2classes(indices):  # remap xview classes 11-94 to 0-61
 
 
 def xview_class_weights(indices):  # weights of each class in the training set, normalized to mu = 1
+    """Calculates normalized class weights from given indices, with mean=1, for class imbalance handling."""
     weights = 1 / torch.FloatTensor(
         [
             74,
@@ -266,6 +270,7 @@ def xview_class_weights(indices):  # weights of each class in the training set, 
 
 
 def xview_class_weights_hard_mining(indices):  # weights of each class in the training set, normalized to mu = 1
+    """Calculates normalized class weights for hard-mined classes, useful for imbalanced datasets."""
     weights = 1 / torch.FloatTensor(
         [
             33.97268,
@@ -335,6 +340,7 @@ def xview_class_weights_hard_mining(indices):  # weights of each class in the tr
 
 
 def plot_one_box(x, im, color=None, label=None, line_thickness=None):
+    """Draws a labeled rectangle with specified thickness and color on an image."""
     tl = line_thickness or round(0.003 * max(im.shape[0:2]))  # line thickness
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
@@ -348,6 +354,7 @@ def plot_one_box(x, im, color=None, label=None, line_thickness=None):
 
 
 def weights_init_normal(m):
+    """Initializes network weights normally for Conv and BatchNorm2d layers."""
     classname = m.__class__.__name__
     if classname.find("Conv") != -1:
         torch.nn.init.normal_(m.weight.data, 0.0, 0.03)
@@ -357,6 +364,7 @@ def weights_init_normal(m):
 
 
 def xyxy2xywh(box):
+    """Converts bounding box format from [x1, y1, x2, y2] to [x_center, y_center, width, height]."""
     xywh = np.zeros(box.shape)
     xywh[:, 0] = (box[:, 0] + box[:, 2]) / 2
     xywh[:, 1] = (box[:, 1] + box[:, 3]) / 2
@@ -658,7 +666,9 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
 
 
 def secondary_class_detection(x, y, w, h, img, model, device):
-    # Runs secondary classifier on bounding boxes
+    """Applies secondary classification to bounding boxes using a given model and returns the class with the highest
+    probability for each box.
+    """
     print("Classifying boxes...", end="")
 
     # 1. create 48-pixel squares from each chip
@@ -713,13 +723,14 @@ def secondary_class_detection(x, y, w, h, img, model, device):
 
 
 def createChips():
-    # Creates *.h5 file of all chips in xview dataset for training independent classifier
+    """Generates and saves a dataset of image chips from the xview dataset for classifier training."""
 
-    import scipy.io
-    import numpy as np
+    from sys import platform
+
     import cv2
     import h5py
-    from sys import platform
+    import numpy as np
+    import scipy.io
 
     mat = scipy.io.loadmat("utils/targets_c60.mat")
     unique_images = np.unique(mat["id"])
@@ -769,7 +780,9 @@ def createChips():
 
 
 def strip_optimizer_from_checkpoint(filename="weights/best.pt"):
-    # Strip optimizer from *.pt files for lighter files (reduced by 2/3 size)
+    """Strips optimizer from .pt checkpoint files, reducing size by 2/3, by saving a lite version without optimizer
+    state.
+    """
     import torch
 
     a = torch.load(filename, map_location="cpu")
@@ -778,9 +791,9 @@ def strip_optimizer_from_checkpoint(filename="weights/best.pt"):
 
 
 def plotResults():
-    # Plot YOLO training results
-    import numpy as np
+    """Plots YOLO training results from 'results.txt' for key metrics over first 300 epochs."""
     import matplotlib.pyplot as plt
+    import numpy as np
 
     plt.figure(figsize=(16, 8))
     s = ["X", "Y", "Width", "Height", "Objectness", "Classification", "Total Loss", "Precision", "Recall"]

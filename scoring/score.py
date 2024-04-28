@@ -17,10 +17,9 @@ import csv
 import json
 import os
 import time
-import scipy.io
-
 
 import numpy as np
+import scipy.io
 from tqdm import tqdm
 
 from scoring.matching import Matching
