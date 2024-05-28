@@ -111,7 +111,6 @@ At Ultralytics, we provide two different licensing options to suit various use c
 
 🐞 For reporting bugs or suggesting new features, please open an issue on our [GitHub Issues](https://github.com/ultralytics/xview-yolov3/issues) page. And if you have questions or fancy engaging with us, join our vibrant [Discord](https://ultralytics.com/discord) community!
 
-
 <br>
 <div align="center">
   <a href="https://github.com/ultralytics"><img src="https://github.com/ultralytics/assets/raw/main/social/logo-social-github.png" width="3%" alt="Ultralytics GitHub"></a>
