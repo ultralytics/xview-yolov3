@@ -6,9 +6,7 @@ from rectangle import Rectangle
 
 def safe_divide(numerator, denominator):
     """Computes the safe division to avoid the divide by zero problem."""
-    if denominator == 0:
-        return 0
-    return numerator / denominator
+    return 0 if denominator == 0 else numerator / denominator
 
 
 def compute_statistics_given_rectangle_matches(groundtruth_rects_matched, rects_matched):
@@ -94,13 +92,16 @@ def compute_average_precision_recall_given_precision_recall_dict(precision_recal
 
 def convert_to_rectangle_list(coordinates):
     """Converts the coordinates in a list to the Rectangle list."""
-    rectangle_list = []
-    number_of_rects = int(len(coordinates) / 4)
-    for i in range(number_of_rects):
-        rectangle_list.append(
-            Rectangle(coordinates[4 * i], coordinates[4 * i + 1], coordinates[4 * i + 2], coordinates[4 * i + 3])
+    number_of_rects = len(coordinates) // 4
+    return [
+        Rectangle(
+            coordinates[4 * i],
+            coordinates[4 * i + 1],
+            coordinates[4 * i + 2],
+            coordinates[4 * i + 3],
         )
-    return rectangle_list
+        for i in range(number_of_rects)
+    ]
 
 
 def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_threshold):
@@ -149,18 +150,8 @@ def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_t
     rects = convert_to_rectangle_list(coordinates)
     matching = Matching(groundtruth_rects, rects)
 
-    image_statistics_list = []
     groundtruth_rects_matched, rects_matched = matching.matching_by_greedy_assignment(iou_threshold)
 
     image_statistics = compute_statistics_given_rectangle_matches(groundtruth_rects_matched, rects_matched)
-    image_statistics_list.append(image_statistics)
-
-    # Compute the precision and recall under this iou_threshold.
-    precision_recall = compute_precision_recall_given_image_statistics_list(iou_threshold, image_statistics_list)
-
-    # Compute the average_precision and average_recall.
-    # average_precision, average_recall = (
-    #    compute_average_precision_recall_given_precision_recall_dict(
-    #        precision_recall_dict))
-
-    return precision_recall
+    image_statistics_list = [image_statistics]
+    return compute_precision_recall_given_image_statistics_list(iou_threshold, image_statistics_list)

@@ -43,13 +43,13 @@ def create_mat_file():
     import scipy.io
 
     path = "/Users/glennjocher/Downloads/DATA/xview/"
-    coords, chips, classes = get_labels(path + "xView_train.geojson")
+    coords, chips, classes = get_labels(f"{path}xView_train.geojson")
 
     uchips = np.unique(chips)
     n = len(uchips)
     shapes = np.zeros((n, 2))
     stats = np.zeros((n, 12))  # BGR mean and std, HSV mean and std
-    for i, chip in enumerate(path + "train_images/" + uchips):
+    for i, chip in enumerate(f"{path}train_images/{uchips}"):
         print(i)
         img = cv2.imread(chip.replace(".tif", ".bmp"))
         if img is not None:

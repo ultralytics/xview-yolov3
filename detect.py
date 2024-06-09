@@ -13,13 +13,11 @@ parser = argparse.ArgumentParser()
 if platform == "darwin":  # macos
     parser.add_argument("-image_folder", type=str, default="/Users/glennjocher/Downloads/DATA/xview/train_images/5.tif")
     parser.add_argument("-output_folder", type=str, default="./output_xview", help="path to outputs")
-    cuda = False  # torch.cuda.is_available()
 else:  # gcp
     # cd yolo && python3 detect.py -secondary_classifier 1
     parser.add_argument("-image_folder", type=str, default="../train_images/5.tif", help="path to images")
     parser.add_argument("-output_folder", type=str, default="../output", help="path to outputs")
-    cuda = False
-
+cuda = False  # torch.cuda.is_available()
 parser.add_argument("-plot_flag", type=bool, default=True)
 parser.add_argument("-secondary_classifier", type=bool, default=False)
 parser.add_argument("-cfg", type=str, default="cfg/c60_a30symmetric.cfg", help="cfg file path")
@@ -35,9 +33,9 @@ print(opt)
 def detect(opt):
     """Detects objects in images using Darknet model, optionally uses a secondary classifier, and performs NMS."""
     if opt.plot_flag:
-        os.system("rm -rf " + opt.output_folder + "_img")
-        os.makedirs(opt.output_folder + "_img", exist_ok=True)
-    os.system("rm -rf " + opt.output_folder)
+        os.system(f"rm -rf {opt.output_folder}_img")
+        os.makedirs(f"{opt.output_folder}_img", exist_ok=True)
+    os.system(f"rm -rf {opt.output_folder}")
     os.makedirs(opt.output_folder, exist_ok=True)
     device = torch.device("cuda:0" if cuda else "cpu")
 
@@ -150,7 +148,7 @@ def detect(opt):
                     #     pred[:, 1] += y1
                     #     preds.append(pred.unsqueeze(0))
 
-        if len(preds) > 0:
+        if preds:
             detections = non_max_suppression(
                 torch.cat(preds, 1), opt.conf_thres, opt.nms_thres, mat_priors, img, model2, device
             )
@@ -163,7 +161,7 @@ def detect(opt):
     # Bounding-box colors
     color_list = [[random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)] for _ in range(len(classes))]
 
-    if len(img_detections) == 0:
+    if not img_detections:
         return
 
     # Iterate through images and save plot of detections
@@ -187,10 +185,10 @@ def detect(opt):
 
             # write results to .txt file
             results_path = os.path.join(opt.output_folder, path.split("/")[-1])
-            if os.path.isfile(results_path + ".txt"):
-                os.remove(results_path + ".txt")
+            if os.path.isfile(f"{results_path}.txt"):
+                os.remove(f"{results_path}.txt")
 
-            results_img_path = os.path.join(opt.output_folder + "_img", path.split("/")[-1])
+            results_img_path = os.path.join(f"{opt.output_folder}_img", path.split("/")[-1])
             with open(results_path.replace(".bmp", ".tif") + ".txt", "a") as file:
                 for i in unique_classes:
                     n = (detections[:, -1].cpu() == i).sum()
@@ -224,7 +222,11 @@ def detect(opt):
     if opt.plot_flag:
         from scoring import score
 
-        score.score(opt.output_folder + "/", "/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson", ".")
+        score.score(
+            f"{opt.output_folder}/",
+            "/Users/glennjocher/Downloads/DATA/xview/xView_train.geojson",
+            ".",
+        )
 
 
 class ConvNetb(nn.Module):

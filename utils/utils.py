@@ -13,8 +13,7 @@ np.set_printoptions(linewidth=320, formatter={"float_kind": "{:11.5g}".format}) 
 def load_classes(path):
     """Loads class labels at 'path'."""
     fp = open(path, "r")
-    names = fp.read().split("\n")[:-1]
-    return names
+    return fp.read().split("\n")[:-1]
 
 
 def modelinfo(model):
@@ -341,7 +340,7 @@ def xview_class_weights_hard_mining(indices):  # weights of each class in the tr
 
 def plot_one_box(x, im, color=None, label=None, line_thickness=None):
     """Draws a labeled rectangle with specified thickness and color on an image."""
-    tl = line_thickness or round(0.003 * max(im.shape[0:2]))  # line thickness
+    tl = line_thickness or round(0.003 * max(im.shape[:2]))
     color = color or [random.randint(0, 255) for _ in range(3)]
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
     cv2.rectangle(im, c1, c2, color, thickness=tl)
@@ -397,9 +396,7 @@ def compute_ap(recall, precision):
     # where X axis (recall) changes value
     i = np.where(mrec[1:] != mrec[:-1])[0]
 
-    # and sum (\Delta recall) * prec
-    ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
-    return ap
+    return np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
 
 
 def bbox_iou(box1, box2, x1y1x2y2=True):
@@ -487,9 +484,9 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
             a, gj, gi, t = a[i], gj[i], gi[i], t[i]
             if len(t.shape) == 1:
                 t = t.view(1, 5)
+        elif iou_anch_best < 0.10:
+            continue
         else:
-            if iou_anch_best < 0.10:
-                continue
             i = 0
 
         tc, gx, gy, gw, gh = t[:, 0].long(), t[:, 1] * nG, t[:, 2] * nG, t[:, 3] * nG, t[:, 4] * nG
@@ -530,6 +527,8 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
     """
 
     output = [None for _ in range(len(prediction))]
+    # Gather bbox priors
+    srl = 6  # sigma rejection level
     for image_i, pred in enumerate(prediction):
         # Filter out confidence scores below threshold
         # Get score and class with highest confidence
@@ -579,8 +578,6 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             #     if class_prob2[i] > class_prob[i]:
             #         class_pred[i] = class_pred2[i]
 
-        # Gather bbox priors
-        srl = 6  # sigma rejection level
         mu = mat["class_mu"][class_pred].T
         sigma = mat["class_sigma"][class_pred].T * srl
 
@@ -627,7 +624,17 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
             # Perform non-maximum suppression
             max_detections = []
 
-            if nms_style == "OR":  # Classical NMS
+            if nms_style == "AND":
+                while detections_class.shape[0] and len(detections_class) != 1:
+                    ious = bbox_iou(detections_class[:1], detections_class[1:])
+
+                    if ious.max() > 0.5:
+                        max_detections.append(detections_class[0].unsqueeze(0))
+
+                    # Remove detections with IoU >= NMS threshold
+                    detections_class = detections_class[1:][ious < nms_thres]
+
+            elif nms_style == "OR":
                 while detections_class.shape[0]:
                     # Get detection with highest confidence and save as max detection
                     max_detections.append(detections_class[0].unsqueeze(0))
@@ -640,22 +647,7 @@ def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img
                     # Remove detections with IoU >= NMS threshold
                     detections_class = detections_class[1:][ious < nms_thres]
 
-            elif (
-                nms_style == "AND"
-            ):  # 'AND'-style NMS, at least two boxes must share commonality to pass, single boxes erased
-                while detections_class.shape[0]:
-                    if len(detections_class) == 1:
-                        break
-
-                    ious = bbox_iou(detections_class[:1], detections_class[1:])
-
-                    if ious.max() > 0.5:
-                        max_detections.append(detections_class[0].unsqueeze(0))
-
-                    # Remove detections with IoU >= NMS threshold
-                    detections_class = detections_class[1:][ious < nms_thres]
-
-            if len(max_detections) > 0:
+            if max_detections:
                 max_detections = torch.cat(max_detections).data
                 # Add max detections to outputs
                 output[image_i] = (
@@ -685,10 +677,14 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     y2 = np.minimum(y + l, img.shape[0]).astype(np.uint16)
 
     n = len(x)
-    images = []
-    for i in range(n):
-        images.append(cv2.resize(img[y1[i] : y2[i], x1[i] : x2[i]], (height, height), interpolation=cv2.INTER_LINEAR))
-
+    images = [
+        cv2.resize(
+            img[y1[i] : y2[i], x1[i] : x2[i]],
+            (height, height),
+            interpolation=cv2.INTER_LINEAR,
+        )
+        for i in range(n)
+    ]
     # # plot
     # images_numpy = images.copy()
     # import matplotlib.pyplot as plt
@@ -709,7 +705,7 @@ def secondary_class_detection(x, y, w, h, img, model, device):
 
     with torch.no_grad():
         classes = []
-        nB = int(n / 1000) + 1  # number of batches
+        nB = n // 1000 + 1
         print("%g batches..." % nB, end="")
         for i in range(nB):
             print("%g " % i, end="")

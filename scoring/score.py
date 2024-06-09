@@ -95,13 +95,16 @@ def convert_to_rectangle_list(coordinates):
     Outputs:
       A list of rectangles
     """
-    rectangle_list = []
-    number_of_rects = int(len(coordinates) / 4)
-    for i in range(number_of_rects):
-        rectangle_list.append(
-            Rectangle(coordinates[4 * i], coordinates[4 * i + 1], coordinates[4 * i + 2], coordinates[4 * i + 3])
+    number_of_rects = len(coordinates) // 4
+    return [
+        Rectangle(
+            coordinates[4 * i],
+            coordinates[4 * i + 1],
+            coordinates[4 * i + 2],
+            coordinates[4 * i + 3],
         )
-    return rectangle_list
+        for i in range(number_of_rects)
+    ]
 
 
 def ap_from_pr(p, r):
@@ -121,10 +124,8 @@ def ap_from_pr(p, r):
         if p[i] > p[i - 1]:
             p[i - 1] = p[i]
 
-    i = np.where(r[1:] != r[: len(r) - 1])[0] + 1
-    ap = np.sum((r[i] - r[i - 1]) * p[i])
-
-    return ap
+    i = np.where(r[1:] != r[:-1])[0] + 1
+    return np.sum((r[i] - r[i - 1]) * p[i])
 
 
 # @profile
@@ -206,10 +207,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     print("Number of Predictions: %d" % num_preds)
     print("Number of GT: %d" % np.sum(gt_classes.shape))
 
-    per_file_class_data = {}
-    for i in gt_unique:
-        per_file_class_data[i] = [[], []]
-
+    per_file_class_data = {i: [[], []] for i in gt_unique}
     num_gt_per_cls = np.zeros((max_gt_cls))
 
     attempted = np.zeros(100)
@@ -432,13 +430,9 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     with open("data/xview.names") as f:
         lines = f.readlines()
 
-    map_dict = {}
-    for i in range(60):
-        map_dict[lines[i].replace("\n", "")] = average_precision_per_class[int(n[i])]
-
+    map_dict = {lines[i].replace("\n", ""): average_precision_per_class[int(n[i])] for i in range(60)}
     print(np.nansum(per_class_rcount), map_dict)
-    vals = {}
-    vals["map"] = np.nanmean(average_precision_per_class)
+    vals = {"map": np.nanmean(average_precision_per_class)}
     vals["map_score"] = np.nanmean(per_class_p)
     vals["mar_score"] = np.nanmean(per_class_r)
 
@@ -446,7 +440,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
         (average_precision_per_class, per_class_p, per_class_r, per_class_rcount, num_gt_per_cls)
     ).reshape(5, 100)
 
-    for i in splits.keys():
+    for i in splits:
         vals[i] = np.nanmean(average_precision_per_class[splits[i]])
 
     v2 = np.zeros((62, 5))
@@ -469,15 +463,15 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     # with open(path_output + '/score.txt', 'w') as f:
     #     f.write(str("%.8f" % vals['map']))
     #
-    with open(path_output + "/metrics.txt", "w") as f:
-        for key in vals.keys():
-            f.write("%s %f\n" % (str(key), vals[key]))
+    with open(f"{path_output}/metrics.txt", "w") as f:
+        for key, value in vals.items():
+            f.write("%s %f\n" % (str(key), value))
         # for key in vals.keys():
         #     f.write("%f\n" % (vals[key]))
         for i in range(len(v2)):
             f.write(("%g, " * 5 + "\n") % (v2[i, 0], v2[i, 1], v2[i, 2], v2[i, 3], v2[i, 4]))
 
-    print("Final time: %s" % str(time.time() - ttime))
+    print(f"Final time: {str(time.time() - ttime)}")
 
 
 if __name__ == "__main__":
