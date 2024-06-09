@@ -18,7 +18,7 @@ class ImageFolder:  # for eval-only
         batch size and image size.
         """
         if os.path.isdir(path):
-            self.files = sorted(glob.glob("%s/*.*" % path))
+            self.files = sorted(glob.glob(f"{path}/*.*"))
         elif os.path.isfile(path):
             self.files = [path]
 
@@ -26,7 +26,7 @@ class ImageFolder:  # for eval-only
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
         self.height = img_size
-        assert self.nF > 0, "No images found in path %s" % path
+        assert self.nF > 0, f"No images found in path {path}"
 
         # RGB normalization values
         self.rgb_mean = np.array([60.134, 49.697, 40.746], dtype=np.float32).reshape((3, 1, 1))
@@ -66,11 +66,11 @@ class ListDataset:  # for training
         contains images.
         """
         self.path = path
-        self.files = sorted(glob.glob("%s/*.tif" % path))
+        self.files = sorted(glob.glob(f"{path}/*.tif"))
         self.nF = len(self.files)  # number of image files
         self.nB = math.ceil(self.nF / batch_size)  # number of batches
         self.batch_size = batch_size
-        assert self.nB > 0, "No images found in path %s" % path
+        assert self.nB > 0, f"No images found in path {path}"
         self.height = img_size
         # load targets
         self.mat = scipy.io.loadmat(targets_path)
@@ -122,7 +122,7 @@ class ListDataset:  # for training
 
         img_all = []
         labels_all = []
-        for index, files_index in enumerate(range(ia, ib)):
+        for files_index in range(ia, ib):
             # img_path = self.files[self.shuffled_vector[files_index]]  # BGR
             img_path = "%s/%g.tif" % (self.path, self.shuffled_vector[files_index])
             # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/2294.bmp'
@@ -328,48 +328,44 @@ def random_affine(
     imw = cv2.warpPerspective(
         img, M, dsize=(height, height), flags=cv2.INTER_LINEAR, borderValue=borderValue
     )  # BGR order (YUV-equalized BGR means)
-    # borderValue = [40.746, 49.697, 60.134])  # RGB
-
-    # Return warped points also
-    if targets is not None:
-        if len(targets) > 0:
-            n = targets.shape[0]
-            points = targets[:, 1:5].copy()
-            area0 = (points[:, 2] - points[:, 0]) * (points[:, 3] - points[:, 1])
-
-            # warp points
-            xy = np.ones((n * 4, 3))
-            xy[:, :2] = points[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
-            xy = (xy @ M.T)[:, :2].reshape(n, 8)
-
-            # create new boxes
-            x = xy[:, [0, 2, 4, 6]]
-            y = xy[:, [1, 3, 5, 7]]
-            xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
-
-            # apply angle-based reduction
-            radians = a * math.pi / 180
-            reduction = max(abs(math.sin(radians)), abs(math.cos(radians))) ** 0.5
-            x = (xy[:, 2] + xy[:, 0]) / 2
-            y = (xy[:, 3] + xy[:, 1]) / 2
-            w = (xy[:, 2] - xy[:, 0]) * reduction
-            h = (xy[:, 3] - xy[:, 1]) * reduction
-            xy = np.concatenate((x - w / 2, y - h / 2, x + w / 2, y + h / 2)).reshape(4, n).T
-
-            # reject warped points outside of image
-            np.clip(xy, 0, height, out=xy)
-            w = xy[:, 2] - xy[:, 0]
-            h = xy[:, 3] - xy[:, 1]
-            area = w * h
-            ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
-            i = (w > 4) & (h > 4) & (area / area0 > 0.1) & (ar < 10)
-
-            targets = targets[i]
-            targets[:, 1:5] = xy[i]
-
-        return imw, targets, M
-    else:
+    if targets is None:
         return imw
+    if len(targets) > 0:
+        n = targets.shape[0]
+        points = targets[:, 1:5].copy()
+        area0 = (points[:, 2] - points[:, 0]) * (points[:, 3] - points[:, 1])
+
+        # warp points
+        xy = np.ones((n * 4, 3))
+        xy[:, :2] = points[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)  # x1y1, x2y2, x1y2, x2y1
+        xy = (xy @ M.T)[:, :2].reshape(n, 8)
+
+        # create new boxes
+        x = xy[:, [0, 2, 4, 6]]
+        y = xy[:, [1, 3, 5, 7]]
+        xy = np.concatenate((x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
+
+        # apply angle-based reduction
+        radians = a * math.pi / 180
+        reduction = max(abs(math.sin(radians)), abs(math.cos(radians))) ** 0.5
+        x = (xy[:, 2] + xy[:, 0]) / 2
+        y = (xy[:, 3] + xy[:, 1]) / 2
+        w = (xy[:, 2] - xy[:, 0]) * reduction
+        h = (xy[:, 3] - xy[:, 1]) * reduction
+        xy = np.concatenate((x - w / 2, y - h / 2, x + w / 2, y + h / 2)).reshape(4, n).T
+
+        # reject warped points outside of image
+        np.clip(xy, 0, height, out=xy)
+        w = xy[:, 2] - xy[:, 0]
+        h = xy[:, 3] - xy[:, 1]
+        area = w * h
+        ar = np.maximum(w / (h + 1e-16), h / (w + 1e-16))
+        i = (w > 4) & (h > 4) & (area / area0 > 0.1) & (ar < 10)
+
+        targets = targets[i]
+        targets[:, 1:5] = xy[i]
+
+    return imw, targets, M
 
 
 def convert_tif2bmp(p="/Users/glennjocher/Downloads/DATA/xview/val_images_bmp"):
@@ -378,11 +374,11 @@ def convert_tif2bmp(p="/Users/glennjocher/Downloads/DATA/xview/val_images_bmp"):
 
     import cv2
 
-    files = sorted(glob.glob("%s/*.tif" % p))
+    files = sorted(glob.glob(f"{p}/*.tif"))
     for i, f in enumerate(files):
         print("%g/%g" % (i + 1, len(files)))
 
         img = cv2.imread(f)
 
         cv2.imwrite(f.replace(".tif", ".bmp"), img)
-        os.system("rm -rf " + f)
+        os.system(f"rm -rf {f}")

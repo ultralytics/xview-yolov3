@@ -99,6 +99,7 @@ def main(opt):
         % ("Epoch", "Batch", "x", "y", "w", "h", "conf", "cls", "total", "P", "R", "nGT", "TP", "FP", "FN", "time")
     )
     class_weights = xview_class_weights_hard_mining(range(60)).to(device)
+    n = 4  # number of pictures at a time
     for epoch in range(opt.epochs):
         epoch += start_epoch
 
@@ -121,10 +122,9 @@ def main(opt):
         rloss = defaultdict(float)  # running loss
         metrics = torch.zeros(4, 60)
         for i, (imgs, targets) in enumerate(dataloader):
-            n = 4  # number of pictures at a time
-            for j in range(int(len(imgs) / n)):
+            for j in range(len(imgs) // n):
                 targets_j = targets[j * n : j * n + n]
-                nGT = sum([len(x) for x in targets_j])
+                nGT = sum(len(x) for x in targets_j)
                 if nGT < 1:
                     continue
 
@@ -147,19 +147,11 @@ def main(opt):
                 # Precision
                 precision = metrics[0] / (metrics[0] + metrics[1] + 1e-16)
                 k = (metrics[0] + metrics[1]) > 0
-                if k.sum() > 0:
-                    mean_precision = precision[k].mean()
-                else:
-                    mean_precision = 0
-
+                mean_precision = precision[k].mean() if k.sum() > 0 else 0
                 # Recall
                 recall = metrics[0] / (metrics[0] + metrics[2] + 1e-16)
                 k = (metrics[0] + metrics[2]) > 0
-                if k.sum() > 0:
-                    mean_recall = recall[k].mean()
-                else:
-                    mean_recall = 0
-
+                mean_recall = recall[k].mean() if k.sum() > 0 else 0
                 s = ("%10s%10s" + "%10.3g" * 14) % (
                     "%g/%g" % (epoch, opt.epochs - 1),
                     "%g/%g" % (i, len(dataloader) - 1),
@@ -181,8 +173,8 @@ def main(opt):
                 t1 = time.time()
                 print(s)
 
-            # if i == 1:
-            #    return
+                # if i == 1:
+                #    return
 
         # # Update dynamic class weights
         # new_weights = metrics[3]
@@ -218,7 +210,7 @@ def main(opt):
 
         # Save backup checkpoint
         if (epoch > 0) & (epoch % 100 == 0):
-            os.system("cp weights/latest.pt weights/backup" + str(epoch) + ".pt")
+            os.system(f"cp weights/latest.pt weights/backup{epoch}.pt")
 
     # Save final model
     dt = time.time() - t0

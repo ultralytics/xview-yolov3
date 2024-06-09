@@ -16,7 +16,6 @@ limitations under the License.
 from collections import defaultdict
 
 import numpy as np
-
 from scoring.rectangle import Rectangle
 
 
@@ -54,7 +53,7 @@ class Matching(object):
 
         self.iou_rectangle_pair_indices_ = defaultdict(list)
 
-        if not (n == 0 or m == 0):
+        if n != 0 and m != 0:
             mat2 = np.array([j.coords for j in self.groundtruth_rects_])
             mat1 = np.array([j.coords for j in self.rects_])
             # i,j axes correspond to #boxes, #coords per rect
@@ -88,8 +87,8 @@ class Matching(object):
 
     def greedy_match(self, iou_threshold):
         """Performs greedy matching of rectangles based on IOU threshold, returning matched indices."""
-        gt_rects_matched = [False for gt_index in range(self.m)]
-        rects_matched = [False for r_index in range(self.n)]
+        gt_rects_matched = [False for _ in range(self.m)]
+        rects_matched = [False for _ in range(self.n)]
 
         if self.n == 0:
             return [], []
@@ -97,10 +96,11 @@ class Matching(object):
             return rects_matched, []
 
         for i, gt_index in enumerate(np.argmax(self.iou_matrix, axis=1)):
-            if self.iou_matrix[i, gt_index] >= iou_threshold:
-                if gt_rects_matched[gt_index] is False and rects_matched[i] is False:
-                    rects_matched[i] = True
-                    gt_rects_matched[gt_index] = True
+            if self.iou_matrix[i, gt_index] >= iou_threshold and (
+                gt_rects_matched[gt_index] is False and rects_matched[i] is False
+            ):
+                rects_matched[i] = True
+                gt_rects_matched[gt_index] = True
         return rects_matched, gt_rects_matched
 
 
