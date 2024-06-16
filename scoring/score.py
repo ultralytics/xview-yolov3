@@ -265,7 +265,6 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
         average_precision_per_class[i] = ap
 
     # metric splits
-    metric_keys = ["map", "map/small", "map/medium", "map/large", "map/common", "map/rare"]
 
     splits = {
         "map/small": [17, 18, 19, 20, 21, 23, 24, 26, 27, 28, 32, 41, 60, 62, 63, 64, 65, 66, 91],
@@ -436,9 +435,9 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     vals["map_score"] = np.nanmean(per_class_p)
     vals["mar_score"] = np.nanmean(per_class_r)
 
-    a = np.concatenate(
-        (average_precision_per_class, per_class_p, per_class_r, per_class_rcount, num_gt_per_cls)
-    ).reshape(5, 100)
+    np.concatenate((average_precision_per_class, per_class_p, per_class_r, per_class_rcount, num_gt_per_cls)).reshape(
+        5, 100
+    )
 
     for i in splits:
         vals[i] = np.nanmean(average_precision_per_class[splits[i]])

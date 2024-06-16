@@ -110,7 +110,7 @@ class YOLOLayer(nn.Module):
     def forward(self, p, targets=None, requestPrecision=False, weight=None, epoch=None):
         """Processes input tensor `p`, optional targets for precision calculation; returns loss, precision, or both."""
         FT = torch.cuda.FloatTensor if p.is_cuda else torch.FloatTensor
-        device = torch.device("cuda:0" if p.is_cuda else "cpu")
+        torch.device("cuda:0" if p.is_cuda else "cpu")
         # weight = xview_class_weights(range(60)).to(device)
 
         bs = p.shape[0]

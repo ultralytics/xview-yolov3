@@ -1,8 +1,8 @@
-______________________________________________________________________
+---
 
 name: "\\U0001F41BBug report" about: Create a report to help us improve title: '' labels: bug assignees: ''
 
-______________________________________________________________________
+---
 
 Before submitting a bug report, please ensure that you are using the latest versions of:
 
