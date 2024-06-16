@@ -142,7 +142,6 @@ def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_t
     # Start to build up the Matching instances for each of the image_id_*, which
     # is to hold the IOU computation between the rectangle pairs for the same
     # image_id_*.
-    matchings = {}
     if (len(groundtruth_coordinates) % 4 != 0) or (len(coordinates) % 4 != 0):
         raise ValueError("groundtruth_info_dict and test_info_dict should hold " "only 4 * N numbers.")
 

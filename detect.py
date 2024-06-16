@@ -92,8 +92,8 @@ def detect(opt):
     for batch_i, (img_paths, img) in enumerate(dataloader):
         print("\n", batch_i, img.shape, end=" ")
 
-        img_ud = np.ascontiguousarray(np.flip(img, axis=1))
-        img_lr = np.ascontiguousarray(np.flip(img, axis=2))
+        np.ascontiguousarray(np.flip(img, axis=1))
+        np.ascontiguousarray(np.flip(img, axis=2))
 
         preds = []
         length = opt.img_size
