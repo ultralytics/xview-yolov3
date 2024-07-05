@@ -518,15 +518,8 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device="cpu"):
     """Performs Non-Maximum Suppression on detection results, filtering out low-confidence detections."""
+    
     prediction = prediction.cpu()
-    """
-    Removes detections with lower object confidence score than 'conf_thres' and performs Non-Maximum Suppression to
-    further filter detections.
-
-    Returns detections with shape:
-        (x1, y1, x2, y2, object_conf, class_score, class_pred)
-    """
-
     output = [None for _ in range(len(prediction))]
     # Gather bbox priors
     srl = 6  # sigma rejection level
