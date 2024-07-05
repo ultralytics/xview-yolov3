@@ -301,7 +301,9 @@ def resize_square(img, height=416, color=(0, 0, 0)):  # resizes a rectangular im
 def random_affine(
     img, targets=None, degrees=(-10, 10), translate=(0.1, 0.1), scale=(0.9, 1.1), shear=(-3, 3), borderValue=(0, 0, 0)
 ):
-    """Performs random affine transformations on an image and its target annotations, including rotation, translation, scaling, and shearing."""
+    """Performs random affine transformations on an image and its target annotations, including rotation, translation,
+    scaling, and shearing.
+    """
     # torchvision.transforms.RandomAffine(degrees=(-10, 10), translate=(.1, .1), scale=(.9, 1.1), shear=(-10, 10))
     # https://medium.com/uruvideo/dataset-augmentation-with-random-homographies-a8f4b44830d4
     border = 750
