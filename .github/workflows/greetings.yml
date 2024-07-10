@@ -14,9 +14,9 @@ jobs:
             Hello @${{ github.actor }}, thank you for your interest in our work! **Ultralytics has publicly released YOLOv5** at https://github.com/ultralytics/yolov5, featuring faster, lighter and more accurate object detection. YOLOv5 is recommended for all new projects.
 
             <a href="https://apps.apple.com/app/id1452689527" target="_blank">
-            <img src="https://github.com/ultralytics/yolov5/releases/download/v1.0/splash.jpg" width="800"></a>
+            <img src="https://github.com/ultralytics/assets/releases/download/v0.0.0/splash.jpg" width="800"></a>
 
-            <img src="https://github.com/ultralytics/yolov5/releases/download/v1.0/model_plot.png" width="800">
+            <img src="https://github.com/ultralytics/assets/releases/download/v0.0.0/model_plot.png" width="800">
 
             If this is a 🐛 Bug Report, please provide screenshots and **minimum viable code to reproduce your issue**, otherwise we can not help you.
 
