@@ -230,6 +230,8 @@ def detect(opt):
 
 
 class ConvNetb(nn.Module):
+    """Defines a convolutional neural network model with configurable classes and multiple convolutional layers."""
+
     def __init__(self, num_classes=60):
         """Initializes a ConvNetb model with configurable number of classes, defaulting to 60, and a series of
         convolutional layers.

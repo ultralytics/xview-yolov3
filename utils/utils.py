@@ -402,7 +402,6 @@ def compute_ap(recall, precision):
 def bbox_iou(box1, box2, x1y1x2y2=True):
     # if len(box1.shape) == 1:
     #    box1 = box1.reshape(1, 4)
-
     """Returns the IoU of two bounding boxes."""
     if x1y1x2y2:
         # Get the coordinates of bounding boxes
@@ -518,7 +517,6 @@ def build_targets(pred_boxes, pred_conf, pred_cls, target, anchor_wh, nA, nC, nG
 
 def non_max_suppression(prediction, conf_thres=0.5, nms_thres=0.4, mat=None, img=None, model2=None, device="cpu"):
     """Performs Non-Maximum Suppression on detection results, filtering out low-confidence detections."""
-
     prediction = prediction.cpu()
     output = [None for _ in range(len(prediction))]
     # Gather bbox priors
@@ -714,7 +712,6 @@ def secondary_class_detection(x, y, w, h, img, model, device):
 
 def createChips():
     """Generates and saves a dataset of image chips from the xview dataset for classifier training."""
-
     from sys import platform
 
     import cv2

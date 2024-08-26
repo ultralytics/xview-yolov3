@@ -16,7 +16,6 @@ limitations under the License.
 from collections import defaultdict
 
 import numpy as np
-
 from scoring.rectangle import Rectangle
 
 
@@ -30,6 +29,7 @@ class Matching(object):
         Args:
           groundtruth_rects: a list of groundtruth rectangles.
           rects: a list of rectangles to be matched against the groundtruth_rects.
+
         Raises:
           ValueError: if any item inside the groundtruth_rects or rects are not
           Rectangle type.
@@ -115,6 +115,7 @@ def cartesian(arrays, out=None):
         1-D arrays to form the cartesian product of.
     out : ndarray
         Array to place the cartesian product in.
+
     Returns
     -------
     out : ndarray
