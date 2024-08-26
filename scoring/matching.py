@@ -16,6 +16,7 @@ limitations under the License.
 from collections import defaultdict
 
 import numpy as np
+
 from scoring.rectangle import Rectangle
 
 
