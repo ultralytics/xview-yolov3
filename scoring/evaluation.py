@@ -22,6 +22,7 @@ def compute_statistics_given_rectangle_matches(groundtruth_rects_matched, rects_
         rects_matched: the rects_matched represents a list of integers returned
           from the Matching class instance to indicate the matched rectangle
           indices from groundtruth_rects for each of the rects.
+
     Returns:
         A dictionary holding the computed statistics as well as the inputs.
     """
@@ -47,6 +48,7 @@ def compute_precision_recall_given_image_statistics_list(iou_threshold, image_st
         image_statistics_list: a list of the statistics computed and returned
         by the compute_statistics_given_rectangle_matches method for a list of
         images.
+
     Returns:
         A dictionary holding the precision, recall as well as the inputs.
     """
@@ -77,6 +79,7 @@ def compute_average_precision_recall_given_precision_recall_dict(precision_recal
         compute_precision_recall_given_image_statistics_list method, which is
         calculated under a range of iou_thresholds, where the iou_threshold is
         the key.
+
     Returns:
         average_precision, average_recall.
     """
@@ -130,15 +133,16 @@ def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_t
         iou_threshold_range: the IOU threshold range to compute the average
           precision (AP) and average recall (AR). For example:
           iou_threshold_range = [0.50:0.05:0.95]
+
     Returns:
         average_precision, average_recall, as well as the precision_recall_dict,
         where precision_recall_dict holds the full precision/recall information
         for each of the iou_threshold in the iou_threshold_range.
+
     Raises:
         ValueError: if the input groundtruth_info_dict and test_info_dict show
         inconsistent information.
     """
-
     # Start to build up the Matching instances for each of the image_id_*, which
     # is to hold the IOU computation between the rectangle pairs for the same
     # image_id_*.

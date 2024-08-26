@@ -69,7 +69,6 @@ class Rectangle(object):
 
     def intersect(self, other):
         """Returns the intersection of this rectangle with the other rectangle."""
-
         xmin = max(self.xmin_, other.xmin_)
         ymin = max(self.ymin_, other.ymin_)
         xmax = min(self.xmax_, other.xmax_)
