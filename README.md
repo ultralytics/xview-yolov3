@@ -93,7 +93,7 @@ If you use this repository or the associated tools and datasets in your research
 
 # 👥 Contribute
 
-🤝 We love contributions from the community! Our open-source projects thrive on your help. To start contributing, please check out our [Contributing Guide](https://docs.ultralytics.com/help/contributing). Additionally, we'd love to hear from you through our [Survey](https://ultralytics.com/survey?utm_source=github&utm_medium=social&utm_campaign=Survey). It's a way to **impact** the future of our projects. A big shoutout and thank you 🙏 to all our contributors!
+🤝 We love contributions from the community! Our open-source projects thrive on your help. To start contributing, please check out our [Contributing Guide](https://docs.ultralytics.com/help/contributing). Additionally, we'd love to hear from you through our [Survey](https://www.ultralytics.com/survey?utm_source=github&utm_medium=social&utm_campaign=Survey). It's a way to **impact** the future of our projects. A big shoutout and thank you 🙏 to all our contributors!
 
 <!-- Image with SVG format can be troublesome in some markdown viewers -->
 
@@ -104,12 +104,12 @@ If you use this repository or the associated tools and datasets in your research
 
 At Ultralytics, we provide two different licensing options to suit various use cases:
 
-- **AGPL-3.0 License**: The [AGPL-3.0 License](https://www.gnu.org/licenses/agpl-3.0.html) is an [OSI-approved](https://opensource.org/licenses/) open-source format that's best suited for students, researchers, and enthusiasts to promote collaboration and knowledge sharing. The full terms can be found in the [LICENSE](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) file.
-- **Enterprise License**: If you're looking for a commercial application of our software and models, the Enterprise License enables integration into commercial products while bypassing the open-source stipulations of the AGPL-3.0. For embedding our solutions into your commercial offerings, please contact us through [Ultralytics Licensing](https://ultralytics.com/license).
+- **AGPL-3.0 License**: The [AGPL-3.0 License](https://www.gnu.org/licenses/agpl-3.0.html) is an [OSI-approved](https://opensource.org/license) open-source format that's best suited for students, researchers, and enthusiasts to promote collaboration and knowledge sharing. The full terms can be found in the [LICENSE](https://github.com/ultralytics/ultralytics/blob/main/LICENSE) file.
+- **Enterprise License**: If you're looking for a commercial application of our software and models, the Enterprise License enables integration into commercial products while bypassing the open-source stipulations of the AGPL-3.0. For embedding our solutions into your commercial offerings, please contact us through [Ultralytics Licensing](https://www.ultralytics.com/license).
 
 # 📬 Contact
 
-🐞 For reporting bugs or suggesting new features, please open an issue on our [GitHub Issues](https://github.com/ultralytics/xview-yolov3/issues) page. And if you have questions or fancy engaging with us, join our vibrant [Discord](https://ultralytics.com/discord) community!
+🐞 For reporting bugs or suggesting new features, please open an issue on our [GitHub Issues](https://github.com/ultralytics/xview-yolov3/issues) page. And if you have questions or fancy engaging with us, join our vibrant [Discord](https://discord.com/invite/ultralytics) community!
 
 <br>
 <div align="center">
