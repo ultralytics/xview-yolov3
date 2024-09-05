@@ -153,8 +153,8 @@ def main(opt):
                 k = (metrics[0] + metrics[2]) > 0
                 mean_recall = recall[k].mean() if k.sum() > 0 else 0
                 s = ("%10s%10s" + "%10.3g" * 14) % (
-                    "%g/%g" % (epoch, opt.epochs - 1),
-                    "%g/%g" % (i, len(dataloader) - 1),
+                    f"{epoch:g}/{opt.epochs - 1:g}",
+                    f"{i:g}/{len(dataloader) - 1:g}",
                     rloss["x"],
                     rloss["y"],
                     rloss["w"],
@@ -214,7 +214,7 @@ def main(opt):
 
     # Save final model
     dt = time.time() - t0
-    print("Finished %g epochs in %.2fs (%.2fs/epoch)" % (epoch, dt, dt / (epoch + 1)))
+    print(f"Finished {epoch:g} epochs in {dt:.2f}s ({dt / (epoch + 1):.2f}s/epoch)")
 
 
 if __name__ == "__main__":

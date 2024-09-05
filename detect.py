@@ -100,10 +100,10 @@ def detect(opt):
         ni = int(math.ceil(img.shape[1] / length))  # up-down
         nj = int(math.ceil(img.shape[2] / length))  # left-right
         for i in range(ni):  # for i in range(ni - 1):
-            print("row %g/%g: " % (i, ni), end="")
+            print(f"row {i:g}/{ni:g}: ", end="")
 
             for j in range(nj):  # for j in range(nj if i==0 else nj - 1):
-                print("%g " % j, end="", flush=True)
+                print(f"{j:g} ", end="", flush=True)
 
                 # forward scan
                 y2 = min((i + 1) * length, img.shape[1])
@@ -166,7 +166,7 @@ def detect(opt):
 
     # Iterate through images and save plot of detections
     for img_i, (path, detections) in enumerate(zip(imgs, img_detections)):
-        print("image %g: '%s'" % (img_i, path))
+        print(f"image {img_i:g}: '{path}'")
 
         if opt.plot_flag:
             img = cv2.imread(path)
@@ -192,7 +192,7 @@ def detect(opt):
             with open(results_path.replace(".bmp", ".tif") + ".txt", "a") as file:
                 for i in unique_classes:
                     n = (detections[:, -1].cpu() == i).sum()
-                    print("%g %ss" % (n, classes[int(i)]))
+                    print(f"{n:g} {classes[int(i)]}s")
 
                 for x1, y1, x2, y2, conf, cls_conf, cls_pred in detections:
                     # Rescale coordinates to original dimensions
@@ -207,11 +207,11 @@ def detect(opt):
                     # write to file
                     xvc = xview_indices2classes(int(cls_pred))  # xview class
                     # if (xvc != 21) & (xvc != 72):
-                    file.write(("%g %g %g %g %g %g \n") % (x1, y1, x2, y2, xvc, cls_conf * conf))
+                    file.write(f"{x1:g} {y1:g} {x2:g} {y2:g} {xvc:g} {cls_conf * conf:g} \n")
 
                     if opt.plot_flag:
                         # Add the bbox to the plot
-                        label = "%s %.2f" % (classes[int(cls_pred)], cls_conf) if cls_conf > 0.05 else None
+                        label = f"{classes[int(cls_pred)]} {cls_conf:.2f}" if cls_conf > 0.05 else None
                         color = bbox_colors[int(np.where(unique_classes == int(cls_pred))[0])]
                         plot_one_box([x1, y1, x2, y2], img, label=label, color=color, line_thickness=1)
 
@@ -236,7 +236,7 @@ class ConvNetb(nn.Module):
         """Initializes a ConvNetb model with configurable number of classes, defaulting to 60, and a series of
         convolutional layers.
         """
-        super(ConvNetb, self).__init__()
+        super().__init__()
         n = 64  # initial convolution size
         self.layer1 = nn.Sequential(
             nn.Conv2d(3, n, kernel_size=3, stride=1, padding=1, bias=False), nn.BatchNorm2d(n), nn.LeakyReLU()

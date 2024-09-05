@@ -20,7 +20,7 @@ import numpy as np
 from scoring.rectangle import Rectangle
 
 
-class Matching(object):
+class Matching:
     """Matching class."""
 
     def __init__(self, groundtruth_rects, rects):

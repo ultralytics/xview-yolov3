@@ -128,7 +128,7 @@ class ListDataset:  # for training
         labels_all = []
         for files_index in range(ia, ib):
             # img_path = self.files[self.shuffled_vector[files_index]]  # BGR
-            img_path = "%s/%g.tif" % (self.path, self.shuffled_vector[files_index])
+            img_path = f"{self.path}/{self.shuffled_vector[files_index]:g}.tif"
             # img_path = '/Users/glennjocher/Downloads/DATA/xview/train_images/2294.bmp'
 
             img0 = cv2.imread(img_path)
@@ -383,7 +383,7 @@ def convert_tif2bmp(p="/Users/glennjocher/Downloads/DATA/xview/val_images_bmp"):
 
     files = sorted(glob.glob(f"{p}/*.tif"))
     for i, f in enumerate(files):
-        print("%g/%g" % (i + 1, len(files)))
+        print(f"{i + 1:g}/{len(files):g}")
 
         img = cv2.imread(f)
 

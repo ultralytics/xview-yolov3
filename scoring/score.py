@@ -66,7 +66,7 @@ def get_labels(fname):
 
     coords = np.zeros((len(data["features"]), 4))
     chips = np.zeros((len(data["features"])), dtype="object")
-    classes = np.zeros((len(data["features"])))
+    classes = np.zeros(len(data["features"]))
 
     for i in tqdm(range(len(data["features"]))):
         if data["features"][i]["properties"]["bounds_imcoords"] != []:
@@ -169,7 +169,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
         fname = file.split(".txt")[0]
         pchips.append(fname)
 
-        with open(path_predictions + file, "r") as f:
+        with open(path_predictions + file) as f:
             arr = np.array(list(csv.reader(f, delimiter=" ")))
             if arr.shape[0] == 0:
                 # If the file is empty, we fill it in with an array of zeros
@@ -202,13 +202,13 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     max_gt_cls = 100
 
     if set(pchips).issubset(set(gt_unique)):
-        raise ValueError("The prediction files {%s} are not in the ground truth." % str(set(pchips) - (set(gt_unique))))
+        raise ValueError(f"The prediction files {{{str(set(pchips) - (set(gt_unique)))}}} are not in the ground truth.")
 
     print("Number of Predictions: %d" % num_preds)
     print("Number of GT: %d" % np.sum(gt_classes.shape))
 
     per_file_class_data = {i: [[], []] for i in gt_unique}
-    num_gt_per_cls = np.zeros((max_gt_cls))
+    num_gt_per_cls = np.zeros(max_gt_cls)
 
     attempted = np.zeros(100)
     for file_ind in range(len(pchips)):
@@ -456,7 +456,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     vals["f1"] = 2 / ((1 / (np.spacing(1) + vals["map_score"])) + (1 / (np.spacing(1) + vals["mar_score"])))
 
     print(
-        "mAP: %f | mAP score: %f | mAR: %f | F1: %f" % (vals["map"], vals["map_score"], vals["mar_score"], vals["f1"])
+        "mAP: {:f} | mAP score: {:f} | mAR: {:f} | F1: {:f}".format(vals["map"], vals["map_score"], vals["mar_score"], vals["f1"])
     )
 
     # with open(path_output + '/score.txt', 'w') as f:
@@ -464,7 +464,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     #
     with open(f"{path_output}/metrics.txt", "w") as f:
         for key, value in vals.items():
-            f.write("%s %f\n" % (str(key), value))
+            f.write(f"{str(key)} {value:f}\n")
         # for key in vals.keys():
         #     f.write("%f\n" % (vals[key]))
         for i in range(len(v2)):

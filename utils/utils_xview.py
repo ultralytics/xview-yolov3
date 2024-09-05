@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 def xview_class2name(classes):
     """Converts numerical class IDs to their corresponding names using 'data/xview.names'."""
-    with open("data/xview.names", "r") as f:
+    with open("data/xview.names") as f:
         x = f.readlines()
     return x[classes].replace("\n", "")
 
