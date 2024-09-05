@@ -456,7 +456,9 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     vals["f1"] = 2 / ((1 / (np.spacing(1) + vals["map_score"])) + (1 / (np.spacing(1) + vals["mar_score"])))
 
     print(
-        "mAP: {:f} | mAP score: {:f} | mAR: {:f} | F1: {:f}".format(vals["map"], vals["map_score"], vals["mar_score"], vals["f1"])
+        "mAP: {:f} | mAP score: {:f} | mAR: {:f} | F1: {:f}".format(
+            vals["map"], vals["map_score"], vals["mar_score"], vals["f1"]
+        )
     )
 
     # with open(path_output + '/score.txt', 'w') as f:
