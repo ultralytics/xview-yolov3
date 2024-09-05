@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 
-class Rectangle(object):
+class Rectangle:
     """Rectangle class."""
 
     def __init__(self, xmin, ymin, xmax, ymax):

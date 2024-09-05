@@ -12,7 +12,7 @@ np.set_printoptions(linewidth=320, formatter={"float_kind": "{:11.5g}".format}) 
 
 def load_classes(path):
     """Loads class labels at 'path'."""
-    fp = open(path, "r")
+    fp = open(path)
     return fp.read().split("\n")[:-1]
 
 
@@ -26,7 +26,7 @@ def modelinfo(model):
         print(
             "%4g %70s %9s %12g %20s %12g %12g" % (i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std())
         )
-    print("\n%g layers, %g parameters, %g gradients" % (i + 1, nparams, ngradients))
+    print(f"\n{i + 1:g} layers, {nparams:g} parameters, {ngradients:g} gradients")
 
 
 def xview_classes2indices(classes):  # remap xview classes 11-94 to 0-61
@@ -698,9 +698,9 @@ def secondary_class_detection(x, y, w, h, img, model, device):
     with torch.no_grad():
         classes = []
         nB = n // 1000 + 1
-        print("%g batches..." % nB, end="")
+        print(f"{nB:g} batches...", end="")
         for i in range(nB):
-            print("%g " % i, end="")
+            print(f"{i:g} ", end="")
             j0 = int(i * 1000)
             j1 = int(min(j0 + 1000, n))
             im = images[j0:j1]
@@ -729,9 +729,9 @@ def createChips():
         print(counter)
 
         if platform == "darwin":  # macos
-            img = cv2.imread("/Users/glennjocher/Downloads/DATA/xview/train_images/%g.tif" % i)
+            img = cv2.imread(f"/Users/glennjocher/Downloads/DATA/xview/train_images/{i:g}.tif")
         else:  # gcp
-            img = cv2.imread("../train_images/%g.tif" % i)
+            img = cv2.imread(f"../train_images/{i:g}.tif")
 
         for j in np.nonzero(mat["id"] == i)[0]:
             c, x1, y1, x2, y2 = mat["targets"][j]
