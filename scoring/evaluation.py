@@ -1,3 +1,4 @@
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 """Utility methods for computing the performance metrics."""
 
 from matching import Matching
@@ -147,7 +148,7 @@ def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_t
     # is to hold the IOU computation between the rectangle pairs for the same
     # image_id_*.
     if (len(groundtruth_coordinates) % 4 != 0) or (len(coordinates) % 4 != 0):
-        raise ValueError("groundtruth_info_dict and test_info_dict should hold " "only 4 * N numbers.")
+        raise ValueError("groundtruth_info_dict and test_info_dict should hold only 4 * N numbers.")
 
     groundtruth_rects = convert_to_rectangle_list(groundtruth_coordinates)
     rects = convert_to_rectangle_list(coordinates)
