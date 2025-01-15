@@ -1,5 +1,4 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
-
 """
 Copyright 2018 Defense Innovation Unit Experimental All rights reserved.
 
@@ -22,9 +21,10 @@ import time
 
 import numpy as np
 import scipy.io
+from tqdm import tqdm
+
 from scoring.matching import Matching
 from scoring.rectangle import Rectangle
-from tqdm import tqdm
 
 """
   Scoring code to calculate per-class precision and mean average precision.
