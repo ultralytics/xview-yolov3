@@ -15,8 +15,8 @@ Welcome to the Ultralytics `xview-yolov3` repository! This project provides the 
 
 To successfully run this project, ensure your environment meets the following prerequisites:
 
--   **Python:** Version 3.6 or later. You can download Python from the [official Python website](https://www.python.org/downloads/).
--   **Dependencies:** Install the required packages using pip. It's recommended to use a virtual environment.
+- **Python:** Version 3.6 or later. You can download Python from the [official Python website](https://www.python.org/downloads/).
+- **Dependencies:** Install the required packages using pip. It's recommended to use a virtual environment.
 
 ```bash
 pip3 install -U -r requirements.txt
@@ -24,12 +24,12 @@ pip3 install -U -r requirements.txt
 
 Key dependencies include:
 
--   `numpy`: Essential for numerical operations in Python.
--   `scipy`: Provides algorithms for scientific and technical computing.
--   `torch`: The core [PyTorch](https://pytorch.org/) library for deep learning.
--   `opencv-python`: The [OpenCV](https://opencv.org/) library for computer vision tasks.
--   `h5py`: Enables interaction with data stored in HDF5 format.
--   `tqdm`: A utility for displaying progress bars in loops and command-line interfaces.
+- `numpy`: Essential for numerical operations in Python.
+- `scipy`: Provides algorithms for scientific and technical computing.
+- `torch`: The core [PyTorch](https://pytorch.org/) library for deep learning.
+- `opencv-python`: The [OpenCV](https://opencv.org/) library for computer vision tasks.
+- `h5py`: Enables interaction with data stored in HDF5 format.
+- `tqdm`: A utility for displaying progress bars in loops and command-line interfaces.
 
 # 📥 Download Data
 
@@ -51,8 +51,9 @@ Before initiating the training process, we perform several preprocessing steps o
 ## Starting the Training
 
 Once the xView data is downloaded and placed in the expected directory, you can **start training** by executing the `train.py` script. You will need to configure the path to your xView data within the script:
--   Modify line 41 for local machine execution.
--   Modify line 43 if you are training in a cloud environment like [Google Colab](https://docs.ultralytics.com/integrations/google-colab/) or [Kaggle](https://docs.ultralytics.com/integrations/kaggle/).
+
+- Modify line 41 for local machine execution.
+- Modify line 43 if you are training in a cloud environment like [Google Colab](https://docs.ultralytics.com/integrations/google-colab/) or [Kaggle](https://docs.ultralytics.com/integrations/kaggle/).
 
 ```bash
 python train.py
@@ -130,8 +131,8 @@ A huge thank you 🙏 to all our contributors for making our community vibrant a
 
 Ultralytics offers two licensing options to accommodate different needs:
 
--   **AGPL-3.0 License:** Ideal for students, researchers, and enthusiasts, this [OSI-approved](https://opensource.org/license/agpl-v3) open-source license promotes open collaboration and knowledge sharing. See the [LICENSE](https://github.com/ultralytics/xview-yolov3/blob/main/LICENSE) file for full details.
--   **Enterprise License:** Designed for commercial use, this license allows integration of Ultralytics software and AI models into commercial products and services without the open-source requirements of AGPL-3.0. If your project requires an Enterprise License, please contact us via [Ultralytics Licensing](https://www.ultralytics.com/license).
+- **AGPL-3.0 License:** Ideal for students, researchers, and enthusiasts, this [OSI-approved](https://opensource.org/license/agpl-v3) open-source license promotes open collaboration and knowledge sharing. See the [LICENSE](https://github.com/ultralytics/xview-yolov3/blob/main/LICENSE) file for full details.
+- **Enterprise License:** Designed for commercial use, this license allows integration of Ultralytics software and AI models into commercial products and services without the open-source requirements of AGPL-3.0. If your project requires an Enterprise License, please contact us via [Ultralytics Licensing](https://www.ultralytics.com/license).
 
 # 📬 Contact
 

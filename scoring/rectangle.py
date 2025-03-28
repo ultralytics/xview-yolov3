@@ -1,5 +1,4 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
-
 """
 Copyright 2018 Defense Innovation Unit Experimental All rights reserved.
 
