@@ -1,4 +1,5 @@
 #!/bin/bash
+# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
 # CREDIT: https://github.com/pjreddie/darknet/tree/master/scripts/get_coco_dataset.sh
 

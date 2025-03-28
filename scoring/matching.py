@@ -1,4 +1,5 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 """
 Copyright 2018 Defense Innovation Unit Experimental All rights reserved.
 
@@ -17,7 +18,6 @@ limitations under the License.
 from collections import defaultdict
 
 import numpy as np
-
 from scoring.rectangle import Rectangle
 
 
