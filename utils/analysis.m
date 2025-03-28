@@ -1,3 +1,5 @@
+% Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
+
 % MATLAB xView analysis code for cleaning up targets and building a targets.mat file used during training
 
 clc; clear; close all
