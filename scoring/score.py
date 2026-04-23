@@ -53,14 +53,11 @@ from scoring.rectangle import Rectangle
 
 # @profile
 def get_labels(fname):
-    """
-    Processes a WorldView3 GEOJSON file.
+    """Processes a WorldView3 GEOJSON file.
 
     Args:
         fname: filepath to the GeoJson file.
-
-    Outputs:
-      Bounding box coordinate array, Chip-name array, and Classes array
+        Outputs: Bounding box coordinate array, Chip-name array, and Classes array
     """
     with open(fname) as f:
         data = json.load(f)
@@ -86,15 +83,11 @@ def get_labels(fname):
 
 
 def convert_to_rectangle_list(coordinates):
-    """
-    Converts a list of coordinates to a list of rectangles.
+    """Converts a list of coordinates to a list of rectangles.
 
     Args:
-        coordinates: a flattened list of bounding box coordinates in format
-          (xmin,ymin,xmax,ymax)
-
-    Outputs:
-      A list of rectangles
+        coordinates: a flattened list of bounding box coordinates in format (xmin,ymin,xmax,ymax)
+        Outputs: A list of rectangles
     """
     number_of_rects = len(coordinates) // 4
     return [
@@ -109,15 +102,12 @@ def convert_to_rectangle_list(coordinates):
 
 
 def ap_from_pr(p, r):
-    """
-    Calculates AP from precision and recall values as specified in the PASCAL VOC devkit.
+    """Calculates AP from precision and recall values as specified in the PASCAL VOC devkit.
 
     Args:
         p: an array of precision values
         r: an array of recall values
-
-    Outputs:
-      An average precision value
+        Outputs: An average precision value
     """
     r = np.concatenate([[0], r, [1]])
     p = np.concatenate([[0], p, [0]])
@@ -131,32 +121,25 @@ def ap_from_pr(p, r):
 
 # @profile
 def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
-    """
-    Compute metrics on a number of prediction files, given a folder of prediction files and a ground truth.  Primary
+    """Compute metrics on a number of prediction files, given a folder of prediction files and a ground truth. Primary
     metric is mean average precision (mAP).
 
     Args:
-        path_predictions: a folder path of prediction files.
-          Prediction files should have filename format 'XYZ.tif.txt',
-          where 'XYZ.tif' is the xView TIFF file being predicted on.
-          Prediction files should be in space-delimited csv format, with each
-          line like (xmin ymin xmax ymax class_prediction score_prediction)
-
+        path_predictions: a folder path of prediction files. Prediction files should have filename format 'XYZ.tif.txt',
+            where 'XYZ.tif' is the xView TIFF file being predicted on. Prediction files should be in space-delimited csv
+            format, with each line like (xmin ymin xmax ymax class_prediction score_prediction)
         path_groundtruth: a file path to a single ground truth geojson
-
         path_output: a folder path for output scoring files
-
-        iou_threshold: a float between 0 and 1 indicating the percentage
-          iou required to count a prediction as a true positive
-
-    Outputs:
-      Writes two files to the 'path_output' parameter folder: 'score.txt' and 'metrics.txt'
-      'score.txt' contains a single floating point value output: mAP
-      'metrics.txt' contains the remaining metrics in per-line format (metric/class_num: score_float)
+        iou_threshold: a float between 0 and 1 indicating the percentage iou required to count a prediction as a true
+            positive
+        Outputs:
+        Writes two files to the 'path_output' parameter folder: 'score.txt' and 'metrics.txt'
+        'score.txt' contains a single floating point value output: mAP
+        'metrics.txt' contains the remaining metrics in per-line format (metric/class_num: score_float)
 
     Raises:
-      ValueError: if there are files in the prediction folder that are not in the ground truth geojson.
-        EG a prediction file is titled '15.tif.txt', but the file '15.tif' is not in the ground truth.
+        ValueError: if there are files in the prediction folder that are not in the ground truth geojson. EG a
+            prediction file is titled '15.tif.txt', but the file '15.tif' is not in the ground truth.
     """
     assert iou_threshold < 1 and iou_threshold > 0
 
@@ -203,7 +186,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     max_gt_cls = 100
 
     if set(pchips).issubset(set(gt_unique)):
-        raise ValueError(f"The prediction files {{{str(set(pchips) - (set(gt_unique)))}}} are not in the ground truth.")
+        raise ValueError(f"The prediction files {{{set(pchips) - (set(gt_unique))!s}}} are not in the ground truth.")
 
     print("Number of Predictions: %d" % num_preds)
     print("Number of GT: %d" % np.sum(gt_classes.shape))
@@ -467,13 +450,13 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     #
     with open(f"{path_output}/metrics.txt", "w") as f:
         for key, value in vals.items():
-            f.write(f"{str(key)} {value:f}\n")
+            f.write(f"{key!s} {value:f}\n")
         # for key in vals.keys():
         #     f.write("%f\n" % (vals[key]))
         for i in range(len(v2)):
             f.write(("%g, " * 5 + "\n") % (v2[i, 0], v2[i, 1], v2[i, 2], v2[i, 3], v2[i, 4]))
 
-    print(f"Final time: {str(time.time() - ttime)}")
+    print(f"Final time: {time.time() - ttime!s}")
 
 
 if __name__ == "__main__":

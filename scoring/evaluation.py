@@ -11,18 +11,15 @@ def safe_divide(numerator, denominator):
 
 
 def compute_statistics_given_rectangle_matches(groundtruth_rects_matched, rects_matched):
-    """
-    Computes the staticstics given the groundtruth_rects and rects matches.
+    """Computes the staticstics given the groundtruth_rects and rects matches.
 
     Args:
         image_id: the image_id referring to the image to be evaluated.
-        groundtruth_rects_matched: the groundtruth_rects_matched represents
-          a list of integers returned from the Matching class instance to
-          indicate the matched rectangle indices from rects for each of the
-          groundtruth_rects.
-        rects_matched: the rects_matched represents a list of integers returned
-          from the Matching class instance to indicate the matched rectangle
-          indices from groundtruth_rects for each of the rects.
+        groundtruth_rects_matched: the groundtruth_rects_matched represents a list of integers returned from the
+            Matching class instance to indicate the matched rectangle indices from rects for each of
+            the groundtruth_rects.
+        rects_matched: the rects_matched represents a list of integers returned from the Matching class instance to
+            indicate the matched rectangle indices from groundtruth_rects for each of the rects.
 
     Returns:
         A dictionary holding the computed statistics as well as the inputs.
@@ -41,14 +38,12 @@ def compute_statistics_given_rectangle_matches(groundtruth_rects_matched, rects_
 
 
 def compute_precision_recall_given_image_statistics_list(iou_threshold, image_statistics_list):
-    """
-    Computes the precision recall numbers given iou_threshold and statistics.
+    """Computes the precision recall numbers given iou_threshold and statistics.
 
     Args:
         iou_threshold: the iou_threshold under which the statistics are computed.
-        image_statistics_list: a list of the statistics computed and returned
-        by the compute_statistics_given_rectangle_matches method for a list of
-        images.
+        image_statistics_list: a list of the statistics computed and returned by the
+            compute_statistics_given_rectangle_matches method for a list of images.
 
     Returns:
         A dictionary holding the precision, recall as well as the inputs.
@@ -71,15 +66,12 @@ def compute_precision_recall_given_image_statistics_list(iou_threshold, image_st
 
 
 def compute_average_precision_recall_given_precision_recall_dict(precision_recall_dict):
-    """
-    Computes the average precision (AP) and average recall (AR).
+    """Computes the average precision (AP) and average recall (AR).
 
     Args:
-        precision_recall_dict: the precision_recall_dict holds the dictionary of
-        precision and recall information returned by the
-        compute_precision_recall_given_image_statistics_list method, which is
-        calculated under a range of iou_thresholds, where the iou_threshold is
-        the key.
+        precision_recall_dict: the precision_recall_dict holds the dictionary of precision and recall information
+            returned by the compute_precision_recall_given_image_statistics_list method, which is calculated under a
+            range of iou_thresholds, where the iou_threshold is the key.
 
     Returns:
         average_precision, average_recall.
@@ -109,30 +101,20 @@ def convert_to_rectangle_list(coordinates):
 
 
 def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_threshold):
-    """
-    Computes the average precision (AP) and average recall (AR).
+    """Computes the average precision (AP) and average recall (AR).
 
     Args:
-        groundtruth_info_dict: the groundtruth_info_dict holds all the groundtruth
-          information for an evaluation dataset. The format of this groundtruth_info_dict is
+        groundtruth_info_dict: the groundtruth_info_dict holds all the groundtruth information for an evaluation
+            dataset. The format of this groundtruth_info_dict is
           as follows:
-          {'image_id_0':
-           [xmin_0,ymin_0,xmax_0,ymax_0,...,xmin_N0,ymin_N0,xmax_N0,ymax_N0],
-           ...,
-           'image_id_M':
-           [xmin_0,ymin_0,xmax_0,ymax_0,...,xmin_NM,ymin_NM,xmax_NM,ymax_NM]},
-          where
-            image_id_* is an image_id that has the groundtruth rectangles labeled.
-            xmin_*,ymin_*,xmax_*,ymax_* is the top-left and bottom-right corners
-              of one groundtruth rectangle.
-
-        test_info_dict: the test_info_dict holds all the test information for an
-          evaluation dataset.
-           The format of this test_info_dict is the same
-          as the above groundtruth_info_dict.
-
+        {'image_id_0': [xmin_0,ymin_0,xmax_0,ymax_0,...,xmin_N0,ymin_N0,xmax_N0,ymax_N0], ...,
+        'image_id_M': [xmin_0,ymin_0,xmax_0,ymax_0,...,xmin_NM,ymin_NM,xmax_NM,ymax_NM]}, where image_id_* is an
+            image_id that has the groundtruth rectangles labeled. xmin_*,ymin_*,xmax_*,ymax_* is the top-left and
+            bottom-right corners of one groundtruth rectangle.
+        test_info_dict: the test_info_dict holds all the test information for an evaluation dataset. The format of this
+            test_info_dict is the same as the above groundtruth_info_dict.
         iou_threshold_range: the IOU threshold range to compute the average
-          precision (AP) and average recall (AR). For example:
+        precision (AP) and average recall (AR). For example:
           iou_threshold_range = [0.50:0.05:0.95]
 
     Returns:
@@ -141,8 +123,7 @@ def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_t
         for each of the iou_threshold in the iou_threshold_range.
 
     Raises:
-        ValueError: if the input groundtruth_info_dict and test_info_dict show
-        inconsistent information.
+        ValueError: if the input groundtruth_info_dict and test_info_dict show inconsistent information.
     """
     # Start to build up the Matching instances for each of the image_id_*, which
     # is to hold the IOU computation between the rectangle pairs for the same

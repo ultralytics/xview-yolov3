@@ -375,11 +375,9 @@ def xyxy2xywh(box):
 
 
 def compute_ap(recall, precision):
-    """
-    Compute the average precision, given the recall and precision curves.
+    """Compute the average precision, given the recall and precision curves.
 
-    Code originally from https://github.com/rbgirshick/py-faster-rcnn.
-    # Arguments
+    Code originally from https://github.com/rbgirshick/py-faster-rcnn. # Arguments
         recall:    The recall curve (list).
         precision: The precision curve (list).
     # Returns

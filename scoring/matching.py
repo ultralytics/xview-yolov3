@@ -25,16 +25,14 @@ class Matching:
     """Matching class."""
 
     def __init__(self, groundtruth_rects, rects):
-        """
-        Constructs a Matching instance.
+        """Constructs a Matching instance.
 
         Args:
-          groundtruth_rects: a list of groundtruth rectangles.
-          rects: a list of rectangles to be matched against the groundtruth_rects.
+            groundtruth_rects: a list of groundtruth rectangles.
+            rects: a list of rectangles to be matched against the groundtruth_rects.
 
         Raises:
-          ValueError: if any item inside the groundtruth_rects or rects are not
-          Rectangle type.
+            ValueError: if any item inside the groundtruth_rects or rects are not Rectangle type.
         """
         for rect in groundtruth_rects:
             if not isinstance(rect, Rectangle):
@@ -108,8 +106,7 @@ class Matching:
 
 
 def cartesian(arrays, out=None):
-    """
-    Generate a cartesian product of input arrays.
+    """Generate a cartesian product of input arrays.
 
     Parameters
     ----------
