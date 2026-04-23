@@ -103,8 +103,7 @@ class ListDataset:  # for training
         # self.rgb_std = np.array([69.095, 66.369, 64.236], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
-        """Initializes iterator by resetting count, creating a shuffled vector of image numbers based on their
-        weights.
+        """Initializes iterator by resetting count, creating a shuffled vector of image numbers based on their weights.
         """
         self.count = -1
         # self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
@@ -203,7 +202,7 @@ class ListDataset:  # for training
             if nL1 > 0:
                 area0 = (labels1[:, 3] - labels1[:, 1]) * (labels1[:, 4] - labels1[:, 2])
 
-            h, w, _ = img1.shape
+            _h, _w, _ = img1.shape
             for j in range(8):
                 labels = np.array([], dtype=np.float32)
 
