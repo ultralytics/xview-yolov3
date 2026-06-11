@@ -50,10 +50,7 @@ Before initiating the training process, we perform several preprocessing steps o
 
 ## Starting the Training
 
-Once the xView data is downloaded and placed in the expected directory, you can **start training** by executing the `train.py` script. You will need to configure the path to your xView data within the script:
-
-- Modify line 41 for local machine execution.
-- Modify line 43 if you are training in a cloud environment like [Google Colab](https://docs.ultralytics.com/integrations/google-colab/) or [Kaggle](https://docs.ultralytics.com/integrations/kaggle/).
+Once the xView data is downloaded and placed in the expected directory, you can **start training** by executing the `train.py` script. Configure the `train_path` values in `train.py` for your local machine or cloud environment, such as [Google Colab](https://docs.ultralytics.com/integrations/google-colab/) or [Kaggle](https://docs.ultralytics.com/integrations/kaggle/).
 
 ```bash
 python train.py
@@ -61,13 +58,13 @@ python train.py
 
 ## Resuming Training
 
-If your training session is interrupted, you can easily **resume training** from the last saved checkpoint. Use the `--resume` flag as shown below:
+If your training session is interrupted, you can easily **resume training** from the last saved checkpoint. Use the `-resume` flag as shown below:
 
 ```bash
-python train.py --resume 1
+python train.py -resume 1
 ```
 
-The script will automatically load the weights from the `latest.pt` file located in the `checkpoints/` directory and continue the training process.
+The script will automatically load the weights from the `weights/latest.pt` file and continue the training process.
 
 ## Training Details
 
@@ -97,17 +94,18 @@ To improve model robustness and generalization, the `datasets.py` script applies
 
 # 🔍 Inference
 
-After training completes, the model checkpoints (`.pt` files) containing the learned weights are saved in the `checkpoints/` directory. You can use the `detect.py` script to perform [inference](https://docs.ultralytics.com/modes/predict/) on new or existing xView images using your trained model.
+After training completes, the model checkpoints (`.pt` files) containing the learned weights are saved in the `weights/` directory. You can use the `detect.py` script to perform [inference](https://docs.ultralytics.com/modes/predict/) on new or existing xView images using your trained model.
 
-For example, to run detection on the image `5.tif` from the training set using the best performing weights (`best.pt`), you would run:
+For example, download the default lightweight xView weights and run detection on an xView image:
 
 ```bash
-python detect.py --weights checkpoints/best.pt --source path/to/5.tif
+(cd weights && bash download_weights.sh)
+python detect.py -image_folder path/to/5.tif
 ```
 
 The script will process the image, detect objects, draw bounding boxes, and save the output image. An example output might look like this:
 
-<img src="https://github.com/ultralytics/xview/blob/main/output_img/1047.jpg?raw=true" width="100%" alt="Example inference output on xView image">
+<img src="https://github.com/ultralytics/xview-yolov3/blob/main/output/5.jpg?raw=true" width="100%" alt="Example inference output on xView image">
 
 # 📝 Citation
 
@@ -125,7 +123,7 @@ We also invite you to share your feedback through our [Survey](https://www.ultra
 
 A huge thank you 🙏 to all our contributors for making our community vibrant and innovative!
 
-[![Ultralytics open-source contributors](https://raw.githubusercontent.com/ultralytics/assets/main/im/image-contributors.png)](https://github.com/ultralytics/ultralytics/graphs/contributors)
+[![Ultralytics open-source contributors](https://raw.githubusercontent.com/ultralytics/assets/main/im/image-contributors.png)](https://github.com/ultralytics/xview-yolov3/graphs/contributors)
 
 # 📜 License
 
