@@ -96,11 +96,11 @@ To improve model robustness and generalization, the `datasets.py` script applies
 
 After training completes, the model checkpoints (`.pt` files) containing the learned weights are saved in the `weights/` directory. You can use the `detect.py` script to perform [inference](https://docs.ultralytics.com/modes/predict/) on new or existing xView images using your trained model.
 
-For example, download the default lightweight xView weights and run detection on an xView image:
+For example, download the default lightweight xView weights and run detection on a directory of xView images:
 
 ```bash
 (cd weights && bash download_weights.sh)
-python detect.py -image_folder path/to/5.tif
+python detect.py -image_folder path/to/train_images
 ```
 
 The script will process the image, detect objects, draw bounding boxes, and save the output image. An example output might look like this:
