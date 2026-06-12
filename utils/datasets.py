@@ -103,8 +103,7 @@ class ListDataset:  # for training
         # self.rgb_std = np.array([69.095, 66.369, 64.236], dtype=np.float32).reshape((1, 3, 1, 1))
 
     def __iter__(self):
-        """Initializes iterator by resetting count, creating a shuffled vector of image numbers based on their weights.
-        """
+        """Initializes iterator by resetting count, creating a shuffled vector of image numbers based on their weights."""
         self.count = -1
         # self.shuffled_vector = np.random.permutation(self.nF)  # shuffled vector
         self.shuffled_vector = np.random.choice(
