@@ -36,10 +36,10 @@ class Matching:
         """
         for rect in groundtruth_rects:
             if not isinstance(rect, Rectangle):
-                raise ValueError("Invalid instance type: should be Rectangle.")
+                raise TypeError("Invalid instance type: should be Rectangle.")
         for rect in rects:
             if not isinstance(rect, Rectangle):
-                raise ValueError("Invalid instance type: should be Rectangle.")
+                raise TypeError("Invalid instance type: should be Rectangle.")
         self.groundtruth_rects_ = groundtruth_rects
         self.rects_ = rects
         self._compute_iou_from_rectangle_pairs()
@@ -132,6 +132,6 @@ def cartesian(arrays, out=None):
         out = np.empty_like(ix, dtype=dtype)
 
     for n, arr in enumerate(arrays):
-        out[:, n] = arrays[n][ix[:, n]]
+        out[:, n] = arr[ix[:, n]]
 
     return out

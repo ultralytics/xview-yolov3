@@ -29,7 +29,7 @@ def get_labels(fname="xView_train.geojson"):  # from utils.utils_xview import ge
             chips[i] = b_id
             classes[i] = data["features"][i]["properties"]["type_id"]
             if val.shape[0] != 4:
-                print("Issues at %d!" % i)
+                print(f"Issues at {i:d}!")
             else:
                 coords[i] = val
         else:

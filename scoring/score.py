@@ -112,8 +112,7 @@ def ap_from_pr(p, r):
     r = np.concatenate([[0], r, [1]])
     p = np.concatenate([[0], p, [0]])
     for i in range(p.shape[0] - 2, 0, -1):
-        if p[i] > p[i - 1]:
-            p[i - 1] = p[i]
+        p[i - 1] = max(p[i - 1], p[i])
 
     i = np.where(r[1:] != r[:-1])[0] + 1
     return np.sum((r[i] - r[i - 1]) * p[i])
@@ -188,8 +187,8 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     if set(pchips).issubset(set(gt_unique)):
         raise ValueError(f"The prediction files {{{set(pchips) - (set(gt_unique))!s}}} are not in the ground truth.")
 
-    print("Number of Predictions: %d" % num_preds)
-    print("Number of GT: %d" % np.sum(gt_classes.shape))
+    print(f"Number of Predictions: {num_preds:d}")
+    print(f"Number of GT: {np.sum(gt_classes.shape):d}")
 
     per_file_class_data = {i: [[], []] for i in gt_unique}
     num_gt_per_cls = np.zeros(max_gt_cls)
@@ -449,8 +448,7 @@ def score(path_predictions, path_groundtruth, path_output, iou_threshold=0.5):
     #     f.write(str("%.8f" % vals['map']))
     #
     with open(f"{path_output}/metrics.txt", "w") as f:
-        for key, value in vals.items():
-            f.write(f"{key!s} {value:f}\n")
+        f.writelines(f"{key!s} {value:f}\n" for key, value in vals.items())
         # for key in vals.keys():
         #     f.write("%f\n" % (vals[key]))
         for i in range(len(v2)):

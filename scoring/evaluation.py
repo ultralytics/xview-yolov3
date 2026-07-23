@@ -78,7 +78,7 @@ def compute_average_precision_recall_given_precision_recall_dict(precision_recal
     """
     precision = 0
     recall = 0
-    for _, value in precision_recall_dict.items():
+    for value in precision_recall_dict.values():
         precision += value["precision"]
         recall += value["recall"]
     average_precision = safe_divide(precision, len(precision_recall_dict))
@@ -104,18 +104,9 @@ def compute_average_precision_recall(groundtruth_coordinates, coordinates, iou_t
     """Computes the average precision (AP) and average recall (AR).
 
     Args:
-        groundtruth_info_dict: the groundtruth_info_dict holds all the groundtruth information for an evaluation
-            dataset. The format of this groundtruth_info_dict is
-          as follows:
-        {'image_id_0': [xmin_0,ymin_0,xmax_0,ymax_0,...,xmin_N0,ymin_N0,xmax_N0,ymax_N0], ...,
-        'image_id_M': [xmin_0,ymin_0,xmax_0,ymax_0,...,xmin_NM,ymin_NM,xmax_NM,ymax_NM]}, where image_id_* is an
-            image_id that has the groundtruth rectangles labeled. xmin_*,ymin_*,xmax_*,ymax_* is the top-left and
-            bottom-right corners of one groundtruth rectangle.
-        test_info_dict: the test_info_dict holds all the test information for an evaluation dataset. The format of this
-            test_info_dict is the same as the above groundtruth_info_dict.
-        iou_threshold_range: the IOU threshold range to compute the average
-        precision (AP) and average recall (AR). For example:
-          iou_threshold_range = [0.50:0.05:0.95]
+        groundtruth_coordinates: Coordinates of the ground-truth rectangles.
+        coordinates: Coordinates of the predicted rectangles.
+        iou_threshold: Intersection-over-union threshold used for matching.
 
     Returns:
         average_precision, average_recall, as well as the precision_recall_dict,
