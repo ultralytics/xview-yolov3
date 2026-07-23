@@ -1,12 +1,19 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
 import argparse
+import os
+import random
 import time
+from collections import defaultdict
 from sys import platform
 
-from models import *
-from utils.datasets import *
-from utils.utils import *
+import numpy as np
+import torch
+from torch import nn
+
+from models import Darknet
+from utils.datasets import ListDataset
+from utils.utils import modelinfo, xview_class_weights_hard_mining
 
 # batch_size 8: 32*17 = 544
 # batch_size 4: 32*25 = 800 (1.47 vs 544) or 32*23 = 736
@@ -194,8 +201,7 @@ def main(opt):
 
         # Update best loss
         loss_per_target = rloss["loss"] / rloss["nGT"]
-        if loss_per_target < best_loss:
-            best_loss = loss_per_target
+        best_loss = min(best_loss, loss_per_target)
 
         # Save latest checkpoint
         checkpoint = {

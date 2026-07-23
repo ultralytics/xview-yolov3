@@ -1,12 +1,26 @@
 # Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license
 
 import argparse
+import math
+import os
+import random
 import time
 from sys import platform
 
-from models import *
-from utils.datasets import *
-from utils.utils import *
+import cv2
+import numpy as np
+import scipy.io
+import torch
+from torch import nn
+
+from models import Darknet
+from utils.datasets import ImageFolder
+from utils.utils import (
+    load_classes,
+    non_max_suppression,
+    plot_one_box,
+    xview_indices2classes,
+)
 
 targets_path = "utils/targets_c60.mat"
 
@@ -99,8 +113,8 @@ def detect(opt):
 
         preds = []
         length = opt.img_size
-        ni = int(math.ceil(img.shape[1] / length))  # up-down
-        nj = int(math.ceil(img.shape[2] / length))  # left-right
+        ni = math.ceil(img.shape[1] / length)  # up-down
+        nj = math.ceil(img.shape[2] / length)  # left-right
         for i in range(ni):  # for i in range(ni - 1):
             print(f"row {i:g}/{ni:g}: ", end="")
 
@@ -157,7 +171,7 @@ def detect(opt):
             img_detections.extend(detections)
             imgs.extend(img_paths)
 
-        print("Batch %d... (Done %.3fs)" % (batch_i, time.time() - prev_time))
+        print(f"Batch {batch_i:d}... (Done {time.time() - prev_time:.3f}s)")
         prev_time = time.time()
 
     # Bounding-box colors

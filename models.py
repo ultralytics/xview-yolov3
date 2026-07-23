@@ -2,9 +2,11 @@
 
 from collections import defaultdict
 
-import torch.nn as nn
+import numpy as np
+import torch
+from torch import nn
 
-from utils.utils import *
+from utils.utils import build_targets
 
 
 def create_modules(module_defs):
@@ -21,7 +23,7 @@ def create_modules(module_defs):
             kernel_size = int(module_def["size"])
             pad = (kernel_size - 1) // 2 if int(module_def["pad"]) else 0
             modules.add_module(
-                "conv_%d" % i,
+                f"conv_{i:d}",
                 nn.Conv2d(
                     in_channels=output_filters[-1],
                     out_channels=filters,
@@ -34,22 +36,22 @@ def create_modules(module_defs):
             )
 
             if bn:
-                modules.add_module("batch_norm_%d" % i, nn.BatchNorm2d(filters))
+                modules.add_module(f"batch_norm_{i:d}", nn.BatchNorm2d(filters))
             if module_def["activation"] == "leaky":
-                modules.add_module("leaky_%d" % i, nn.LeakyReLU())
+                modules.add_module(f"leaky_{i:d}", nn.LeakyReLU())
 
         elif module_def["type"] == "upsample":
             upsample = nn.Upsample(scale_factor=int(module_def["stride"]))  # , mode='bilinear', align_corners=True)
-            modules.add_module("upsample_%d" % i, upsample)
+            modules.add_module(f"upsample_{i:d}", upsample)
 
         elif module_def["type"] == "route":
             layers = [int(x) for x in module_def["layers"].split(",")]
             filters = sum(output_filters[layer_i] for layer_i in layers)
-            modules.add_module("route_%d" % i, EmptyLayer())
+            modules.add_module(f"route_{i:d}", EmptyLayer())
 
         elif module_def["type"] == "shortcut":
             filters = output_filters[int(module_def["from"])]
-            modules.add_module("shortcut_%d" % i, EmptyLayer())
+            modules.add_module(f"shortcut_{i:d}", EmptyLayer())
 
         elif module_def["type"] == "yolo":
             anchor_idxs = [int(x) for x in module_def["mask"].split(",")]
@@ -61,7 +63,7 @@ def create_modules(module_defs):
             img_height = int(hyperparams["height"])
             # Define detection layer
             yolo_layer = YOLOLayer(anchors, num_classes, img_height, anchor_idxs)
-            modules.add_module("yolo_%d" % i, yolo_layer)
+            modules.add_module(f"yolo_{i:d}", yolo_layer)
 
         # Register module list and number of output filters
         module_list.append(modules)
@@ -296,8 +298,8 @@ class Darknet(nn.Module):
 
 def parse_model_config(path):
     """Parses the yolo-v3 layer configuration file and returns module definitions."""
-    file = open(path)
-    lines = file.read().split("\n")
+    with open(path) as file:
+        lines = file.read().split("\n")
     lines = [x for x in lines if x and not x.startswith("#")]
     lines = [x.rstrip().lstrip() for x in lines]  # get rid of fringe whitespaces
     module_defs = []

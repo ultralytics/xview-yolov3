@@ -14,19 +14,20 @@ np.set_printoptions(linewidth=320, formatter={"float_kind": "{:11.5g}".format}) 
 
 def load_classes(path):
     """Loads class labels at 'path'."""
-    fp = open(path)
-    return fp.read().split("\n")[:-1]
+    with open(path) as file:
+        return file.read().split("\n")[:-1]
 
 
 def modelinfo(model):
     """Prints model layers, parameters, gradients, and statistics; requires a model object as input."""
     nparams = sum(x.numel() for x in model.parameters())
     ngradients = sum(x.numel() for x in model.parameters() if x.requires_grad)
-    print("\n%4s %70s %9s %12s %20s %12s %12s" % ("", "name", "gradient", "parameters", "shape", "mu", "sigma"))
+    print(f"\n{'':4s} {'name':>70s} {'gradient':>9s} {'parameters':>12s} {'shape':>20s} {'mu':>12s} {'sigma':>12s}")
     for i, (name, p) in enumerate(model.named_parameters()):
         name = name.replace("module_list.", "")
         print(
-            "%4g %70s %9s %12g %20s %12g %12g" % (i, name, p.requires_grad, p.numel(), list(p.shape), p.mean(), p.std())
+            f"{i:4g} {name:>70s} {p.requires_grad!s:>9s} {p.numel():12g} {list(p.shape)!s:>20s} "
+            f"{p.mean().item():12g} {p.std().item():12g}"
         )
     print(f"\n{i + 1:g} layers, {nparams:g} parameters, {ngradients:g} gradients")
 
