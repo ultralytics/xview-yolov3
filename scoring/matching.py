@@ -36,10 +36,10 @@ class Matching:
         """
         for rect in groundtruth_rects:
             if not isinstance(rect, Rectangle):
-                raise TypeError("Invalid instance type: should be Rectangle.")
+                raise ValueError("Invalid instance type: should be Rectangle.")  # noqa: TRY004
         for rect in rects:
             if not isinstance(rect, Rectangle):
-                raise TypeError("Invalid instance type: should be Rectangle.")
+                raise ValueError("Invalid instance type: should be Rectangle.")  # noqa: TRY004
         self.groundtruth_rects_ = groundtruth_rects
         self.rects_ = rects
         self._compute_iou_from_rectangle_pairs()

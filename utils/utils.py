@@ -26,7 +26,8 @@ def modelinfo(model):
     for i, (name, p) in enumerate(model.named_parameters()):
         name = name.replace("module_list.", "")
         print(
-            f"{i:4g} {name:>70s} {p.requires_grad!s:>9s} {p.numel():12g} {list(p.shape)!s:>20s} {p.mean():12g} {p.std():12g}"
+            f"{i:4g} {name:>70s} {p.requires_grad!s:>9s} {p.numel():12g} {list(p.shape)!s:>20s} "
+            f"{p.mean().item():12g} {p.std().item():12g}"
         )
     print(f"\n{i + 1:g} layers, {nparams:g} parameters, {ngradients:g} gradients")
 
