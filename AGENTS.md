@@ -31,12 +31,12 @@ After opening a PR:
 ## Commands
 
 ```bash
-pip3 install -U -r requirements.txt        # install (numpy, scipy, opencv-python, torch, matplotlib, tqdm, h5py)
-python train.py                            # train; edit the train_path values near the top of train.py first
-python train.py -resume 1                  # resume from weights/latest.pt
-(cd weights && bash download_weights.sh)   # fetch pretrained xView weights
+pip3 install -U -r requirements.txt      # install (numpy, scipy, opencv-python, torch, matplotlib, tqdm, h5py)
+python train.py                          # train; edit the train_path values near the top of train.py first
+python train.py -resume 1                # resume from weights/latest.pt
+(cd weights && bash download_weights.sh) # fetch pretrained xView weights
 python detect.py -image_folder path/to/train_images
-ruff format . && ruff check --fix .        # formatting is applied on PRs by Ultralytics Actions, not a repo config
+ruff format . && ruff check --fix . # formatting is applied on PRs by Ultralytics Actions, not a repo config
 ```
 
 - There is no test suite, no `pyproject.toml`, and no packaging. CI is limited to `format.yml` (Ultralytics Actions), `cla.yml`, and `stale.yml` — no build or test workflow runs on PRs.
