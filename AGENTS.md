@@ -45,7 +45,7 @@ ruff format . && ruff check --fix . # formatting is applied on PRs by Ultralytic
 ## Architecture
 
 - `models.py` — `parse_model_config()` reads a Darknet `cfg/*.cfg` file into module definitions, `create_modules()` builds them, and `Darknet` runs the forward pass with `YOLOLayer` heads. `cfg/c60_a30symmetric.cfg` (60 classes, 30 k-means anchors) is the default for both `train.py` and `detect.py`.
-- `utils/datasets.py` — `ListDataset` iterates full-resolution `.tif` images, samples one augmented chip per image, and reads label boxes from the `utils/targets_c60.mat` MATLAB file; `ImageFolder` serves inference. Images are sampled with per-image weights, and classes with `xview_class_weights()`.
+- `utils/datasets.py` — `ListDataset` iterates full-resolution `.tif` images, applies a random affine to each, then crops 8 chips of `-img_size` (default 800) per image from candidate centers weighted by `xview_class_weights()`, so a default `-batch_size 8` loader step yields 64 chips that `train.py` feeds to the model 4 at a time. Labels come from the `utils/targets_c60.mat` MATLAB file; `ImageFolder` serves inference.
 - `utils/utils.py` — the shared helper module: xView class index remapping, anchor/target building, NMS, mAP, and plotting.
 - `utils/analysis.m` — the MATLAB script that generated the k-means anchors baked into the `cfg` files; it is not part of the Python pipeline.
 - `scoring/` — the official xView Challenge scorer, vendored from the Defense Innovation Unit under Apache-2.0. Keep its license header intact and prefer not to modify it.

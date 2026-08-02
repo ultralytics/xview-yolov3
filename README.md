@@ -68,7 +68,7 @@ The script will automatically load the weights from the `weights/latest.pt` file
 
 ## Training Details
 
-During each training epoch, one randomly sampled 800x800 pixel chip is extracted from each full-resolution image and processed in batches of 8 (`-img_size` defaults to 32 x 25 = 800 and `-batch_size` to 8). On hardware like an Nvidia GTX 1080 Ti, you can typically complete around 100 epochs per day.
+During each training epoch, the system processes 8 randomly sampled 800x800 pixel chips extracted from each full-resolution image in the dataset (`-img_size` defaults to 32 x 25 = 800). On hardware like an Nvidia GTX 1080 Ti, you can typically complete around 100 epochs per day.
 
 Be mindful of [overfitting](https://www.ultralytics.com/glossary/overfitting), which can become a significant issue after approximately 200 epochs. Monitoring validation metrics is crucial. The best observed validation mean Average Precision ([mAP](https://www.ultralytics.com/glossary/mean-average-precision-map)) in experiments was 0.16 after 300 epochs (roughly 3 days of training), corresponding to a training mAP of 0.30.
 
