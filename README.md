@@ -1,13 +1,13 @@
-<a href="https://www.ultralytics.com/"><img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="320" alt="Ultralytics logo"></a>
+<a href="https://www.ultralytics.com"><img src="https://raw.githubusercontent.com/ultralytics/assets/main/logo/Ultralytics_Logotype_Original.svg" width="320" alt="Ultralytics logo"></a>
 
 # 🚀 Introduction
 
-Welcome to the Ultralytics `xview-yolov3` repository! This project provides the necessary code and instructions to train the powerful [Ultralytics YOLOv3](https://docs.ultralytics.com/models/yolov3/) object detection model on the challenging [xView dataset](https://challenge.xviewdataset.org/). The primary goal is to support participants in the [xView Challenge](https://challenge.xviewdataset.org/), which focuses on advancing the state-of-the-art in detecting objects within [satellite imagery](https://www.ultralytics.com/blog/using-computer-vision-to-analyse-satellite-imagery), a critical application of [computer vision](https://www.ultralytics.com/glossary/computer-vision-cv) in remote sensing.
+Welcome to the Ultralytics `xview-yolov3` repository! This project provides the necessary code and instructions to train the powerful [Ultralytics YOLOv3](https://docs.ultralytics.com/models/yolov3) object detection model on the challenging [xView dataset](https://challenge.xviewdataset.org/). The primary goal is to support participants in the [xView Challenge](https://challenge.xviewdataset.org/), which focuses on advancing the state-of-the-art in detecting objects within [satellite imagery](https://www.ultralytics.com/blog/using-computer-vision-to-analyze-satellite-imagery), a critical application of [computer vision](https://www.ultralytics.com/glossary/computer-vision-cv) in remote sensing.
 
 [![Ultralytics Actions](https://github.com/ultralytics/xview-yolov3/actions/workflows/format.yml/badge.svg)](https://github.com/ultralytics/xview-yolov3/actions/workflows/format.yml)
 [![Ultralytics Discord](https://img.shields.io/discord/1089800235347353640?logo=discord&logoColor=white&label=Discord&color=blue)](https://discord.com/invite/ultralytics)
-[![Ultralytics Forums](https://img.shields.io/discourse/users?server=https%3A%2F%2Fcommunity.ultralytics.com&logo=discourse&label=Forums&color=blue)](https://community.ultralytics.com/)
-[![Ultralytics Reddit](https://img.shields.io/reddit/subreddit-subscribers/ultralytics?style=flat&logo=reddit&logoColor=white&label=Reddit&color=blue)](https://reddit.com/r/ultralytics)
+[![Ultralytics Forums](https://img.shields.io/discourse/users?server=https%3A%2F%2Fcommunity.ultralytics.com&logo=discourse&label=Forums&color=blue)](https://community.ultralytics.com)
+[![Ultralytics Reddit](https://img.shields.io/reddit/subreddit-subscribers/ultralytics?style=flat&logo=reddit&logoColor=white&label=Reddit&color=blue)](https://www.reddit.com/r/ultralytics/)
 
 <img src="https://github-production-user-asset-6210df.s3.amazonaws.com/26833433/238799379-bb3b02f0-dee4-4e67-80ae-4b2378b813ad.jpg?raw=true" width="100%" alt="xView dataset example detections">
 
@@ -50,7 +50,7 @@ Before initiating the training process, we perform several preprocessing steps o
 
 ## Starting the Training
 
-Once the xView data is downloaded and placed in the expected directory, you can **start training** by executing the `train.py` script. Configure the `train_path` values in `train.py` for your local machine or cloud environment, such as [Google Colab](https://docs.ultralytics.com/integrations/google-colab/) or [Kaggle](https://docs.ultralytics.com/integrations/kaggle/).
+Once the xView data is downloaded and placed in the expected directory, you can **start training** by executing the `train.py` script. Configure the `train_path` values in `train.py` for your local machine or cloud environment, such as [Google Colab](https://docs.ultralytics.com/integrations/google-colab) or [Kaggle](https://docs.ultralytics.com/integrations/kaggle).
 
 ```bash
 python train.py
@@ -90,11 +90,11 @@ To improve model robustness and generalization, the `datasets.py` script applies
 | HSV Saturation | +/- 50%                                   |
 | HSV Intensity  | +/- 50%                                   |
 
-**Note:** Augmentation is applied **only** during the training phase. During inference or validation, the original, unaugmented images are used. The corresponding [bounding box](https://www.ultralytics.com/glossary/bounding-box) coordinates are automatically adjusted to match the transformations applied to the images. Explore more augmentation techniques with [Albumentations](https://docs.ultralytics.com/integrations/albumentations/).
+**Note:** Augmentation is applied **only** during the training phase. During inference or validation, the original, unaugmented images are used. The corresponding [bounding box](https://www.ultralytics.com/glossary/bounding-box) coordinates are automatically adjusted to match the transformations applied to the images. Explore more augmentation techniques with [Albumentations](https://docs.ultralytics.com/integrations/albumentations).
 
 # 🔍 Inference
 
-After training completes, the model checkpoints (`.pt` files) containing the learned weights are saved in the `weights/` directory. You can use the `detect.py` script to perform [inference](https://docs.ultralytics.com/modes/predict/) on new or existing xView images using your trained model.
+After training completes, the model checkpoints (`.pt` files) containing the learned weights are saved in the `weights/` directory. You can use the `detect.py` script to perform [inference](https://docs.ultralytics.com/modes/predict) on new or existing xView images using your trained model.
 
 For example, download the default lightweight xView weights and run detection on a directory of xView images:
 
@@ -117,7 +117,7 @@ For the xView dataset itself, please refer to the citation guidelines provided o
 
 # 👥 Contribute
 
-🤝 We thrive on community contributions! Open-source projects like this benefit greatly from your input. Whether it's fixing bugs, adding features, or improving documentation, your help is valuable. Please see our [Contributing Guide](https://docs.ultralytics.com/help/contributing/) for more details on how to get started.
+🤝 We thrive on community contributions! Open-source projects like this benefit greatly from your input. Whether it's fixing bugs, adding features, or improving documentation, your help is valuable. Please see our [Contributing Guide](https://docs.ultralytics.com/help/contributing) for more details on how to get started.
 
 We also invite you to share your feedback through our [Survey](https://www.ultralytics.com/survey?utm_source=github&utm_medium=social&utm_campaign=Survey). Your insights help shape the future of Ultralytics projects.
 
@@ -129,7 +129,7 @@ A huge thank you 🙏 to all our contributors for making our community vibrant a
 
 Ultralytics offers two licensing options to accommodate different needs:
 
-- **AGPL-3.0 License:** Ideal for students, researchers, and enthusiasts, this [OSI-approved](https://opensource.org/license/agpl-v3) open-source license promotes open collaboration and knowledge sharing. See the [LICENSE](https://github.com/ultralytics/xview-yolov3/blob/main/LICENSE) file for full details.
+- **AGPL-3.0 License:** Ideal for students, researchers, and enthusiasts, this [OSI-approved](https://opensource.org/license/agpl-3.0) open-source license promotes open collaboration and knowledge sharing. See the [LICENSE](https://github.com/ultralytics/xview-yolov3/blob/main/LICENSE) file for full details.
 - **Enterprise License:** Designed for commercial use, this license allows integration of Ultralytics software and AI models into commercial products and services without the open-source requirements of AGPL-3.0. If your project requires an Enterprise License, please contact us via [Ultralytics Licensing](https://www.ultralytics.com/license).
 
 # 📬 Contact
